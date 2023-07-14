@@ -35,26 +35,26 @@
 
 #ifdef __cplusplus
 extern "C" {
-namespace edgelab {
+// namespace edgelab {
 #endif
 
 /*------------------------------------------------------------------*/
 /* CONSTANTS
  *------------------------------------------------------------------*/
 enum {
-    EL_OK = 0,       // success
-    EL_LOGE = -1,   // general error
-    EL_ETIMOUT = -2, // timeout
-    EL_EIO = -3,     // IO error
-    EL_EINVAL = -4,  // invalid argument
-    EL_ENOMEM = -5,  // out of memory
-    EL_EBUSY = -6,   // busy
-    EL_ENOTSUP = -7, // not supported
-    EL_EPERM = -8,   // operation not permitted
-    EL_EAGAIN = -9,  // try again
+    EL_OK      = 0,  // success
+    EL_AGAIN   = 1,  // try again
+    EL_ELOG    = 2,  // general error
+    EL_ETIMOUT = 3,  // timeout
+    EL_EIO     = 4,  // IO error
+    EL_EINVAL  = 5,  // invalid argument
+    EL_ENOMEM  = 6,  // out of memory
+    EL_EBUSY   = 7,  // busy
+    EL_ENOTSUP = 8,  // not supported
+    EL_EPERM   = 9,  // operation not permitted
 };
 
-typedef int EL_ERR;
+typedef uint8_t EL_STA;
 
 /*------------------------------------------------------------------*/
 /* STRUCTURES
@@ -62,16 +62,16 @@ typedef int EL_ERR;
 
 typedef struct EL_ATTR_PACKED {
     size_t size;
-    int *dims;
+    int*   dims;
 } el_shape_t;
 
 typedef struct EL_ATTR_PACKED {
-    float scale;
+    float   scale;
     int32_t zero_point;
 } el_quant_param_t;
 
 typedef struct EL_ATTR_PACKED {
-    void *pool;
+    void*  pool;
     size_t size;
 } el_memory_pool_t;
 
@@ -80,8 +80,8 @@ typedef struct EL_ATTR_PACKED {
     uint16_t y;
     uint16_t w;
     uint16_t h;
-    uint8_t score;
-    uint8_t target;
+    uint8_t  score;
+    uint8_t  target;
 } el_box_t;
 
 typedef struct EL_ATTR_PACKED {
@@ -91,13 +91,13 @@ typedef struct EL_ATTR_PACKED {
 
 typedef struct EL_ATTR_PACKED {
     size_t index;
-    void *data;
+    void*  data;
     size_t size;
 } el_tensor_t;
 
 typedef struct EL_ATTR_PACKED {
-    el_tensor_t *tensor;
-    size_t length;
+    el_tensor_t* tensor;
+    size_t       length;
 } el_input_t;
 
 typedef enum {
@@ -118,10 +118,10 @@ typedef enum {
 } el_pixel_rotate_t;
 
 typedef struct EL_ATTR_PACKED {
-    uint8_t *data;
-    size_t size;
-    uint32_t width;
-    uint32_t height;
+    uint8_t*          data;
+    size_t            size;
+    uint32_t          width;
+    uint32_t          height;
     el_pixel_format_t format;
     el_pixel_rotate_t rotate;
 } el_img_t;
@@ -133,7 +133,7 @@ typedef struct EL_ATTR_PACKED {
 
 #ifdef __cplusplus
 }
-}
+// }
 #endif
 
 #endif /* _EL_TYPES_H_ */

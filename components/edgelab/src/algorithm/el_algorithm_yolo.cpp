@@ -30,49 +30,41 @@
 
 namespace edgelab {
 
-Yolo::Yolo(InferenceEngine &engine) : Algorithm(engine)
-{
+Yolo::Yolo(InferenceEngine& engine) : Algorithm(engine) {
     w_scale = 1.0f;
     h_scale = 1.0f;
 }
 
-Yolo::~Yolo()
-{
-}
+Yolo::~Yolo() {}
 
-EL_ERR Yolo::init()
-{
+EL_STA Yolo::init() {
     this->results.clear();
-    input_shape = this->engine->get_input_shape(0);
+    input_shape  = this->engine->get_input_shape(0);
     output_shape = this->engine->get_output_shape(0);
-    input_quant = this->engine->get_input_quant_param(0);
+    input_quant  = this->engine->get_input_quant_param(0);
     output_quant = this->engine->get_output_quant_param(0);
     return EL_OK;
 }
 
-EL_ERR Yolo::deinit()
-{
+EL_STA Yolo::deinit() {
     this->results.clear();
     return EL_OK;
 }
 
-EL_ERR Yolo::preprocess()
-{
-    EL_ERR ret = EL_OK;
-    el_img_t img = {0};
-    el_img_t *i_img = static_cast<el_img_t *>(this->input);
+EL_STA Yolo::preprocess() {
+    EL_STA    ret   = EL_OK;
+    el_img_t  img   = {0};
+    el_img_t* i_img = static_cast<el_img_t*>(this->input);
 
-    img.data = static_cast<uint8_t *>(this->engine->get_input(0));
-    img.width = input_shape.dims[1];
+    img.data   = static_cast<uint8_t*>(this->engine->get_input(0));
+    img.width  = input_shape.dims[1];
     img.height = input_shape.dims[2];
-    img.size = img.width * img.height * input_shape.dims[3];
+    img.size   = img.width * img.height * input_shape.dims[3];
     if (input_shape.dims[3] == 3) {
         img.format = EL_PIXEL_FORMAT_RGB888;
-    }
-    else if (input_shape.dims[3] == 1) {
+    } else if (input_shape.dims[3] == 1) {
         img.format = EL_PIXEL_FORMAT_GRAYSCALE;
-    }
-    else {
+    } else {
         return EL_EINVAL;
     }
 
@@ -90,35 +82,34 @@ EL_ERR Yolo::preprocess()
     return EL_OK;
 }
 
-EL_ERR Yolo::postprocess()
-{
+EL_STA Yolo::postprocess() {
     this->results.clear();
 
     // get output
-    int8_t *data = static_cast<int8_t *>(this->engine->get_output(0));
-    uint16_t width = input_shape.dims[1];
-    uint16_t height = input_shape.dims[2];
-    float scale = output_quant.scale;
-    int32_t zero_point = output_quant.zero_point;
-    uint32_t num_record = output_shape.dims[1];
+    int8_t*  data        = static_cast<int8_t*>(this->engine->get_output(0));
+    uint16_t width       = input_shape.dims[1];
+    uint16_t height      = input_shape.dims[2];
+    float    scale       = output_quant.scale;
+    int32_t  zero_point  = output_quant.zero_point;
+    uint32_t num_record  = output_shape.dims[1];
     uint32_t num_element = output_shape.dims[2];
-    uint32_t num_class = num_element - 5;
+    uint32_t num_class   = num_element - 5;
 
     bool rescale = scale < 0.1 ? true : false;
 
     // parse output
     for (int i = 0; i < num_record; i++) {
         float score = float(data[i * num_element + INDEX_S] - zero_point) * scale;
-        score = rescale ? score * 100 : score;
+        score       = rescale ? score * 100 : score;
         if (score > this->score_threshold) {
             el_box_t box;
-            int8_t max = -128;
-            box.score = score;
-            box.target = 0;
+            int8_t   max = -128;
+            box.score    = score;
+            box.target   = 0;
             // get box target
             for (uint16_t j = 0; j < num_class; j++) {
                 if (max < data[i * num_element + INDEX_T + j]) {
-                    max = data[i * num_element + INDEX_T + j];
+                    max        = data[i * num_element + INDEX_T + j];
                     box.target = j;
                 }
             }
@@ -133,8 +124,7 @@ EL_ERR Yolo::postprocess()
                 box.y = EL_CLIP(uint16_t(y * height), 0, height);
                 box.w = EL_CLIP(uint16_t(w * width), 0, width);
                 box.h = EL_CLIP(uint16_t(h * height), 0, height);
-            }
-            else {
+            } else {
                 box.x = EL_CLIP(uint16_t(x), 0, width);
                 box.y = EL_CLIP(uint16_t(y), 0, height);
                 box.w = EL_CLIP(uint16_t(w), 0, width);
@@ -158,10 +148,10 @@ EL_ERR Yolo::postprocess()
     //                box.score,
     //                box.target);
     // }
-    this->results.sort([](const el_box_t &a, const el_box_t &b) { return a.x < b.x; });
+    this->results.sort([](const el_box_t& a, const el_box_t& b) { return a.x < b.x; });
     this->result_size = std::distance(this->results.begin(), this->results.end());
 
-    for (auto &box : this->results) {
+    for (auto& box : this->results) {
         box.x = box.x * w_scale;
         box.y = box.y * h_scale;
         box.w = box.w * w_scale;
@@ -171,9 +161,8 @@ EL_ERR Yolo::postprocess()
     return EL_OK;
 }
 
-const void *Yolo::get_result(size_t index)
-{
-    el_box_t *box = nullptr;
+const void* Yolo::get_result(size_t index) {
+    el_box_t* box = nullptr;
     if (index > this->result_size) {
         return nullptr;
     }
@@ -183,9 +172,6 @@ const void *Yolo::get_result(size_t index)
     return box;
 }
 
-size_t Yolo::get_result_size()
-{
-    return this->result_size;
-}
+size_t Yolo::get_result_size() { return this->result_size; }
 
-} // namespace edgelab
+}  // namespace edgelab

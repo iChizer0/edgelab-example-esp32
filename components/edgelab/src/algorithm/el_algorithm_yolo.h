@@ -36,24 +36,24 @@ namespace edgelab {
 class Yolo : public Algorithm {
    private:
     std::forward_list<el_box_t> results;
-    size_t result_size;
-    el_shape_t input_shape;
-    el_shape_t output_shape;
-    el_quant_param_t input_quant;
-    el_quant_param_t output_quant;
-    float w_scale, h_scale;
+    size_t                      result_size;
+    el_shape_t                  input_shape;
+    el_shape_t                  output_shape;
+    el_quant_param_t            input_quant;
+    el_quant_param_t            output_quant;
+    float                       w_scale, h_scale;
 
    protected:
-    EL_ERR preprocess() override;
-    EL_ERR postprocess() override;
+    EL_STA preprocess() override;
+    EL_STA postprocess() override;
 
    public:
-    Yolo(InferenceEngine &engine);
+    Yolo(InferenceEngine& engine);
     ~Yolo();
-    EL_ERR init() override;
-    EL_ERR deinit() override;
-    const void *get_result(size_t index) override;
-    size_t get_result_size() override;
+    EL_STA      init() override;
+    EL_STA      deinit() override;
+    const void* get_result(size_t index) override;
+    size_t      get_result_size() override;
     enum {
         INDEX_X = 0,
         INDEX_Y = 1,
@@ -64,6 +64,6 @@ class Yolo : public Algorithm {
     };
 };
 
-} // namespace edgelab
+}  // namespace edgelab
 
 #endif /* _EL_ALGO_YOLO_H_ */

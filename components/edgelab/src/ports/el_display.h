@@ -38,13 +38,13 @@ class Display {
    public:
     Display(/* args */){};
     virtual ~Display(){};
-    virtual EL_ERR init() = 0;
-    virtual EL_ERR deinit() = 0;
-    virtual EL_ERR show(const el_img_t* img) = 0;
+    virtual EL_STA init()                    = 0;
+    virtual EL_STA deinit()                  = 0;
+    virtual EL_STA show(const el_img_t* img) = 0;
 
     operator bool() { return _is_present; }
 };
 
-} // namespace edgelab
+}  // namespace edgelab
 
 #endif /* _EL_DISPLAY_H_ */

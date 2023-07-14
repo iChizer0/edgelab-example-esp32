@@ -26,7 +26,8 @@
 #include "el_camera_esp.h"
 
 namespace edgelab {
-EL_ERR CameraEsp::init(size_t width, size_t height)
+
+EL_STA CameraEsp::init(size_t width, size_t height)
 {
     config.ledc_channel = LEDC_CHANNEL_0;
     config.ledc_timer = LEDC_TIMER_0;
@@ -57,7 +58,7 @@ EL_ERR CameraEsp::init(size_t width, size_t height)
     // camera init
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) {
-        EL_LOGE("Camera init failed with error 0x%x", err);
+        EL_ELOG("Camera init failed with error 0x%x", err);
         return EL_EIO;
     }
 
@@ -72,34 +73,35 @@ EL_ERR CameraEsp::init(size_t width, size_t height)
 
     return EL_OK;
 }
-EL_ERR CameraEsp::deinit()
+EL_STA CameraEsp::deinit()
 {
     return EL_OK;
 }
-EL_ERR CameraEsp::start_stream()
+EL_STA CameraEsp::start_stream()
 {
     fb = esp_camera_fb_get();
     if (!fb) {
-        EL_LOGE("Camera capture failed");
+        EL_ELOG("Camera capture failed");
         return EL_EIO;
     }
     this->_is_streaming = true;
     return EL_OK;
 }
 
-EL_ERR CameraEsp::stop_stream()
+EL_STA CameraEsp::stop_stream()
 {
     esp_camera_fb_return(fb);
     this->_is_streaming = false;
     return EL_OK;
 }
-EL_ERR CameraEsp::get_frame(el_img_t *img)
+EL_STA CameraEsp::get_frame(el_img_t *img)
 {
+    
     if (!this->_is_streaming) {
         return EL_EIO;
     }
     if (!fb) {
-        EL_LOGE("Camera capture failed");
+        EL_ELOG("Camera capture failed");
         return EL_EIO;
     }
     img->width = fb->width;
@@ -109,11 +111,11 @@ EL_ERR CameraEsp::get_frame(el_img_t *img)
     img->format = EL_PIXEL_FORMAT_RGB565;
     return EL_OK;
 }
-EL_ERR CameraEsp::get_jpeg(el_img_t *img)
+EL_STA CameraEsp::get_jpeg(el_img_t *img)
 {
     return EL_OK;
 }
-EL_ERR CameraEsp::get_resolutions(el_res_t **res, size_t *res_count)
+EL_STA CameraEsp::get_resolutions(el_res_t **res, size_t *res_count)
 {
     return EL_OK;
 }

@@ -6,12 +6,7 @@ menu "Inference Engine"
             Enable TFLite inference engine
     menu "TFLite options"
         depends on EL_TFLITE
-        config EL_TFLITE_OP_RESOLVER_SIZE
-            int "TFLite op resolver size"
-            default 128
-            range 1 128
-            help
-                TFLite op resolver size
+
         config EL_TFLITE_OP_ABS
             bool "ABS"
             default n

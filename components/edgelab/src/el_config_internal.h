@@ -26,22 +26,21 @@
 #ifndef _EL_CONFIG_INTERNAL_H
 #define _EL_CONFIG_INTERNAL_H
 
-#include "el_config.h"
 #include "el_board_config.h"
+#include "el_config.h"
 
 /* debug config check */
 #ifndef CONFIG_EL_DEBUG
-#define CONFIG_EL_DEBUG 0
+    #define CONFIG_EL_DEBUG 0
 #endif
 
 /* porting config check */
 #ifndef CONFIG_EL_PORTING_POSIX
-#if defined(__unix__) || defined(__APPLE__)
-#define CONFIG_EL_PORTING_POSIX 1
-#else
-#define CONFIG_EL_PORTING_POSIX 0
+    #if defined(__unix__) || defined(__APPLE__)
+        #define CONFIG_EL_PORTING_POSIX 1
+    #else
+        #define CONFIG_EL_PORTING_POSIX 0
+    #endif
 #endif
-#endif
-
 
 #endif /* EL_CONFIG_INTERNAL_H */

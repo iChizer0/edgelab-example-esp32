@@ -44,13 +44,13 @@ class CameraEsp : public Camera {
     sensor_t *sensor;
 
    public:
-    EL_ERR init(size_t width, size_t height) override;
-    EL_ERR deinit() override;
-    EL_ERR start_stream() override;
-    EL_ERR stop_stream() override;
-    EL_ERR get_frame(el_img_t *img) override;
-    EL_ERR get_jpeg(el_img_t *img) override;
-    EL_ERR get_resolutions(el_res_t **res, size_t *res_count) override;
+    EL_STA init(size_t width, size_t height) override;
+    EL_STA deinit() override;
+    EL_STA start_stream() override;
+    EL_STA stop_stream() override;
+    EL_STA get_frame(el_img_t *img) override;
+    EL_STA get_jpeg(el_img_t *img) override;
+    EL_STA get_resolutions(el_res_t **res, size_t *res_count) override;
 
    private:
     framesize_t fit_resolution(size_t width, size_t height);

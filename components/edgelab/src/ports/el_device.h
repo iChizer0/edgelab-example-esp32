@@ -35,26 +35,26 @@ namespace edgelab {
 
 class Device {
    protected:
-    const char *_device_name;
-    uint32_t _device_id;
-    ReplServer *_repl;
+    const char* _device_name;
+    uint32_t    _device_id;
+    ReplServer* _repl;
 
-    Camera *_camera;
-    Display *_display;
+    Camera*  _camera;
+    Display* _display;
 
    public:
     Device(/* args */){};
     ~Device(){};
 
-    ReplServer *get_repl() { return _repl; }
-    Camera *get_camera() { return _camera; }
-    Display *get_display() { return _display; }
-    uint32_t get_device_id() { return _device_id; }
-    const char *get_device_name() { return _device_name; }
+    ReplServer* get_repl() { return _repl; }
+    Camera*     get_camera() { return _camera; }
+    Display*    get_display() { return _display; }
+    uint32_t    get_device_id() { return _device_id; }
+    const char* get_device_name() { return _device_name; }
 
-    static Device *get_device();
+    static Device* get_device();
 };
 
-} // namespace edgelab
+}  // namespace edgelab
 
 #endif /* _EL_Device_H_ */

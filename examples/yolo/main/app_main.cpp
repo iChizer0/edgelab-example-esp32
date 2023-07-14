@@ -27,45 +27,45 @@ extern "C" void app_main(void)
     display->init();
 
     InferenceEngine *engine = new TFLiteEngine();
-    uint8_t *tensor_arena =
-        (uint8_t *)heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint8_t *tensor_arena = (uint8_t *)heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     engine->init(tensor_arena, kTensorArenaSize);
     engine->load_model(g_yolo_model_data, g_yolo_model_data_len);
     Algorithm *algorithm = new Yolo(*engine);
 
     algorithm->init();
-
+    camera->start_stream();
     EL_LOGI("done");
     while (1) {
         el_img_t img;
-        camera->start_stream();
+        // camera->start_stream();
         camera->get_frame(&img);
-        // algorithm->run(&img);
-        // uint32_t preprocess_time = algorithm->get_preprocess_time();
-        // uint32_t run_time = algorithm->get_run_time();
-        // uint32_t postprocess_time = algorithm->get_postprocess_time();
+        algorithm->run(&img);
+        uint32_t preprocess_time = algorithm->get_preprocess_time();
+        uint32_t run_time = algorithm->get_run_time();
+        uint32_t postprocess_time = algorithm->get_postprocess_time();
 
-        // for (int i = 0; i < algorithm->get_result_size(); i++) {
-        //     const el_box_t *box = static_cast<const el_box_t *>(algorithm->get_result(i));
-        //     EL_LOGI("box: %d, %d, %d, %d, %d, %d",
-        //             box->x,
-        //             box->y,
-        //             box->w,
-        //             box->h,
-        //             box->target,
-        //             box->score);
-        //     uint16_t x = box->x - box->w / 2;
-        //     uint16_t y = box->y - box->h / 2;
-        //     el_draw_rect(&img, x, y, box->w, box->h, color[i % 5], 4);
-        // }
-        // // EL_LOGI("draw done");
-        // EL_LOGI("preprocess: %d, run: %d, postprocess: %d",
-        //         preprocess_time,
-        //         run_time,
-        //         postprocess_time);
+        for (int i = 0; i < algorithm->get_result_size(); i++) {
+            const el_box_t *box = static_cast<const el_box_t *>(algorithm->get_result(i));
+            EL_LOGI("box: %d, %d, %d, %d, %d, %d",
+                    box->x,
+                    box->y,
+                    box->w,
+                    box->h,
+                    box->target,
+                    box->score);
+            uint16_t x = box->x - box->w / 2;
+            uint16_t y = box->y - box->h / 2;
+            el_draw_rect(&img, x, y, box->w, box->h, color[i % 5], 4);
+        }
+        // EL_LOGI("draw done");
+        EL_LOGI("preprocess: %d, run: %d, postprocess: %d",
+                preprocess_time,
+                run_time,
+                postprocess_time);
         display->show(&img);
-        camera->stop_stream();
+        
         EL_LOGI(".");
         // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
+    camera->stop_stream();
 }

@@ -33,35 +33,35 @@ namespace edgelab {
 
 class Algorithm {
    private:
-    uint32_t preprocess_time;  // ms
-    uint32_t run_time;         // ms
-    uint32_t postprocess_time; // ms
+    uint32_t preprocess_time;   // ms
+    uint32_t run_time;          // ms
+    uint32_t postprocess_time;  // ms
 
    protected:
-    InferenceEngine *engine;
-    uint8_t score_threshold;
-    uint8_t nms_threshold;
-    void *input;
-    virtual EL_ERR preprocess() = 0;
-    virtual EL_ERR postprocess() = 0;
+    InferenceEngine* engine;
+    uint8_t          score_threshold;
+    uint8_t          nms_threshold;
+    void*            input;
+    virtual EL_STA   preprocess()  = 0;
+    virtual EL_STA   postprocess() = 0;
 
    public:
-    Algorithm(InferenceEngine &engine);
+    Algorithm(InferenceEngine& engine);
     virtual ~Algorithm();
-    virtual EL_ERR init() = 0;
-    virtual EL_ERR deinit() = 0;
-    EL_ERR run(void *input);
-    uint32_t get_preprocess_time();
-    uint32_t get_run_time();
-    uint32_t get_postprocess_time();
-    uint8_t set_score_threshold(uint8_t threshold);
-    uint8_t set_nms_threshold(uint8_t threshold);
-    uint8_t get_score_threshold();
-    uint8_t get_nms_threshold();
-    virtual const void *get_result(size_t index) = 0;
-    virtual size_t get_result_size() = 0;
+    virtual EL_STA      init()   = 0;
+    virtual EL_STA      deinit() = 0;
+    EL_STA              run(void* input);
+    uint32_t            get_preprocess_time();
+    uint32_t            get_run_time();
+    uint32_t            get_postprocess_time();
+    uint8_t             set_score_threshold(uint8_t threshold);
+    uint8_t             set_nms_threshold(uint8_t threshold);
+    uint8_t             get_score_threshold();
+    uint8_t             get_nms_threshold();
+    virtual const void* get_result(size_t index) = 0;
+    virtual size_t      get_result_size()        = 0;
 };
 
-} // namespace edgelab
+}  // namespace edgelab
 
 #endif /* _EL_ALGO_H_ */
