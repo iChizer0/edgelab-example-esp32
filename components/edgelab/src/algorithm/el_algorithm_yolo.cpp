@@ -30,7 +30,7 @@
 
 namespace edgelab {
 
-Yolo::Yolo(InferenceEngine& engine) : Algorithm(engine) {
+Yolo::Yolo(edgelab::inference::BaseEngine& engine) : Algorithm(engine) {
     w_scale = 1.0f;
     h_scale = 1.0f;
 }

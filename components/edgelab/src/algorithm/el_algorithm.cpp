@@ -27,7 +27,7 @@
 
 namespace edgelab {
 
-Algorithm::Algorithm(InferenceEngine& engine) {
+Algorithm::Algorithm(edgelab::inference::BaseEngine& engine) {
     this->engine     = &engine;
     preprocess_time  = 0;
     run_time         = 0;

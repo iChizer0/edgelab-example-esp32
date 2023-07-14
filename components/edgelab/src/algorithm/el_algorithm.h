@@ -27,7 +27,7 @@
 #define _EL_ALGORITHM_H_
 
 #include "el_common.h"
-#include "el_inference.h"
+#include "el_inference_base.h"
 
 namespace edgelab {
 
@@ -38,7 +38,7 @@ class Algorithm {
     uint32_t postprocess_time;  // ms
 
    protected:
-    InferenceEngine* engine;
+    edgelab::inference::BaseEngine* engine;
     uint8_t          score_threshold;
     uint8_t          nms_threshold;
     void*            input;
@@ -46,7 +46,7 @@ class Algorithm {
     virtual EL_STA   postprocess() = 0;
 
    public:
-    Algorithm(InferenceEngine& engine);
+    Algorithm(edgelab::inference::BaseEngine& engine);
     virtual ~Algorithm();
     virtual EL_STA      init()   = 0;
     virtual EL_STA      deinit() = 0;

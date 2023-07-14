@@ -33,7 +33,9 @@
 
 namespace edgelab {
 
-class Yolo : public Algorithm {
+// using InferenceEngine = inference::BaseEngine;
+
+  class Yolo : public Algorithm {
    private:
     std::forward_list<el_box_t> results;
     size_t                      result_size;
@@ -48,7 +50,7 @@ class Yolo : public Algorithm {
     EL_STA postprocess() override;
 
    public:
-    Yolo(InferenceEngine& engine);
+    Yolo(edgelab::inference::BaseEngine& engine);
     ~Yolo();
     EL_STA      init() override;
     EL_STA      deinit() override;

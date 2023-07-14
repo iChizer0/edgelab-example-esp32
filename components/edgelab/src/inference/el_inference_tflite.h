@@ -26,7 +26,7 @@
 #ifndef _EL_INFERENCE_TFLITE_H_
 #define _EL_INFERENCE_TFLITE_H_
 
-#include "el_inference.h"
+#include "el_inference_base.h"
 
 #ifdef CONFIG_EL_TFLITE
 
@@ -347,7 +347,9 @@ class OpsResolver : public MicroMutableOpResolver<OpsCount::OpsTail - OpsCount::
 
 namespace edgelab {
 
-class TFLiteEngine : public InferenceEngine {
+namespace inference {
+
+class TFLiteEngine : public edgelab::inference::BaseEngine {
    private:
     static tflite::OpsResolver resolver;
     tflite::MicroInterpreter*  interpreter;
@@ -394,6 +396,10 @@ class TFLiteEngine : public InferenceEngine {
     el_quant_param_t get_output_quant_param(const char* output_name) override;  // Get output quant param
     #endif
 };
+
+}
+
+// using InferenceEngine = edgelab::inference::TFLiteEngine;
 
 }  // namespace edgelab
 

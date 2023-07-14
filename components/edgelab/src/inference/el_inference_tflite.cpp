@@ -324,6 +324,7 @@ OpsResolver::OpsResolver() {
 }  // namespace tflite
 
 namespace edgelab {
+    namespace inference {
 
 tflite::OpsResolver TFLiteEngine::resolver;
 
@@ -534,7 +535,7 @@ EL_STA TFLiteEngine::load_model(const char* model_path) {
     return ret;
 }
     #endif /* CONFIG_EL_FILESYSTEM */
-
+    }
 }  // namespace edgelab
 
 #endif /* CONFIG_EL_TFLITE */

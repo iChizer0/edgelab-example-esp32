@@ -38,10 +38,6 @@
 #include "el_nms.h"
 #include "el_repl.h"
 
-#ifdef CONFIG_EL_TFLITE
-    #include "el_inference_tflite.h"
-#endif
-
 #ifdef CONFIG_EL_ALGORITHM_YOLO
     #include "el_algorithm_yolo.h"
 #endif
