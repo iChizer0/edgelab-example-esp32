@@ -23,11 +23,13 @@
  *
  */
 
-#ifndef _EL_ALGORITHM_BASE_H_
-#define _EL_ALGORITHM_BASE_H_
+#ifndef _EL_ALGORITHM_BASE_HPP_
+#define _EL_ALGORITHM_BASE_HPP_
 
-#include "el_common.h"
+#include <forward_list>
+
 #include "el_inference_base.h"
+#include "el_types.h"
 
 namespace edgelab {
 namespace algorithm {
@@ -57,24 +59,15 @@ template <typename InferenceEngine, typename InputType, typename OutputType> cla
 
     EL_STA run(InputType* input);
 
-    uint32_t get_preprocess_time() ;
-    uint32_t get_run_time() ;
-    uint32_t get_postprocess_time() ;
+    uint32_t get_preprocess_time() const;
+    uint32_t get_run_time() const;
+    uint32_t get_postprocess_time() const;
 
-    EL_STA   set_score_threshold(uint8_t threshold);
-    uint8_t get_score_threshold() ;
+    EL_STA  set_score_threshold(uint8_t threshold);
+    uint8_t get_score_threshold() const;
 
-    virtual const OutputType* get_result(size_t index)  = 0;
-    virtual size_t            get_result_size()         = 0;
+    virtual const std::forward_list<OutputType>& get_results() = 0;
 };
-
-// }  // namespace base
-// }  // namespace algorithm
-// }  // namespace edgelab
-
-// namespace edgelab {
-// namespace algorithm {
-// namespace base {
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
 Algorithm<InferenceEngine, InputType, OutputType>::Algorithm(InferenceEngine& engine, uint8_t score_threshold)
@@ -130,18 +123,18 @@ EL_STA Algorithm<InferenceEngine, InputType, OutputType>::run(InputType* input) 
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_postprocess_time() {
-    return __postprocess_time;
-}
-
-template <typename InferenceEngine, typename InputType, typename OutputType>
-uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_preprocess_time() {
+uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_preprocess_time() const {
     return __preprocess_time;
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_run_time() {
+uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_run_time() const {
     return __run_time;
+}
+
+template <typename InferenceEngine, typename InputType, typename OutputType>
+uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_postprocess_time() const {
+    return __postprocess_time;
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
@@ -151,7 +144,7 @@ EL_STA Algorithm<InferenceEngine, InputType, OutputType>::set_score_threshold(ui
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-uint8_t Algorithm<InferenceEngine, InputType, OutputType>::get_score_threshold() {
+uint8_t Algorithm<InferenceEngine, InputType, OutputType>::get_score_threshold() const {
     return __score_threshold;
 }
 
@@ -159,5 +152,4 @@ uint8_t Algorithm<InferenceEngine, InputType, OutputType>::get_score_threshold()
 }  // namespace algorithm
 }  // namespace edgelab
 
-
-#endif /* _EL_ALGORITHM_BASE_H_ */
+#endif

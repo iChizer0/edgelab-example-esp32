@@ -69,19 +69,11 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputTy
     EL_STA init() override;
     EL_STA deinit() override;
 
-    EL_STA set_nms_threshold(uint8_t threshold);
-    uint8_t get_nms_threshold() ;
+    EL_STA  set_nms_threshold(uint8_t threshold);
+    uint8_t get_nms_threshold() const;
 
-    const OutputType* get_result(size_t index)  override;
-    size_t            get_result_size()  override;
+    const std::forward_list<OutputType>& get_results() override;
 };
-
-// }  // namespace algorithm
-// }  // namespace edgelab
-
-
-// namespace edgelab {
-// namespace algorithm {
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
 Yolo<InferenceEngine, InputType, OutputType>::Yolo(InferenceEngine& engine,
@@ -230,21 +222,14 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-const OutputType* Yolo<InferenceEngine, InputType, OutputType>::get_result(size_t index) {
-    OutputType* box = nullptr;
-    if (index > _result_size) {
-        return nullptr;
-    }
-    auto front = _results.begin();
-    std::advance(front, index);
-    box = &(*front);
-    return box;
+const std::forward_list<OutputType>& Yolo<InferenceEngine, InputType, OutputType>::get_results() {
+    return _results;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-size_t Yolo<InferenceEngine, InputType, OutputType>::get_result_size() {
-    return _result_size;
-}
+// template <typename InferenceEngine, typename InputType, typename OutputType>
+// size_t Yolo<InferenceEngine, InputType, OutputType>::get_result_size() {
+//     return _result_size;
+// }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
 EL_STA Yolo<InferenceEngine, InputType, OutputType>::set_nms_threshold(uint8_t threshold) {
@@ -253,7 +238,7 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::set_nms_threshold(uint8_t t
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-uint8_t Yolo<InferenceEngine, InputType, OutputType>::get_nms_threshold() {
+uint8_t Yolo<InferenceEngine, InputType, OutputType>::get_nms_threshold() const {
     return _nms_threshold;
 }
 

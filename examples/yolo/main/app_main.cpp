@@ -46,15 +46,11 @@ extern "C" void app_main(void)
         uint32_t run_time = algorithm->get_run_time();
         uint32_t postprocess_time = algorithm->get_postprocess_time();
 
-        for (int i = 0; i < algorithm->get_result_size(); i++) {
-            const el_box_t *box = algorithm->get_result(i);
-            EL_LOGI("box: %d, %d, %d, %d, %d, %d",
-                    box->x,
-                    box->y,
-                    box->w,
-                    box->h,
-                    box->target,
-                    box->score);
+        int i = 0;
+        for (auto b : algorithm->get_results()) {
+            // const el_box_t *box = algorithm->get_result(i);
+            const el_box_t* box = &b;
+            EL_LOGI("box: %d, %d, %d, %d, %d, %d", box->x, box->y, box->w, box->h, box->target, box->score);
             uint16_t x = box->x - box->w / 2;
             uint16_t y = box->y - box->h / 2;
             el_draw_rect(&img, x, y, box->w, box->h, color[i % 5], 4);
