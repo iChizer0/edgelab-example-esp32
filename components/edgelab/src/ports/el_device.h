@@ -39,8 +39,9 @@ class Device {
     uint32_t    _device_id;
     ReplServer* _repl;
 
-    Camera*  _camera;
-    Display* _display;
+    Camera*  _camera; /// I
+    
+    Display* _display; /// O 
 
    public:
     Device(/* args */){};

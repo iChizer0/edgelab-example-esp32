@@ -26,42 +26,18 @@
 #ifndef _EL_ALGORITHM_H_
 #define _EL_ALGORITHM_H_
 
-#include "el_common.h"
-#include "el_inference_base.h"
+// #ifdef CONFIG_EL_ALGORITHM_YOLO
+#include "el_algorithm_yolo.hpp"
+// #endif
 
 namespace edgelab {
 
-class Algorithm {
-   private:
-    uint32_t preprocess_time;   // ms
-    uint32_t run_time;          // ms
-    uint32_t postprocess_time;  // ms
+// #ifdef CONFIG_EL_ALGORITHM_YOLO
 
-   protected:
-    edgelab::inference::BaseEngine* engine;
-    uint8_t          score_threshold;
-    uint8_t          nms_threshold;
-    void*            input;
-    virtual EL_STA   preprocess()  = 0;
-    virtual EL_STA   postprocess() = 0;
+// using Yolo = edgelab::algorithm::Yolo<edgelab::inference::BaseEngine, el_img_t, el_box_t>;
 
-   public:
-    Algorithm(edgelab::inference::BaseEngine& engine);
-    virtual ~Algorithm();
-    virtual EL_STA      init()   = 0;
-    virtual EL_STA      deinit() = 0;
-    EL_STA              run(void* input);
-    uint32_t            get_preprocess_time();
-    uint32_t            get_run_time();
-    uint32_t            get_postprocess_time();
-    uint8_t             set_score_threshold(uint8_t threshold);
-    uint8_t             set_nms_threshold(uint8_t threshold);
-    uint8_t             get_score_threshold();
-    uint8_t             get_nms_threshold();
-    virtual const void* get_result(size_t index) = 0;
-    virtual size_t      get_result_size()        = 0;
-};
+// #endif
 
 }  // namespace edgelab
 
-#endif /* _EL_ALGO_H_ */
+#endif

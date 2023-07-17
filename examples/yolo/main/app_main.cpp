@@ -17,6 +17,8 @@ uint16_t color[] = {
     0xFFFF,
 };
 
+using Yolo = edgelab::algorithm::Yolo<edgelab::inference::BaseEngine, el_img_t, el_box_t>;
+
 extern "C" void app_main(void)
 {
     Device *device = Device::get_device();
@@ -30,14 +32,14 @@ extern "C" void app_main(void)
     uint8_t *tensor_arena = (uint8_t *)heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     engine->init(tensor_arena, kTensorArenaSize);
     engine->load_model(g_yolo_model_data, g_yolo_model_data_len);
-    Algorithm *algorithm = new Yolo(*engine);
+    auto *algorithm = new Yolo(*engine);
 
     algorithm->init();
-    camera->start_stream();
+    // camera->start_stream();
     EL_LOGI("done");
     while (1) {
         el_img_t img;
-        // camera->start_stream();
+        camera->start_stream();
         camera->get_frame(&img);
         algorithm->run(&img);
         uint32_t preprocess_time = algorithm->get_preprocess_time();
@@ -45,7 +47,7 @@ extern "C" void app_main(void)
         uint32_t postprocess_time = algorithm->get_postprocess_time();
 
         for (int i = 0; i < algorithm->get_result_size(); i++) {
-            const el_box_t *box = static_cast<const el_box_t *>(algorithm->get_result(i));
+            const el_box_t *box = algorithm->get_result(i);
             EL_LOGI("box: %d, %d, %d, %d, %d, %d",
                     box->x,
                     box->y,
@@ -63,9 +65,10 @@ extern "C" void app_main(void)
                 run_time,
                 postprocess_time);
         display->show(&img);
-        
+        camera->stop_stream();
+
         EL_LOGI(".");
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
-    camera->stop_stream();
+    // camera->stop_stream();
 }

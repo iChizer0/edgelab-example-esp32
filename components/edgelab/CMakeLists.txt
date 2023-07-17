@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 set(idf_version "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}")
 
 FILE(GLOB_RECURSE SRCS_EDGELAB
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )

@@ -26,7 +26,9 @@
 #ifndef _EDGELAB_H
 #define _EDGELAB_H
 
-#include "el_algorithm.h"
+#include "el_algorithm_base.hpp"
+// #include "el_algorithm.h"
+#include "el_algorithm_yolo.hpp"
 #include "el_base64.h"
 #include "el_camera.h"
 #include "el_common.h"
@@ -37,10 +39,6 @@
 #include "el_misc.h"
 #include "el_nms.h"
 #include "el_repl.h"
-
-#ifdef CONFIG_EL_ALGORITHM_YOLO
-    #include "el_algorithm_yolo.h"
-#endif
 
 #ifdef __cplusplus
 using namespace edgelab;

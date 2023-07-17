@@ -33,11 +33,13 @@
 #endif
 
 namespace edgelab {
-    enum struct EngineName {
-        TFLite
-    };
-
-    template <EngineName EN, typename = typename std::enable_if<EN == EngineName::TFLite>::type>
-    using InferenceEngine = typename edgelab::inference::TFLiteEngine;
+namespace inference {
+enum struct EngineName { TFLite };
 }
+
+using EngineName = edgelab::inference::EngineName;
+
+template <EngineName EN, typename = typename std::enable_if<EN == EngineName::TFLite>::type>
+using InferenceEngine = typename edgelab::inference::TFLiteEngine;
+}  // namespace edgelab
 #endif

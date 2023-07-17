@@ -25,6 +25,7 @@
 
 #include "el_display_esp.h"
 
+
 namespace edgelab {
 
 DisplayEsp::DisplayEsp()
