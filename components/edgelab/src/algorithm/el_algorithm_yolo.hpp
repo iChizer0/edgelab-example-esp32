@@ -62,7 +62,7 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputTy
     };
 
    public:
-    Yolo(InferenceEngine& engine, int8_t score_threshold = 40, int8_t nms_threshold = 45);
+    Yolo(InferenceEngine& engine, int8_t score_threshold = 50, int8_t nms_threshold = 55);
     ~Yolo();
 
     EL_STA init() override;

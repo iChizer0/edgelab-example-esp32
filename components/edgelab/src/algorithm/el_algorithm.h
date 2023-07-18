@@ -36,7 +36,7 @@
 namespace edgelab {
 
 #ifdef CONFIG_EL_ALGORITHM_YOLO
-using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::BaseEngine, el_img_t, el_box_t>;
+using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::base::Engine, el_img_t, el_box_t>;
 #endif
 
 }  // namespace edgelab

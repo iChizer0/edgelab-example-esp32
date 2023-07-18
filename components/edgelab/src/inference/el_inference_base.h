@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2023 Hongtai Liu (Seeed Technology Inc.)
+ * Copyright (c) 2023 Hongtai Liu, nullptr (Seeed Technology Inc.)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,49 +40,47 @@
 
 namespace edgelab {
 namespace inference {
+namespace base {
 
-class BaseEngine {
+class Engine {
    public:
-    BaseEngine(){};
-    virtual ~BaseEngine(){};           // Virtual destructor for polymorphism
+    Engine()          = default;
+    virtual ~Engine() = default;
 
-    virtual EL_STA init()            = 0;  // Initialize Inference Engine without memory pool
-    virtual EL_STA init(size_t size) = 0;  // Initialize Inference Engine with memory pool
-    virtual EL_STA init(void*  pool,
-                        size_t size) = 0;  // Initialize Inference Engine with memory pool
+    virtual EL_STA init()                        = 0;
+    virtual EL_STA init(size_t size)             = 0;
+    virtual EL_STA init(void* pool, size_t size) = 0;
 
-    virtual EL_STA run() = 0;              // Run inference
+    virtual EL_STA run() = 0;
 
 #ifdef CONFIG_EL_FILESYSTEM
-    virtual EL_STA load_model(const char* model_path) = 0;  // Load model from file
+    virtual EL_STA load_model(const char* model_path) = 0;
 #endif
-    virtual EL_STA load_model(const void* model_data,
-                              size_t      model_size) = 0;  // Load model from memory
+    virtual EL_STA load_model(const void* model_data, size_t model_size) = 0;
 
-    virtual EL_STA set_input(size_t index, const void* input_data,
-                             size_t input_size) = 0;                               // Set input data
-    virtual void*  get_input(size_t index)      = 0;                               // Get input data
+    virtual EL_STA set_input(size_t index, const void* input_data, size_t input_size) = 0;
+    virtual void*  get_input(size_t index)                                            = 0;
 
-    virtual void*            get_output(size_t index)             = 0;             // Get output data
-    virtual el_shape_t       get_input_shape(size_t index)        = 0;             // Get input shape
-    virtual el_shape_t       get_output_shape(size_t index)       = 0;             // Get output shape
-    virtual el_quant_param_t get_input_quant_param(size_t index)  = 0;             // Get input quant param
-    virtual el_quant_param_t get_output_quant_param(size_t index) = 0;             // Get output quant param
+    virtual void*            get_output(size_t index)             = 0;
+    virtual el_shape_t       get_input_shape(size_t index)        = 0;
+    virtual el_shape_t       get_output_shape(size_t index)       = 0;
+    virtual el_quant_param_t get_input_quant_param(size_t index)  = 0;
+    virtual el_quant_param_t get_output_quant_param(size_t index) = 0;
 #ifdef CONFIG_EL_INFERENCER_TENSOR_NAME
-    virtual size_t           get_input_index(const char* input_name)         = 0;  // Get input index
-    virtual size_t           get_output_index(const char* output_name)       = 0;  // Get output index
-    virtual void*            get_input(const char* input_name)               = 0;  // Get input data
-    virtual EL_STA           set_input(const char* input_name, const void* input_data,
-                                       size_t input_size)                    = 0;  // Set input data
-    virtual void*            get_output(const char* output_name)             = 0;  // Get output data
-    virtual el_shape_t       get_input_shape(const char* input_name)         = 0;  // Get input shape
-    virtual el_shape_t       get_output_shape(const char* output_name)       = 0;  // Get output shape
-    virtual el_quant_param_t get_input_quant_param(const char* input_name)   = 0;  // Get input quant param
-    virtual el_quant_param_t get_output_quant_param(const char* output_name) = 0;  // Get output quant param
+    virtual size_t           get_input_index(const char* input_name)                                      = 0;
+    virtual size_t           get_output_index(const char* output_name)                                    = 0;
+    virtual void*            get_input(const char* input_name)                                            = 0;
+    virtual EL_STA           set_input(const char* input_name, const void* input_data, size_t input_size) = 0;
+    virtual void*            get_output(const char* output_name)                                          = 0;
+    virtual el_shape_t       get_input_shape(const char* input_name)                                      = 0;
+    virtual el_shape_t       get_output_shape(const char* output_name)                                    = 0;
+    virtual el_quant_param_t get_input_quant_param(const char* input_name)                                = 0;
+    virtual el_quant_param_t get_output_quant_param(const char* output_name)                              = 0;
 #endif
 };
 
+}  // namespace base
 }  // namespace inference
 }  // namespace edgelab
 
-#endif  // _EL_PORTING_H_
+#endif

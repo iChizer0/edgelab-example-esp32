@@ -47,13 +47,13 @@ extern "C" void app_main(void)
         uint32_t postprocess_time = algorithm->get_postprocess_time();
 
         int i = 0;
-        for (auto b : algorithm->get_results()) {
+        for (auto &b : algorithm->get_results()) {
             // const el_box_t *box = algorithm->get_result(i);
             const el_box_t* box = &b;
             EL_LOGI("box: %d, %d, %d, %d, %d, %d", box->x, box->y, box->w, box->h, box->target, box->score);
             uint16_t x = box->x - box->w / 2;
             uint16_t y = box->y - box->h / 2;
-            el_draw_rect(&img, x, y, box->w, box->h, color[i % 5], 4);
+            el_draw_rect(&img, x, y, box->w, box->h, color[i++ % 5], 4);
         }
         // EL_LOGI("draw done");
         EL_LOGI("preprocess: %d, run: %d, postprocess: %d",
@@ -64,7 +64,7 @@ extern "C" void app_main(void)
         camera->stop_stream();
 
         EL_LOGI(".");
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        // vTaskDelay(10 / portTICK_PERIOD_MS);
     }
     // camera->stop_stream();
 }

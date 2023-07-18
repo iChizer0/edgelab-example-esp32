@@ -23,308 +23,307 @@
  *
  */
 
+// #ifdef CONFIG_EL_TFLITE
 #include "el_inference_tflite.h"
-
-#ifdef CONFIG_EL_TFLITE
 
 namespace tflite {
 
 OpsResolver::OpsResolver() {
-    #ifdef CONFIG_EL_TFLITE_OP_ABS
+#ifdef CONFIG_EL_TFLITE_OP_ABS
     AddAbs();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ADD
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ADD
     AddAdd();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ADDN
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ADDN
     AddAddN();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ARGMAX
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ARGMAX
     AddArgMax();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ARGMIN
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ARGMIN
     AddArgMin();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ASSIGN_VARIABLE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ASSIGN_VARIABLE
     AddAssignVariable();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_AVERAGE_POOL_2D
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_AVERAGE_POOL_2D
     AddAveragePool2D();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_BATCH_TO_SPACE_ND
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_BATCH_TO_SPACE_ND
     AddBatchToSpaceNd();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_BROADCAST_ARGS
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_BROADCAST_ARGS
     AddBroadcastArgs();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_BROADCAST_TO
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_BROADCAST_TO
     AddBroadcastTo();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_CALL_ONCE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_CALL_ONCE
     AddCallOnce();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_CAST
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_CAST
     AddCast();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_CEIL
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_CEIL
     AddCeil();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_CIRULAR_BUFFER
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_CIRULAR_BUFFER
     AddCircularBuffer();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_CONCATENATION
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_CONCATENATION
     AddConcatenation();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_CONV_2D
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_CONV_2D
     AddConv2D();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_COS
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_COS
     AddCos();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_CUM_SUM
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_CUM_SUM
     AddCumSum();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_DEPTH_TO_SPACE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_DEPTH_TO_SPACE
     AddDepthToSpace();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_DEPTHWISE_CONV_2D
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_DEPTHWISE_CONV_2D
     AddDepthwiseConv2D();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_DEQUANTIZE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_DEQUANTIZE
     AddDequantize();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_DETECTION_POSTPROCESS
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_DETECTION_POSTPROCESS
     AddDetectionPostprocess();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_DIV
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_DIV
     AddDiv();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ELU
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ELU
     AddElu();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_EQUAL
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_EQUAL
     AddEqual();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_ETHOS_U
+#endif
+#ifdef CONFIG_EL_TFLITE_ETHOS_U
     AddEthosU();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_EXP
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_EXP
     AddExp();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_EXPAND_DIMS
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_EXPAND_DIMS
     AddExpandDims();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_FILL
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_FILL
     AddFill();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_FLOOR
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_FLOOR
     AddFloor();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_FLOOR_DIV
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_FLOOR_DIV
     AddFloorDiv();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_FLOOR_MOD
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_FLOOR_MOD
     AddFloorMod();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_FULLY_CONNECTED
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_FULLY_CONNECTED
     AddFullyConnected();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_GATHER
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_GATHER
     AddGather();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_GATHER_ND
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_GATHER_ND
     AddGatherNd();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_GREATER
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_GREATER
     AddGreater();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_GREATER_EQUAL
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_GREATER_EQUAL
     AddGreaterEqual();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_HARD_SWISH
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_HARD_SWISH
     AddHardSwish();
-    #endif
+#endif
     AddIf();
-    #ifdef CONFIG_EL_TFLITE_OP_L2_NORMALIZATION
+#ifdef CONFIG_EL_TFLITE_OP_L2_NORMALIZATION
     AddL2Normalization();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_L2_POOL_2D
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_L2_POOL_2D
     AddL2Pool2D();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LEAKY_RELU
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LEAKY_RELU
     AddLeakyRelu();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LESS
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LESS
     AddLess();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LESS_EQUAL
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LESS_EQUAL
     AddLessEqual();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LOG
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LOG
     AddLog();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LOGICAL_AND
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LOGICAL_AND
     AddLogicalAnd();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LOGICAL_NOT
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LOGICAL_NOT
     AddLogicalNot();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LOGICAL_OR
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LOGICAL_OR
     AddLogicalOr();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LOGISTIC
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LOGISTIC
     AddLogistic();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_LOG_SOFTMAX
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_LOG_SOFTMAX
     AddLogSoftmax();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_MAX_POOL_2D
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_MAX_POOL_2D
     AddMaxPool2D();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_MAXIMUM
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_MAXIMUM
     AddMaximum();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_MEAN
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_MEAN
     AddMean();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_MINIMUM
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_MINIMUM
     AddMinimum();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_MIRROR_PAD
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_MIRROR_PAD
     AddMirrorPad();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_MUL
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_MUL
     AddMul();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_NEG
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_NEG
     AddNeg();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_NOT_EQUAL
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_NOT_EQUAL
     AddNotEqual();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ONE_HOT
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ONE_HOT
     AddPack();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_PAD
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_PAD
     AddPad();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_PADV2
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_PADV2
     AddPadV2();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_PRELU
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_PRELU
     AddPrelu();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_QUANTIZE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_QUANTIZE
     AddQuantize();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_READ_VARIABLE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_READ_VARIABLE
     AddReadVariable();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_REDUCE_ANY
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_REDUCE_ANY
     AddReduceMax();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_RELU
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_RELU
     AddRelu();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_RELU6
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_RELU6
     AddRelu6();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_RESHAPE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_RESHAPE
     AddReshape();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_RESIZE_BILINEAR
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_RESIZE_BILINEAR
     AddResizeBilinear();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_RESIZE_NEAREST_NEIGHBOR
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_RESIZE_NEAREST_NEIGHBOR
     AddResizeNearestNeighbor();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ROUND
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ROUND
     AddRound();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_RSQRT
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_RSQRT
     AddRsqrt();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SELECT_V2
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SELECT_V2
     AddSelectV2();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SHAPE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SHAPE
     AddShape();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SIN
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SIN
     AddSin();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SLICE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SLICE
     AddSlice();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SOFTMAX
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SOFTMAX
     AddSoftmax();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SPACE_TO_BATCH_ND
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SPACE_TO_BATCH_ND
     AddSpaceToBatchNd();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SPACE_TO_DEPTH
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SPACE_TO_DEPTH
     AddSpaceToDepth();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SPLIT
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SPLIT
     AddSplit();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SPLIT_V
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SPLIT_V
     AddSplitV();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SQRT
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SQRT
     AddSqrt();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SQUARE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SQUARE
     AddSquare();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SQUARED_DIFFERENCE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SQUARED_DIFFERENCE
     AddSquaredDifference();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SQUEEZE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SQUEEZE
     AddSqueeze();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_STRIDED_SLICE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_STRIDED_SLICE
     AddStridedSlice();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SUB
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SUB
     AddSub();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_SUM
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_SUM
     AddSum();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_SVDF
+#endif
+#ifdef CONFIG_EL_TFLITE_SVDF
     AddSvdf();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_TANH
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_TANH
     AddTanh();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_TRANSPOSE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_TRANSPOSE
     AddTranspose();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_TRANSPOSE_CONV
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_TRANSPOSE_CONV
     AddTransposeConv();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_UNIDIRECTIONAL_SEQUENCE_LSTM
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_UNIDIRECTIONAL_SEQUENCE_LSTM
     AddUnidirectionalSequenceLSTM();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_UNPACK
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_UNPACK
     AddUnpack();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_VARHANDLE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_VARHANDLE
     AddVarHandle();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_WHILE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_WHILE
     AddWhile();
-    #endif
-    #ifdef CONFIG_EL_TFLITE_OP_ZEROS_LIKE
+#endif
+#ifdef CONFIG_EL_TFLITE_OP_ZEROS_LIKE
     AddZerosLike();
-    #endif
+#endif
 }
 
 }  // namespace tflite
 
 namespace edgelab {
-    namespace inference {
+namespace inference {
 
 tflite::OpsResolver TFLiteEngine::resolver;
 
@@ -333,9 +332,9 @@ TFLiteEngine::TFLiteEngine() {
     model            = nullptr;
     memory_pool.pool = nullptr;
     memory_pool.size = 0;
-    #ifdef CONFIG_EL_FILESYSTEM
+#ifdef CONFIG_EL_FILESYSTEM
     model_file = nullptr;
-    #endif
+#endif
 }
 
 TFLiteEngine::~TFLiteEngine() {
@@ -347,12 +346,12 @@ TFLiteEngine::~TFLiteEngine() {
         delete[] static_cast<uint8_t*>(memory_pool.pool);
         memory_pool.pool = nullptr;
     }
-    #ifdef CONFIG_EL_FILESYSTEM
+#ifdef CONFIG_EL_FILESYSTEM
     if (model_file != nullptr) {
         delete model_file;
         model_file = nullptr;
     }
-    #endif
+#endif
 }
 
 EL_STA TFLiteEngine::init() { return EL_OK; }
@@ -510,7 +509,7 @@ el_quant_param_t TFLiteEngine::get_output_quant_param(size_t index) {
     return quant_param;
 }
 
-    #ifdef CONFIG_EL_FILESYSTEM
+#ifdef CONFIG_EL_FILESYSTEM
 EL_STA TFLiteEngine::load_model(const char* model_path) {
     EL_STA        ret  = EL_OK;
     size_t        size = 0;
@@ -534,8 +533,8 @@ EL_STA TFLiteEngine::load_model(const char* model_path) {
 
     return ret;
 }
-    #endif /* CONFIG_EL_FILESYSTEM */
-    }
+#endif /* CONFIG_EL_FILESYSTEM */
+}  // namespace inference
 }  // namespace edgelab
 
-#endif /* CONFIG_EL_TFLITE */
+// #endif /* CONFIG_EL_TFLITE */
