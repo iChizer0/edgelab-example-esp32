@@ -6,6 +6,7 @@
 #include "freertos/task.h"
 #include "meter.h"
 #include "yolo_model_data.h"
+// #include "fomo_model_data.h"
 
 #define kTensorArenaSize (1024 * 1024)
 
@@ -32,7 +33,9 @@ extern "C" void app_main(void)
     uint8_t *tensor_arena = (uint8_t *)heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     engine->init(tensor_arena, kTensorArenaSize);
     engine->load_model(g_yolo_model_data, g_yolo_model_data_len);
-    auto *algorithm = new Yolo(*engine);
+    auto* algorithm = new Yolo(*engine);
+    // engine->load_model(g_fomo_model_data, g_fomo_model_data_len);
+    // auto* algorithm = new Fomo(*engine);
 
     algorithm->init();
     // camera->start_stream();
@@ -56,10 +59,7 @@ extern "C" void app_main(void)
             el_draw_rect(&img, x, y, box->w, box->h, color[i++ % 5], 4);
         }
         // EL_LOGI("draw done");
-        EL_LOGI("preprocess: %d, run: %d, postprocess: %d",
-                preprocess_time,
-                run_time,
-                postprocess_time);
+        el_printf("preprocess: %d, run: %d, postprocess: %d\n", preprocess_time, run_time, postprocess_time);
         display->show(&img);
         camera->stop_stream();
 

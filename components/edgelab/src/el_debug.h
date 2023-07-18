@@ -43,6 +43,7 @@ extern "C" {
 // 2 : print warning
 // 3 : print info
 // 4 : print verbose
+// #define CONFIG_EL_DEBUG 0
 #if CONFIG_EL_DEBUG
 
     #if CONFIG_EL_DEBUG_COLOR

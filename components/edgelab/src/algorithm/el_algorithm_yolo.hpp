@@ -48,6 +48,8 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputTy
     float                         _h_scale;
     uint8_t                       _nms_threshold;
 
+    InputType                     _img;
+
    protected:
     EL_STA preprocess() override;
     EL_STA postprocess() override;
@@ -62,7 +64,7 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputTy
     };
 
    public:
-    Yolo(InferenceEngine& engine, int8_t score_threshold = 50, int8_t nms_threshold = 55);
+    Yolo(InferenceEngine& engine, int8_t score_threshold = 30, int8_t nms_threshold = 30);
     ~Yolo();
 
     EL_STA init() override;
@@ -96,6 +98,20 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::init() {
     _output_shape = this->__p_engine->get_output_shape(0);
     _input_quant  = this->__p_engine->get_input_quant_param(0);
     _output_quant = this->__p_engine->get_output_quant_param(0);
+
+    _img.data   = static_cast<uint8_t*>(this->__p_engine->get_input(0));
+    _img.width  = _input_shape.dims[1];
+    _img.height = _input_shape.dims[2];
+    _img.size   = _img.width * _img.height * _input_shape.dims[3];
+
+    if (_input_shape.dims[3] == 3) {
+        _img.format = EL_PIXEL_FORMAT_RGB888;
+    } else if (_input_shape.dims[3] == 1) {
+        _img.format = EL_PIXEL_FORMAT_GRAYSCALE;
+    } else {
+        return EL_EINVAL;
+    }
+
     return EL_OK;
 }
 
@@ -108,33 +124,21 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::deinit() {
 template <typename InferenceEngine, typename InputType, typename OutputType>
 EL_STA Yolo<InferenceEngine, InputType, OutputType>::preprocess() {
     EL_STA     ret   = EL_OK;
-    InputType  img   = InputType();
     InputType* i_img = this->__p_input;
 
-    img.data   = static_cast<uint8_t*>(this->__p_engine->get_input(0));
-    img.width  = _input_shape.dims[1];
-    img.height = _input_shape.dims[2];
-    img.size   = img.width * img.height * _input_shape.dims[3];
-    if (_input_shape.dims[3] == 3) {
-        img.format = EL_PIXEL_FORMAT_RGB888;
-    } else if (_input_shape.dims[3] == 1) {
-        img.format = EL_PIXEL_FORMAT_GRAYSCALE;
-    } else {
-        return EL_EINVAL;
-    }
-
     // convert image
-    ret = el_img_convert(i_img, &img);
+    ret = rgb_to_rgb(i_img, &_img);
+
     if (ret != EL_OK) {
         return ret;
     }
 
-    for (int i = 0; i < img.size; i++) {
-        img.data[i] -= 128;
+    for (size_t i = _img.size - 1 ; i--;) {
+        _img.data[i] -= 128;
     }
 
-    _w_scale = static_cast<float>(i_img->width) / static_cast<float>(img.width);
-    _h_scale = static_cast<float>(i_img->height) / static_cast<float>(img.height);
+    _w_scale = static_cast<float>(i_img->width) / static_cast<float>(_img.width);
+    _h_scale = static_cast<float>(i_img->height) / static_cast<float>(_img.height);
 
     return EL_OK;
 }
@@ -161,7 +165,7 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
         float  score = static_cast<float>(data[idx + INDEX_S] - zero_point) * scale;
         score        = rescale ? score * 100 : score;
         if (score > this->__score_threshold) {
-            static OutputType box;
+            OutputType box;
             box.score  = score;
             box.target = 0;
             int8_t max = -128;
@@ -180,10 +184,10 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
             float h = static_cast<float>(data[idx + INDEX_H] - zero_point) * scale;
 
             if (rescale) {
-                box.x = EL_CLIP(static_cast<uint16_t>(x * width), 0, width);
-                box.y = EL_CLIP(static_cast<uint16_t>(y * height), 0, height);
-                box.w = EL_CLIP(static_cast<uint16_t>(w * width), 0, width);
-                box.h = EL_CLIP(static_cast<uint16_t>(h * height), 0, height);
+                box.x = EL_CLIP(static_cast<uint16_t>(x * _w_scale), 0, width);
+                box.y = EL_CLIP(static_cast<uint16_t>(y * _h_scale), 0, height);
+                box.w = EL_CLIP(static_cast<uint16_t>(w * _w_scale), 0, width);
+                box.h = EL_CLIP(static_cast<uint16_t>(h * _h_scale), 0, height);
             } else {
                 box.x = EL_CLIP(static_cast<uint16_t>(x), 0, width);
                 box.y = EL_CLIP(static_cast<uint16_t>(y), 0, height);
@@ -198,17 +202,17 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
         }
     }
 
-    el_nms(_results, _nms_threshold, this->__score_threshold);
+    el_nms(_results, _nms_threshold, this->__score_threshold, false, true);
 
-    // for (auto &box : _results) {
-    //     LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
-    //                box.x,
-    //                box.y,
-    //                box.w,
-    //                box.h,
-    //                box.score,
-    //                box.target);
-    // }
+    for (auto &box : _results) {
+        LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
+                   box.x,
+                   box.y,
+                   box.w,
+                   box.h,
+                   box.score,
+                   box.target);
+    }
     _results.sort([](const OutputType& a, const OutputType& b) { return a.x < b.x; });
 
     for (auto& box : _results) {

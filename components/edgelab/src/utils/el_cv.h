@@ -91,6 +91,8 @@ void el_draw_box(el_img_t* img, const el_box_t* box, bool show_text = false);
 void el_draw_rect(
   el_img_t* img, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint32_t color, uint16_t thickness = 1);
 
+EL_STA rgb_to_rgb(const el_img_t* src, el_img_t* dst);
+
 #ifdef __cplusplus
 }  // namespace edgelab
 }

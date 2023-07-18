@@ -31,7 +31,7 @@
 
 /* debug config check */
 #ifndef CONFIG_EL_DEBUG
-    #define CONFIG_EL_DEBUG 0
+    #define CONFIG_EL_DEBUG 4
 #endif
 
 /* porting config check */

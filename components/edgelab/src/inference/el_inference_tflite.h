@@ -35,6 +35,8 @@
 #include "tensorflow/lite/micro/system_setup.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
+#define CONFIG_EL_TFLITE_OP_DEPTHWISE_CONV_2D
+
 namespace tflite {
 
 enum OpsCount : unsigned int {

@@ -118,6 +118,11 @@ EL_ATTR_WEAK EL_STA rgb_to_rgb(const el_img_t* src, el_img_t* dst) {
                 g = src->data[init_index * 3 + 1];
                 b = src->data[init_index * 3 + 2];
             } else if (src->format == EL_PIXEL_FORMAT_RGB565) {
+                // r = (int((src->data[init_index * 2]) >> 3) * 255 + 15) / 32;
+                // g = (int(((src->data[init_index * 2] & 0b00000111) << 3) |
+                //          ((src->data[init_index * 2 + 1] & 0b11100000) >> 5)) * 255 + 31) / 63;
+                // b = (int((src->data[init_index * 2 + 1]) << 3) * 255 + 15) / 31;
+
                 r = RGB565_TO_RGB888_LOOKUP_TABLE_5[((src->data[init_index * 2] & 0xF8) >> 3)];
                 g = RGB565_TO_RGB888_LOOKUP_TABLE_6[((src->data[init_index * 2] & 0x07) << 3) |
                                                     ((src->data[init_index * 2 + 1] & 0xE0) >> 5)];
