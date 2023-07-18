@@ -26,17 +26,18 @@
 #ifndef _EL_ALGORITHM_H_
 #define _EL_ALGORITHM_H_
 
-// #ifdef CONFIG_EL_ALGORITHM_YOLO
-#include "el_algorithm_yolo.hpp"
-// #endif
+#include "el_inference_base.h"
+#include "el_types.h"
+
+#ifdef CONFIG_EL_ALGORITHM_YOLO
+    #include "el_algorithm_yolo.hpp"
+#endif
 
 namespace edgelab {
 
-// #ifdef CONFIG_EL_ALGORITHM_YOLO
-
-// using Yolo = edgelab::algorithm::Yolo<edgelab::inference::BaseEngine, el_img_t, el_box_t>;
-
-// #endif
+#ifdef CONFIG_EL_ALGORITHM_YOLO
+using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::BaseEngine, el_img_t, el_box_t>;
+#endif
 
 }  // namespace edgelab
 

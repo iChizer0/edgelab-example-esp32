@@ -26,9 +26,9 @@
 #ifndef _EDGELAB_H
 #define _EDGELAB_H
 
-#include "el_algorithm_base.hpp"
-// #include "el_algorithm.h"
-#include "el_algorithm_yolo.hpp"
+// #include "el_algorithm_base.hpp"
+#include "el_algorithm.h"
+// #include "el_algorithm_yolo.hpp"
 #include "el_base64.h"
 #include "el_camera.h"
 #include "el_common.h"

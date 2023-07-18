@@ -28,7 +28,6 @@
 
 #include <forward_list>
 
-#include "el_inference_base.h"
 #include "el_types.h"
 
 namespace edgelab {

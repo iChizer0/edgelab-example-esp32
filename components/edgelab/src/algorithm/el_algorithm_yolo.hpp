@@ -40,7 +40,6 @@ template <typename InferenceEngine, typename InputType, typename OutputType>
 class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputType, OutputType> {
    private:
     std::forward_list<OutputType> _results;
-    size_t                        _result_size;
     el_shape_t                    _input_shape;
     el_shape_t                    _output_shape;
     el_quant_param_t              _input_quant;
@@ -199,17 +198,16 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
 
     el_nms(_results, _nms_threshold, this->__score_threshold);
 
-    // for (auto &box : this->results) {
-    //     LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
-    //                box.x,
-    //                box.y,
-    //                box.w,
-    //                box.h,
-    //                box.score,
-    //                box.target);
-    // }
+    for (auto &box : _results) {
+        LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
+                   box.x,
+                   box.y,
+                   box.w,
+                   box.h,
+                   box.score,
+                   box.target);
+    }
     _results.sort([](const OutputType& a, const OutputType& b) { return a.x < b.x; });
-    _result_size = std::distance(_results.begin(), _results.end());
 
     for (auto& box : _results) {
         box.x = box.x * _w_scale;
@@ -226,11 +224,6 @@ const std::forward_list<OutputType>& Yolo<InferenceEngine, InputType, OutputType
     return _results;
 }
 
-// template <typename InferenceEngine, typename InputType, typename OutputType>
-// size_t Yolo<InferenceEngine, InputType, OutputType>::get_result_size() {
-//     return _result_size;
-// }
-
 template <typename InferenceEngine, typename InputType, typename OutputType>
 EL_STA Yolo<InferenceEngine, InputType, OutputType>::set_nms_threshold(uint8_t threshold) {
     _nms_threshold = threshold;
@@ -245,4 +238,4 @@ uint8_t Yolo<InferenceEngine, InputType, OutputType>::get_nms_threshold() const 
 }  // namespace algorithm
 }  // namespace edgelab
 
-#endif /* _EL_ALGO_YOLO_H_ */
+#endif

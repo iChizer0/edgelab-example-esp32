@@ -17,7 +17,7 @@ uint16_t color[] = {
     0xFFFF,
 };
 
-using Yolo = edgelab::algorithm::Yolo<edgelab::inference::BaseEngine, el_img_t, el_box_t>;
+// using Yolo = edgelab::algorithm::Yolo<edgelab::inference::BaseEngine, el_img_t, el_box_t>;
 
 extern "C" void app_main(void)
 {
