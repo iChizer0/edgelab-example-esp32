@@ -157,25 +157,27 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
 
     // parse output
     for (int i = 0; i < num_record; i++) {
-        float score = static_cast<float>(data[i * num_element + INDEX_S] - zero_point) * scale;
-        score       = rescale ? score * 100 : score;
+        size_t idx   = i * num_element;
+        float  score = static_cast<float>(data[idx + INDEX_S] - zero_point) * scale;
+        score        = rescale ? score * 100 : score;
         if (score > this->__score_threshold) {
-            OutputType box;
-            int8_t     max = -128;
-            box.score      = score;
-            box.target     = 0;
+            static OutputType box;
+            box.score  = score;
+            box.target = 0;
+            int8_t max = -128;
+
             // get box target
             for (uint16_t j = 0; j < num_class; j++) {
-                if (max < data[i * num_element + INDEX_T + j]) {
-                    max        = data[i * num_element + INDEX_T + j];
+                if (max < data[idx + INDEX_T + j]) {
+                    max        = data[idx + INDEX_T + j];
                     box.target = j;
                 }
             }
             // get box position
-            float x = static_cast<float>(data[i * num_element + INDEX_X] - zero_point) * scale;
-            float y = static_cast<float>(data[i * num_element + INDEX_Y] - zero_point) * scale;
-            float w = static_cast<float>(data[i * num_element + INDEX_W] - zero_point) * scale;
-            float h = static_cast<float>(data[i * num_element + INDEX_H] - zero_point) * scale;
+            float x = static_cast<float>(data[idx + INDEX_X] - zero_point) * scale;
+            float y = static_cast<float>(data[idx + INDEX_Y] - zero_point) * scale;
+            float w = static_cast<float>(data[idx + INDEX_W] - zero_point) * scale;
+            float h = static_cast<float>(data[idx + INDEX_H] - zero_point) * scale;
 
             if (rescale) {
                 box.x = EL_CLIP(static_cast<uint16_t>(x * width), 0, width);
@@ -198,15 +200,15 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
 
     el_nms(_results, _nms_threshold, this->__score_threshold);
 
-    for (auto &box : _results) {
-        LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
-                   box.x,
-                   box.y,
-                   box.w,
-                   box.h,
-                   box.score,
-                   box.target);
-    }
+    // for (auto &box : _results) {
+    //     LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
+    //                box.x,
+    //                box.y,
+    //                box.w,
+    //                box.h,
+    //                box.score,
+    //                box.target);
+    // }
     _results.sort([](const OutputType& a, const OutputType& b) { return a.x < b.x; });
 
     for (auto& box : _results) {
