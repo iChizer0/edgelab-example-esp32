@@ -29,6 +29,7 @@
 #include <forward_list>
 
 #include "el_types.h"
+#include "el_common.h"
 
 namespace edgelab {
 namespace algorithm {

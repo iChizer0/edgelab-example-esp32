@@ -204,7 +204,7 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
 
     el_nms(_results, _nms_threshold, this->__score_threshold, false, true);
 
-    for (auto &box : _results) {
+    for (const auto &box : _results) {
         LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
                    box.x,
                    box.y,

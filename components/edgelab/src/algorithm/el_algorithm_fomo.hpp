@@ -27,7 +27,6 @@
 #define _EL_ALGORITHM_FOMO_H_
 
 #include <forward_list>
-#include <utility>
 
 #include "el_algorithm_base.hpp"
 #include "el_cv.h"
@@ -55,7 +54,7 @@ class Fomo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputTy
     EL_STA postprocess() override;
 
    public:
-    Fomo(InferenceEngine& engine, int8_t score_threshold = 30);
+    Fomo(InferenceEngine& engine, int8_t score_threshold = 80);
     ~Fomo();
 
     EL_STA init() override;
@@ -135,22 +134,16 @@ EL_STA Fomo<InferenceEngine, InputType, OutputType>::postprocess() {
 
     // get output
     int8_t*  data       = static_cast<int8_t*>(this->__p_engine->get_output(0));
-    uint16_t width      = this->__p_input.width;
-    uint16_t height     = this->__p_input.hight;
+    uint32_t width      = this->__p_input->width;
+    uint32_t height     = this->__p_input->height;
     float    scale      = _output_quant.scale;
     int32_t  zero_point = _output_quant.zero_point;
-    auto     pred_h     = _output_shape.dims[1]; 
-    auto     pred_w     = _output_shape.dims[2]; 
-    auto     pred_t     = _output_shape.dims[3]; 
+    auto     pred_h     = _output_shape.dims[1];
+    auto     pred_w     = _output_shape.dims[2];
+    auto     pred_t     = _output_shape.dims[3];
 
     uint16_t bw = width / pred_w;
     uint16_t bh = height / pred_h;
-
-    // // uint32_t num_record  = _output_shape.dims[1];
-    // // uint32_t num_element = _output_shape.dims[2];
-    // // uint16_t num_class   = num_element - 5;
-
-    // bool rescale = scale < 0.1 ? true : false;
 
     for (int i = 0; i < pred_h; ++i) {
         for (int j = 0; j < pred_w; ++j) {
@@ -164,74 +157,20 @@ EL_STA Fomo<InferenceEngine, InputType, OutputType>::postprocess() {
                 }
             }
             if (max_conf > this->__score_threshold && max_target != 0) {
-                OutputType box{.x      = static_cast<uint16_t>(j * bw + bw / 2),
-                               .y      = static_cast<uint16_t>(i * bh + bh / 2),
-                               .w      = bw,
-                               .h      = bh,
-                               .score  = max_conf,
-                               .target = max_target};
-                _results.emplace_front(std::move(box));
+                _results.emplace_front(OutputType{.x      = static_cast<uint16_t>(j * bw + bw / 2),
+                                                  .y      = static_cast<uint16_t>(i * bh + bh / 2),
+                                                  .w      = bw,
+                                                  .h      = bh,
+                                                  .score  = max_conf,
+                                                  .target = max_target});
             }
         }
     }
-
-    // parse output
-    // for (uint32_t i = 0; i < num_record; ++i) {
-    //     size_t idx   = i * num_element;
-    //     float  score = static_cast<float>(data[idx + INDEX_S] - zero_point) * scale;
-    //     score        = rescale ? score * 100 : score;
-
-    //     if (score > this->__score_threshold) {
-    //         OutputType box;
-    //         box.score  = score;
-    //         box.target = 0;
-    //         int8_t max = -128;
-
-    //         // get box target
-    //         for (uint16_t j = 0; j < num_class; ++j) {
-    //             if (max < data[idx + INDEX_T + j]) {
-    //                 max        = data[idx + INDEX_T + j];
-    //                 box.target = j;
-    //             }
-    //         }
-    //         // get box position
-    //         float x = static_cast<float>(data[idx + INDEX_X] - zero_point) * scale;
-    //         float y = static_cast<float>(data[idx + INDEX_Y] - zero_point) * scale;
-    //         float w = static_cast<float>(data[idx + INDEX_W] - zero_point) * scale;
-    //         float h = static_cast<float>(data[idx + INDEX_H] - zero_point) * scale;
-
-    //         if (rescale) {
-    //             box.x = EL_CLIP(static_cast<uint16_t>(x * width), 0, width);
-    //             box.y = EL_CLIP(static_cast<uint16_t>(y * height), 0, height);
-    //             box.w = EL_CLIP(static_cast<uint16_t>(w * width), 0, width);
-    //             box.h = EL_CLIP(static_cast<uint16_t>(h * height), 0, height);
-    //         } else {
-    //             box.x = EL_CLIP(static_cast<uint16_t>(x), 0, width);
-    //             box.y = EL_CLIP(static_cast<uint16_t>(y), 0, height);
-    //             box.w = EL_CLIP(static_cast<uint16_t>(w), 0, width);
-    //             box.h = EL_CLIP(static_cast<uint16_t>(h), 0, height);
-    //         }
-
-    //         box.w = box.x + box.w > width ? width - box.x : box.w;
-    //         box.h = box.y + box.h > height ? height - box.y : box.h;
-
-    //         _results.emplace_front(box);
-    //     }
-    // }
-
-    // el_nms(_results, _nms_threshold, this->__score_threshold, false, true);
 
     for (auto& box : _results) {
         LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d", box.x, box.y, box.w, box.h, box.score, box.target);
     }
     _results.sort([](const OutputType& a, const OutputType& b) { return a.x < b.x; });
-
-    // for (auto& box : _results) {
-    //     box.x = box.x * _w_scale;
-    //     box.y = box.y * _h_scale;
-    //     box.w = box.w * _w_scale;
-    //     box.h = box.h * _h_scale;
-    // }
 
     return EL_OK;
 }

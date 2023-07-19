@@ -113,53 +113,48 @@ EL_ATTR_WEAK EL_STA rgb_to_rgb(const el_img_t* src, el_img_t* dst) {
             index      = i * dst->width + j;
             init_index = tmph * src->width + tmpw;  // ou
 
-            if (src->format == EL_PIXEL_FORMAT_RGB888) {
-                r = src->data[init_index * 3 + 0];
-                g = src->data[init_index * 3 + 1];
-                b = src->data[init_index * 3 + 2];
-            } else if (src->format == EL_PIXEL_FORMAT_RGB565) {
-                // r = (int((src->data[init_index * 2]) >> 3) * 255 + 15) / 32;
-                // g = (int(((src->data[init_index * 2] & 0b00000111) << 3) |
-                //          ((src->data[init_index * 2 + 1] & 0b11100000) >> 5)) * 255 + 31) / 63;
-                // b = (int((src->data[init_index * 2 + 1]) << 3) * 255 + 15) / 31;
-
+            // if (src->format == EL_PIXEL_FORMAT_RGB888) {
+            //     r = src->data[init_index * 3 + 0];
+            //     g = src->data[init_index * 3 + 1];
+            //     b = src->data[init_index * 3 + 2];
+            // } else if (src->format == EL_PIXEL_FORMAT_RGB565) {
                 r = RGB565_TO_RGB888_LOOKUP_TABLE_5[((src->data[init_index * 2] & 0xF8) >> 3)];
                 g = RGB565_TO_RGB888_LOOKUP_TABLE_6[((src->data[init_index * 2] & 0x07) << 3) |
                                                     ((src->data[init_index * 2 + 1] & 0xE0) >> 5)];
                 b = RGB565_TO_RGB888_LOOKUP_TABLE_5[(src->data[init_index * 2 + 1] & 0x1F)];
-            } else if (src->format == EL_PIXEL_FORMAT_GRAYSCALE) {
-                r = src->data[init_index];
-                g = src->data[init_index];
-                b = src->data[init_index];
-            }
+            // } else if (src->format == EL_PIXEL_FORMAT_GRAYSCALE) {
+            //     r = src->data[init_index];
+            //     g = src->data[init_index];
+            //     b = src->data[init_index];
+            // }
 
-            switch (dst->rotate) {
-            case EL_PIXEL_ROTATE_90:
-                index = (index % dst->width) * (dst->height) + (dst->height - 1 - index / dst->width);
-                break;
-            case EL_PIXEL_ROTATE_180:
-                index = (dst->width - 1 - index % dst->width) + (dst->height - 1 - index / dst->width) * (dst->width);
-                break;
-            case EL_PIXEL_ROTATE_270:
-                index = (dst->width - 1 - index % dst->width) * (dst->height) + index / dst->width;
-                break;
+            // switch (dst->rotate) {
+            // case EL_PIXEL_ROTATE_90:
+            //     index = (index % dst->width) * (dst->height) + (dst->height - 1 - index / dst->width);
+            //     break;
+            // case EL_PIXEL_ROTATE_180:
+            //     index = (dst->width - 1 - index % dst->width) + (dst->height - 1 - index / dst->width) * (dst->width);
+            //     break;
+            // case EL_PIXEL_ROTATE_270:
+            //     index = (dst->width - 1 - index % dst->width) * (dst->height) + index / dst->width;
+            //     break;
 
-            default:
-                break;
-            }
+            // default:
+            //     break;
+            // }
 
-            if (dst->format == EL_PIXEL_FORMAT_GRAYSCALE) {
-                // rgb to gray
-                uint8_t gray     = (r * 299 + g * 587 + b * 114) / 1000;
-                dst->data[index] = gray;
-            } else if (dst->format == EL_PIXEL_FORMAT_RGB565) {
-                dst->data[index * 2 + 0] = (r & 0xF8) | (g >> 5);
-                dst->data[index * 2 + 1] = ((g << 3) & 0xE0) | (b >> 3);
-            } else if (dst->format == EL_PIXEL_FORMAT_RGB888) {
+            // if (dst->format == EL_PIXEL_FORMAT_GRAYSCALE) {
+            //     // rgb to gray
+            //     uint8_t gray     = (r * 299 + g * 587 + b * 114) / 1000;
+            //     dst->data[index] = gray;
+            // } else if (dst->format == EL_PIXEL_FORMAT_RGB565) {
+            //     dst->data[index * 2 + 0] = (r & 0xF8) | (g >> 5);
+            //     dst->data[index * 2 + 1] = ((g << 3) & 0xE0) | (b >> 3);
+            // } else if (dst->format == EL_PIXEL_FORMAT_RGB888) {
                 dst->data[index * 3 + 0] = r;
                 dst->data[index * 3 + 1] = g;
                 dst->data[index * 3 + 2] = b;
-            }
+            // }
         }
     }
 
