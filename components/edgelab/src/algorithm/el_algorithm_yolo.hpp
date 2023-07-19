@@ -27,6 +27,7 @@
 #define _EL_ALGORITHM_YOLO_H_
 
 #include <forward_list>
+#include <utility>
 
 #include "el_algorithm_base.hpp"
 #include "el_cv.h"
@@ -36,23 +37,18 @@
 namespace edgelab {
 namespace algorithm {
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputType, OutputType> {
+template <typename InferenceEngine>
+class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, el_img_t, el_box_t> {
    private:
-    std::forward_list<OutputType> _results;
-    el_shape_t                    _input_shape;
-    el_shape_t                    _output_shape;
-    el_quant_param_t              _input_quant;
-    el_quant_param_t              _output_quant;
-    float                         _w_scale;
-    float                         _h_scale;
-    uint8_t                       _nms_threshold;
-
-    InputType                     _img;
-
-   protected:
-    EL_STA preprocess() override;
-    EL_STA postprocess() override;
+    std::forward_list<el_box_t> _results;
+    el_img_t                    _input_img;
+    el_shape_t                  _input_shape;
+    el_shape_t                  _output_shape;
+    el_quant_param_t            _input_quant;
+    el_quant_param_t            _output_quant;
+    float                       _w_scale;
+    float                       _h_scale;
+    uint8_t                     _nms_threshold;
 
     enum {
         INDEX_X = 0,
@@ -63,8 +59,12 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputTy
         INDEX_T = 5,
     };
 
+   protected:
+    EL_STA preprocess() override;
+    EL_STA postprocess() override;
+
    public:
-    Yolo(InferenceEngine& engine, int8_t score_threshold = 30, int8_t nms_threshold = 30);
+    Yolo(InferenceEngine& engine, int8_t score_threshold = 50, int8_t nms_threshold = 45);
     ~Yolo();
 
     EL_STA init() override;
@@ -73,41 +73,36 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputTy
     EL_STA  set_nms_threshold(uint8_t threshold);
     uint8_t get_nms_threshold() const;
 
-    const std::forward_list<OutputType>& get_results() override;
+    const std::forward_list<el_box_t>& get_results() override;
 };
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-Yolo<InferenceEngine, InputType, OutputType>::Yolo(InferenceEngine& engine,
-                                                   int8_t           score_threshold,
-                                                   int8_t           nms_threshold)
-    : edgelab::algorithm::base::Algorithm<InferenceEngine, InputType, OutputType>(engine, score_threshold),
+template <typename InferenceEngine>
+Yolo<InferenceEngine>::Yolo(InferenceEngine& engine, int8_t score_threshold, int8_t nms_threshold)
+    : edgelab::algorithm::base::Algorithm<InferenceEngine, el_img_t, el_box_t>(engine, score_threshold),
       _nms_threshold(nms_threshold) {
-    _w_scale = 1.0f;
-    _h_scale = 1.0f;
+    _w_scale = 1.f;
+    _h_scale = 1.f;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-Yolo<InferenceEngine, InputType, OutputType>::~Yolo() {
-    deinit();
-}
+template <typename InferenceEngine> Yolo<InferenceEngine>::~Yolo() { deinit(); }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Yolo<InferenceEngine, InputType, OutputType>::init() {
+template <typename InferenceEngine> EL_STA Yolo<InferenceEngine>::init() {
     _results.clear();
     _input_shape  = this->__p_engine->get_input_shape(0);
     _output_shape = this->__p_engine->get_output_shape(0);
     _input_quant  = this->__p_engine->get_input_quant_param(0);
     _output_quant = this->__p_engine->get_output_quant_param(0);
 
-    _img.data   = static_cast<uint8_t*>(this->__p_engine->get_input(0));
-    _img.width  = _input_shape.dims[1];
-    _img.height = _input_shape.dims[2];
-    _img.size   = _img.width * _img.height * _input_shape.dims[3];
+    _input_img.data   = static_cast<decltype(el_img_t::data)>(this->__p_engine->get_input(0));
+    _input_img.width  = static_cast<decltype(el_img_t::width)>(_input_shape.dims[1]);
+    _input_img.height = static_cast<decltype(el_img_t::height)>(_input_shape.dims[2]);
+    _input_img.size =
+      static_cast<decltype(el_img_t::size)>(_input_img.width * _input_img.height * _input_shape.dims[3]);
 
     if (_input_shape.dims[3] == 3) {
-        _img.format = EL_PIXEL_FORMAT_RGB888;
+        _input_img.format = EL_PIXEL_FORMAT_RGB888;
     } else if (_input_shape.dims[3] == 1) {
-        _img.format = EL_PIXEL_FORMAT_GRAYSCALE;
+        _input_img.format = EL_PIXEL_FORMAT_GRAYSCALE;
     } else {
         return EL_EINVAL;
     }
@@ -115,131 +110,121 @@ EL_STA Yolo<InferenceEngine, InputType, OutputType>::init() {
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Yolo<InferenceEngine, InputType, OutputType>::deinit() {
+template <typename InferenceEngine> EL_STA Yolo<InferenceEngine>::deinit() {
     _results.clear();
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Yolo<InferenceEngine, InputType, OutputType>::preprocess() {
-    EL_STA     ret   = EL_OK;
-    InputType* i_img = this->__p_input;
+template <typename InferenceEngine> EL_STA Yolo<InferenceEngine>::preprocess() {
+    EL_STA    ret   = EL_OK;
+    el_img_t* i_img = this->__p_input;
 
     // convert image
-    ret = rgb_to_rgb(i_img, &_img);
+    ret = rgb_to_rgb(i_img, &_input_img);
 
     if (ret != EL_OK) {
         return ret;
     }
 
-    for (size_t i = _img.size - 1 ; i--;) {
-        _img.data[i] -= 128;
+    for (decltype(el_img_t::size) i = 0; i < _input_img.size; ++i) {
+        _input_img.data[i] -= 128;  // uint8_t - int -> int8_t (narrowing)
     }
 
-    _w_scale = static_cast<float>(i_img->width) / static_cast<float>(_img.width);
-    _h_scale = static_cast<float>(i_img->height) / static_cast<float>(_img.height);
+    _w_scale = static_cast<float>(i_img->width) / static_cast<float>(_input_img.width);
+    _h_scale = static_cast<float>(i_img->height) / static_cast<float>(_input_img.height);
 
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Yolo<InferenceEngine, InputType, OutputType>::postprocess() {
+template <typename InferenceEngine> EL_STA Yolo<InferenceEngine>::postprocess() {
     _results.clear();
 
     // get output
-    int8_t*  data        = static_cast<int8_t*>(this->__p_engine->get_output(0));
-    uint16_t width       = _input_shape.dims[1];
-    uint16_t height      = _input_shape.dims[2];
-    float    scale       = _output_quant.scale;
-    int32_t  zero_point  = _output_quant.zero_point;
-    uint32_t num_record  = _output_shape.dims[1];
-    uint32_t num_element = _output_shape.dims[2];
-    uint32_t num_class   = num_element - 5;
-
-    bool rescale = scale < 0.1 ? true : false;
+    auto* data        = static_cast<int8_t*>(this->__p_engine->get_output(0));
+    auto  width       = static_cast<uint16_t>(_input_shape.dims[1]);
+    auto  height      = static_cast<uint16_t>(_input_shape.dims[2]);
+    auto  scale       = float{_output_quant.scale};
+    auto  rescale     = bool{scale < 0.1f ? true : false};
+    auto  zero_point  = int32_t{_output_quant.zero_point};
+    auto  num_record  = static_cast<size_t>(_output_shape.dims[1]);
+    auto  num_element = static_cast<size_t>(_output_shape.dims[2]);
+    auto  num_class   = static_cast<uint8_t>(num_element - 5);
 
     // parse output
-    for (int i = 0; i < num_record; i++) {
-        size_t idx   = i * num_element;
-        float  score = static_cast<float>(data[idx + INDEX_S] - zero_point) * scale;
-        score        = rescale ? score * 100 : score;
+    for (decltype(num_record) i = 0; i < num_record; ++i) {
+        auto idx = i * num_element;
+        auto score =
+          static_cast<decltype(scale)>(data[idx + INDEX_S] - zero_point) * scale;  // int8_t - int32_t (narrowing)
+        score = rescale ? score * 100.f : score;
         if (score > this->__score_threshold) {
-            OutputType box;
-            box.score  = score;
-            box.target = 0;
-            int8_t max = -128;
+            auto box = el_box_t{
+              .x      = 0,
+              .y      = 0,
+              .w      = 0,
+              .h      = 0,
+              .score  = static_cast<decltype(el_box_t::score)>(score),
+              .target = 0,
+            };
 
             // get box target
-            for (uint16_t j = 0; j < num_class; j++) {
+            auto max = int8_t{-128};
+            for (decltype(num_class) j = 0; j < num_class; ++j) {
                 if (max < data[idx + INDEX_T + j]) {
                     max        = data[idx + INDEX_T + j];
                     box.target = j;
                 }
             }
-            // get box position
-            float x = static_cast<float>(data[idx + INDEX_X] - zero_point) * scale;
-            float y = static_cast<float>(data[idx + INDEX_Y] - zero_point) * scale;
-            float w = static_cast<float>(data[idx + INDEX_W] - zero_point) * scale;
-            float h = static_cast<float>(data[idx + INDEX_H] - zero_point) * scale;
 
-            if (rescale) {
-                box.x = EL_CLIP(static_cast<uint16_t>(x * _w_scale), 0, width);
-                box.y = EL_CLIP(static_cast<uint16_t>(y * _h_scale), 0, height);
-                box.w = EL_CLIP(static_cast<uint16_t>(w * _w_scale), 0, width);
-                box.h = EL_CLIP(static_cast<uint16_t>(h * _h_scale), 0, height);
-            } else {
-                box.x = EL_CLIP(static_cast<uint16_t>(x), 0, width);
-                box.y = EL_CLIP(static_cast<uint16_t>(y), 0, height);
-                box.w = EL_CLIP(static_cast<uint16_t>(w), 0, width);
-                box.h = EL_CLIP(static_cast<uint16_t>(h), 0, height);
-            }
+            // get box position, int8_t - int32_t (narrowing)
+            auto x = static_cast<decltype(el_box_t::x)>((data[idx + INDEX_X] - zero_point) * scale);
+            auto y = static_cast<decltype(el_box_t::y)>((data[idx + INDEX_Y] - zero_point) * scale);
+            auto w = static_cast<decltype(el_box_t::w)>((data[idx + INDEX_W] - zero_point) * scale);
+            auto h = static_cast<decltype(el_box_t::h)>((data[idx + INDEX_H] - zero_point) * scale);
 
-            box.w = box.x + box.w > width ? width - box.x : box.w;
-            box.h = box.y + box.h > height ? height - box.y : box.h;
+            box.x = EL_CLIP(x, 0, width);
+            box.y = EL_CLIP(y, 0, height);
+            box.w = EL_CLIP(w, 0, width);
+            box.h = EL_CLIP(h, 0, height);
 
-            _results.emplace_front(box);
+            _results.emplace_front(std::move(box));
         }
     }
 
     el_nms(_results, _nms_threshold, this->__score_threshold, false, true);
+    _results.sort([](const el_box_t& a, const el_box_t& b) { return a.x < b.x; });
 
-    for (const auto &box : _results) {
-        LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d",
-                   box.x,
-                   box.y,
-                   box.w,
-                   box.h,
-                   box.score,
-                   box.target);
+#if CONFIG_EL_DEBUG >= 4
+    for (const auto& box : _results) {
+        LOG_D("\tbox (after NMS, input) -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]",
+              box.x,
+              box.y,
+              box.w,
+              box.h,
+              box.score,
+              box.target);
     }
-    _results.sort([](const OutputType& a, const OutputType& b) { return a.x < b.x; });
+#endif
 
     for (auto& box : _results) {
-        box.x = box.x * _w_scale;
-        box.y = box.y * _h_scale;
-        box.w = box.w * _w_scale;
-        box.h = box.h * _h_scale;
+        box.x = static_cast<decltype(el_box_t::x)>(box.x * _w_scale);
+        box.y = static_cast<decltype(el_box_t::y)>(box.y * _h_scale);
+        box.w = static_cast<decltype(el_box_t::w)>(box.w * _w_scale);
+        box.h = static_cast<decltype(el_box_t::h)>(box.h * _h_scale);
     }
 
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-const std::forward_list<OutputType>& Yolo<InferenceEngine, InputType, OutputType>::get_results() {
+template <typename InferenceEngine> const std::forward_list<el_box_t>& Yolo<InferenceEngine>::get_results() {
     return _results;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Yolo<InferenceEngine, InputType, OutputType>::set_nms_threshold(uint8_t threshold) {
+template <typename InferenceEngine> EL_STA Yolo<InferenceEngine>::set_nms_threshold(uint8_t threshold) {
     _nms_threshold = threshold;
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-uint8_t Yolo<InferenceEngine, InputType, OutputType>::get_nms_threshold() const {
-    return _nms_threshold;
-}
+template <typename InferenceEngine> uint8_t Yolo<InferenceEngine>::get_nms_threshold() const { return _nms_threshold; }
 
 }  // namespace algorithm
 }  // namespace edgelab

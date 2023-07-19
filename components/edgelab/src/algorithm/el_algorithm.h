@@ -33,7 +33,7 @@
 
 namespace edgelab {
 
-using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::base::Engine, el_img_t, el_box_t>;
+using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::base::Engine>;
 using Fomo = typename edgelab::algorithm::Fomo<edgelab::inference::base::Engine, el_img_t, el_box_t>;
 
 }  // namespace edgelab
