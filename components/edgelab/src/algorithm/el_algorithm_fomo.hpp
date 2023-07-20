@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2023 Hongtai Liu, nullptr (Seeed Technology Inc.)
+ * Copyright (c) 2023 Seeed Technology Co.,Ltd
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@
 #define _EL_ALGORITHM_FOMO_H_
 
 #include <forward_list>
+#include <type_traits>
 
 #include "el_algorithm_base.hpp"
 #include "el_cv.h"
@@ -35,48 +36,50 @@
 namespace edgelab {
 namespace algorithm {
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-class Fomo : public edgelab::algorithm::base::Algorithm<InferenceEngine, InputType, OutputType> {
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+class Fomo : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType> {
+    using ScoreType = edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType>::ScoreType;
+
    private:
-    std::forward_list<OutputType> _results;
-    el_shape_t                    _input_shape;
-    el_shape_t                    _output_shape;
-    el_quant_param_t              _input_quant;
-    el_quant_param_t              _output_quant;
-    float                         _w_scale;
-    float                         _h_scale;
+    std::forward_list<BoxType> _results;
+    el_shape_t                 _input_shape;
+    el_shape_t                 _output_shape;
+    el_quant_param_t           _input_quant;
+    el_quant_param_t           _output_quant;
+    float                      _w_scale;
+    float                      _h_scale;
 
    public:
-    InputType _img;
+    ImageType _img;
 
    protected:
     EL_STA preprocess() override;
     EL_STA postprocess() override;
 
    public:
-    Fomo(InferenceEngine& engine, int8_t score_threshold = 80);
+    Fomo(InferenceEngine& engine, ScoreType score_threshold = 80);
     ~Fomo();
 
     EL_STA init() override;
     EL_STA deinit() override;
 
-    const std::forward_list<OutputType>& get_results() override;
+    const std::forward_list<BoxType>& get_results() override;
 };
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-Fomo<InferenceEngine, InputType, OutputType>::Fomo(InferenceEngine& engine, int8_t score_threshold)
-    : edgelab::algorithm::base::Algorithm<InferenceEngine, InputType, OutputType>(engine, score_threshold) {
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+Fomo<InferenceEngine, ImageType, BoxType>::Fomo(InferenceEngine& engine, ScoreType score_threshold)
+    : edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType>(engine, score_threshold) {
     _w_scale = 1.0f;
     _h_scale = 1.0f;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-Fomo<InferenceEngine, InputType, OutputType>::~Fomo() {
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+Fomo<InferenceEngine, ImageType, BoxType>::~Fomo() {
     deinit();
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Fomo<InferenceEngine, InputType, OutputType>::init() {
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+EL_STA Fomo<InferenceEngine, ImageType, BoxType>::init() {
     _results.clear();
     _input_shape  = this->__p_engine->get_input_shape(0);
     _output_shape = this->__p_engine->get_output_shape(0);
@@ -99,16 +102,16 @@ EL_STA Fomo<InferenceEngine, InputType, OutputType>::init() {
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Fomo<InferenceEngine, InputType, OutputType>::deinit() {
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+EL_STA Fomo<InferenceEngine, ImageType, BoxType>::deinit() {
     _results.clear();
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Fomo<InferenceEngine, InputType, OutputType>::preprocess() {
-    EL_STA     ret   = EL_OK;
-    InputType* i_img = this->__p_input;
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+EL_STA Fomo<InferenceEngine, ImageType, BoxType>::preprocess() {
+    EL_STA ret{EL_OK};
+    auto*  i_img{this->__p_input};
 
     // convert image
     el_printf("%d, %d\n", _img.width, _img.height);
@@ -118,7 +121,7 @@ EL_STA Fomo<InferenceEngine, InputType, OutputType>::preprocess() {
         return ret;
     }
 
-    for (size_t i = 0; i < _img.size; i++) {
+    for (decltype(ImageType::size) i{0}; i < _img.size; ++i) {
         _img.data[i] -= 128;
     }
 
@@ -128,55 +131,66 @@ EL_STA Fomo<InferenceEngine, InputType, OutputType>::preprocess() {
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Fomo<InferenceEngine, InputType, OutputType>::postprocess() {
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+EL_STA Fomo<InferenceEngine, ImageType, BoxType>::postprocess() {
     _results.clear();
 
     // get output
-    int8_t*  data       = static_cast<int8_t*>(this->__p_engine->get_output(0));
-    uint32_t width      = this->__p_input->width;
-    uint32_t height     = this->__p_input->height;
-    float    scale      = _output_quant.scale;
-    int32_t  zero_point = _output_quant.zero_point;
-    auto     pred_h     = _output_shape.dims[1];
-    auto     pred_w     = _output_shape.dims[2];
-    auto     pred_t     = _output_shape.dims[3];
+    auto*   data{static_cast<int8_t*>(this->__p_engine->get_output(0))};
+    auto    width{this->__p_input->width};
+    auto    height{this->__p_input->height};
+    float   scale{_output_quant.scale};
+    int32_t zero_point{_output_quant.zero_point};
+    auto    pred_w{_output_shape.dims[2]};
+    auto    pred_h{_output_shape.dims[1]};
+    auto    pred_t{_output_shape.dims[3]};
 
-    uint16_t bw = width / pred_w;
-    uint16_t bh = height / pred_h;
+    auto bw{static_cast<decltype(BoxType::w)>(width / pred_w)};
+    auto bh{static_cast<decltype(BoxType::h)>(height / pred_h)};
 
-    for (int i = 0; i < pred_h; ++i) {
-        for (int j = 0; j < pred_w; ++j) {
-            uint8_t max_conf   = 0;
-            uint8_t max_target = 0;
-            for (int t = 0; t < pred_t; ++t) {
-                uint8_t conf = (data[i * pred_w * pred_t + j * pred_t + t] - zero_point) * scale * 100;
-                if (conf > max_conf) {
-                    max_conf   = conf;
+    for (decltype(pred_h) i{0}; i < pred_h; ++i) {
+        for (decltype(pred_w) j{0}; j < pred_w; ++j) {
+            ScoreType                 max_score{0};
+            decltype(BoxType::target) max_target{0};
+            for (decltype(pred_t) t{0}; t < pred_t; ++t) {
+                auto score{
+                  static_cast<ScoreType>((data[i * pred_w * pred_t + j * pred_t + t] - zero_point) * 100 * scale)};
+                if (score > max_score) {
+                    max_score  = score;
                     max_target = t;
                 }
             }
-            if (max_conf > this->__score_threshold && max_target != 0) {
-                _results.emplace_front(OutputType{.x      = static_cast<uint16_t>(j * bw + bw / 2),
-                                                  .y      = static_cast<uint16_t>(i * bh + bh / 2),
-                                                  .w      = bw,
-                                                  .h      = bh,
-                                                  .score  = max_conf,
-                                                  .target = max_target});
+            if (max_score > this->__score_threshold && max_target != 0) {
+                // only unsigned is supported for fast div by 2 (>> 1)
+                static_assert(std::is_unsigned<decltype(bw)>::value && std::is_unsigned<decltype(bh)>::value);
+                _results.emplace_front(BoxType{.x      = static_cast<decltype(BoxType::x)>(j * bw + (bw >> 1)),
+                                               .y      = static_cast<decltype(BoxType::y)>(i * bh + (bh >> 1)),
+                                               .w      = bw,
+                                               .h      = bh,
+                                               .score  = max_score,
+                                               .target = max_target});
             }
         }
     }
+    _results.sort([](const BoxType& a, const BoxType& b) { return a.x < b.x; });
 
-    for (auto& box : _results) {
-        LOG_D("x: %d, y: %d, w: %d, h: %d, score: %d, target: %d", box.x, box.y, box.w, box.h, box.score, box.target);
+#if CONFIG_EL_DEBUG >= 4
+    for (const auto& box : _results) {
+        LOG_D("\tbox (image space) -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]",
+              box.x,
+              box.y,
+              box.w,
+              box.h,
+              box.score,
+              box.target);
     }
-    _results.sort([](const OutputType& a, const OutputType& b) { return a.x < b.x; });
+#endif
 
     return EL_OK;
 }
 
-template <typename InferenceEngine, typename InputType, typename OutputType>
-const std::forward_list<OutputType>& Fomo<InferenceEngine, InputType, OutputType>::get_results() {
+template <typename InferenceEngine, typename ImageType, typename BoxType>
+const std::forward_list<BoxType>& Fomo<InferenceEngine, ImageType, BoxType>::get_results() {
     return _results;
 }
 

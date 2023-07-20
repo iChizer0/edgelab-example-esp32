@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2023 Hongtai Liu, nullptr (Seeed Technology Inc.)
+ * Copyright (c) 2023 Seeed Technology Co.,Ltd
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,14 +28,17 @@
 
 #include <forward_list>
 
-#include "el_types.h"
 #include "el_common.h"
+#include "el_types.h"
 
 namespace edgelab {
 namespace algorithm {
 namespace base {
 
 template <typename InferenceEngine, typename InputType, typename OutputType> class Algorithm {
+   protected:
+    using ScoreType = decltype(OutputType::score);
+
    private:
     uint32_t __preprocess_time;   // ms
     uint32_t __run_time;          // ms
@@ -45,13 +48,13 @@ template <typename InferenceEngine, typename InputType, typename OutputType> cla
     InferenceEngine* __p_engine;
     InputType*       __p_input;
 
-    uint8_t __score_threshold;
+    ScoreType __score_threshold;
 
     virtual EL_STA preprocess()  = 0;
     virtual EL_STA postprocess() = 0;
 
    public:
-    Algorithm(InferenceEngine& engine, uint8_t score_threshold = 40);
+    Algorithm(InferenceEngine& engine, ScoreType score_threshold = 40);
     virtual ~Algorithm();
 
     virtual EL_STA init()   = 0;
@@ -63,14 +66,14 @@ template <typename InferenceEngine, typename InputType, typename OutputType> cla
     uint32_t get_run_time() const;
     uint32_t get_postprocess_time() const;
 
-    EL_STA  set_score_threshold(uint8_t threshold);
-    uint8_t get_score_threshold() const;
+    EL_STA    set_score_threshold(ScoreType threshold);
+    ScoreType get_score_threshold() const;
 
     virtual const std::forward_list<OutputType>& get_results() = 0;
 };
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-Algorithm<InferenceEngine, InputType, OutputType>::Algorithm(InferenceEngine& engine, uint8_t score_threshold)
+Algorithm<InferenceEngine, InputType, OutputType>::Algorithm(InferenceEngine& engine, ScoreType score_threshold)
     : __p_engine(&engine), __p_input(nullptr), __score_threshold(score_threshold) {
     __preprocess_time  = 0;
     __run_time         = 0;
@@ -138,13 +141,14 @@ uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_postprocess_time
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Algorithm<InferenceEngine, InputType, OutputType>::set_score_threshold(uint8_t threshold) {
+EL_STA Algorithm<InferenceEngine, InputType, OutputType>::set_score_threshold(ScoreType threshold) {
     __score_threshold = threshold;
     return EL_OK;
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-uint8_t Algorithm<InferenceEngine, InputType, OutputType>::get_score_threshold() const {
+Algorithm<InferenceEngine, InputType, OutputType>::ScoreType
+  Algorithm<InferenceEngine, InputType, OutputType>::get_score_threshold() const {
     return __score_threshold;
 }
 

@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2023 Hongtai Liu, nullptr (Seeed Technology Inc.)
+ * Copyright (c) 2023 Seeed Technology Co.,Ltd
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@
 
 namespace edgelab {
 
-using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::base::Engine>;
+using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::base::Engine, el_img_t, el_box_t>;
 using Fomo = typename edgelab::algorithm::Fomo<edgelab::inference::base::Engine, el_img_t, el_box_t>;
 
 }  // namespace edgelab
