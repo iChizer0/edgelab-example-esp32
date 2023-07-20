@@ -28,7 +28,7 @@
 
 #include <forward_list>
 
-#include "el_common.h"
+#include "el_debug.h"
 #include "el_types.h"
 
 namespace edgelab {

@@ -38,7 +38,7 @@ namespace edgelab {
 namespace algorithm {
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-class Fomo : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType> {
+class FOMO : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType> {
     using ScoreType = edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType>::ScoreType;
 
    public:
@@ -49,12 +49,12 @@ class Fomo : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageTy
     EL_STA postprocess() override;
 
    public:
-    Fomo(InferenceEngine* engine, ScoreType score_threshold = 80);
-    ~Fomo();
+    FOMO(InferenceEngine* engine, ScoreType score_threshold = 80);
+    ~FOMO();
 };
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-Fomo<InferenceEngine, ImageType, BoxType>::Fomo(InferenceEngine* engine, ScoreType score_threshold)
+FOMO<InferenceEngine, ImageType, BoxType>::FOMO(InferenceEngine* engine, ScoreType score_threshold)
     : edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType>(engine, score_threshold) {
     _input_img.data   = static_cast<decltype(ImageType::data)>(engine->get_input(0));
     _input_img.width  = static_cast<decltype(ImageType::width)>(this->__input_shape.dims[1]),
@@ -77,12 +77,12 @@ Fomo<InferenceEngine, ImageType, BoxType>::Fomo(InferenceEngine* engine, ScoreTy
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-Fomo<InferenceEngine, ImageType, BoxType>::~Fomo() {
+FOMO<InferenceEngine, ImageType, BoxType>::~FOMO() {
     this->__results.clear();
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA Fomo<InferenceEngine, ImageType, BoxType>::preprocess() {
+EL_STA FOMO<InferenceEngine, ImageType, BoxType>::preprocess() {
     EL_STA ret{EL_OK};
     auto*  i_img{this->__p_input};
 
@@ -102,7 +102,7 @@ EL_STA Fomo<InferenceEngine, ImageType, BoxType>::preprocess() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA Fomo<InferenceEngine, ImageType, BoxType>::postprocess() {
+EL_STA FOMO<InferenceEngine, ImageType, BoxType>::postprocess() {
     this->__results.clear();
 
     // get output
@@ -143,18 +143,6 @@ EL_STA Fomo<InferenceEngine, ImageType, BoxType>::postprocess() {
         }
     }
     this->__results.sort([](const BoxType& a, const BoxType& b) { return a.x < b.x; });
-
-#if CONFIG_EL_DEBUG >= 4
-    for (const auto& box : _results) {
-        LOG_D("\tbox (image space) -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]",
-              box.x,
-              box.y,
-              box.w,
-              box.h,
-              box.score,
-              box.target);
-    }
-#endif
 
     return EL_OK;
 }

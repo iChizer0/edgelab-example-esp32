@@ -39,7 +39,7 @@ namespace edgelab {
 namespace algorithm {
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType> {
+class YOLO : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType> {
     using ScoreType        = edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType>::ScoreType;
     using NMSThresholdType = ScoreType;
 
@@ -63,15 +63,15 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageTy
     EL_STA postprocess() override;
 
    public:
-    Yolo(InferenceEngine* engine, ScoreType score_threshold = 50, NMSThresholdType nms_threshold = 45);
-    ~Yolo();
+    YOLO(InferenceEngine* engine, ScoreType score_threshold = 50, NMSThresholdType nms_threshold = 45);
+    ~YOLO();
 
     EL_STA           set_nms_threshold(ScoreType threshold);
     NMSThresholdType get_nms_threshold() const;
 };
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-Yolo<InferenceEngine, ImageType, BoxType>::Yolo(InferenceEngine* engine,
+YOLO<InferenceEngine, ImageType, BoxType>::YOLO(InferenceEngine* engine,
                                                 ScoreType        score_threshold,
                                                 NMSThresholdType nms_threshold)
     : edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType>(engine, score_threshold),
@@ -99,12 +99,12 @@ Yolo<InferenceEngine, ImageType, BoxType>::Yolo(InferenceEngine* engine,
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-Yolo<InferenceEngine, ImageType, BoxType>::~Yolo() {
+YOLO<InferenceEngine, ImageType, BoxType>::~YOLO() {
     this->__results.clear();
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA Yolo<InferenceEngine, ImageType, BoxType>::preprocess() {
+EL_STA YOLO<InferenceEngine, ImageType, BoxType>::preprocess() {
     EL_STA ret{EL_OK};
     auto*  i_img{this->__p_input};
 
@@ -126,7 +126,7 @@ EL_STA Yolo<InferenceEngine, ImageType, BoxType>::preprocess() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA Yolo<InferenceEngine, ImageType, BoxType>::postprocess() {
+EL_STA YOLO<InferenceEngine, ImageType, BoxType>::postprocess() {
     this->__results.clear();
 
     // get output
@@ -170,49 +170,30 @@ EL_STA Yolo<InferenceEngine, ImageType, BoxType>::postprocess() {
             auto w{static_cast<decltype(BoxType::w)>((data[idx + INDEX_W] - zero_point) * scale)};
             auto h{static_cast<decltype(BoxType::h)>((data[idx + INDEX_H] - zero_point) * scale)};
 
-            box.x = EL_CLIP(x, 0, width);
-            box.y = EL_CLIP(y, 0, height);
-            box.w = EL_CLIP(w, 0, width);
-            box.h = EL_CLIP(h, 0, height);
+            box.x = EL_CLIP(x, 0, width) * _w_scale;
+            box.y = EL_CLIP(y, 0, height) * _h_scale;
+            box.w = EL_CLIP(w, 0, width) * _w_scale;
+            box.h = EL_CLIP(h, 0, height) * _h_scale;
 
             this->__results.emplace_front(std::move(box));
         }
     }
-
     el_nms(this->__results, _nms_threshold, this->__score_threshold, false, true);
+
     this->__results.sort([](const BoxType& a, const BoxType& b) { return a.x < b.x; });
-
-#if CONFIG_EL_DEBUG >= 4
-    for (const auto& box : this->__results) {
-        LOG_D("\tbox (after nms, input space) -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]",
-              box.x,
-              box.y,
-              box.w,
-              box.h,
-              box.score,
-              box.target);
-    }
-#endif
-
-    for (auto& box : this->__results) {
-        box.x = static_cast<decltype(BoxType::x)>(box.x * _w_scale);
-        box.y = static_cast<decltype(BoxType::y)>(box.y * _h_scale);
-        box.w = static_cast<decltype(BoxType::w)>(box.w * _w_scale);
-        box.h = static_cast<decltype(BoxType::h)>(box.h * _h_scale);
-    }
 
     return EL_OK;
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA Yolo<InferenceEngine, ImageType, BoxType>::set_nms_threshold(NMSThresholdType threshold) {
+EL_STA YOLO<InferenceEngine, ImageType, BoxType>::set_nms_threshold(NMSThresholdType threshold) {
     _nms_threshold = threshold;
     return EL_OK;
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-Yolo<InferenceEngine, ImageType, BoxType>::NMSThresholdType
-  Yolo<InferenceEngine, ImageType, BoxType>::get_nms_threshold() const {
+YOLO<InferenceEngine, ImageType, BoxType>::NMSThresholdType
+  YOLO<InferenceEngine, ImageType, BoxType>::get_nms_threshold() const {
     return _nms_threshold;
 }
 

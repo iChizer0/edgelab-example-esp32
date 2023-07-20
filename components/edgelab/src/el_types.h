@@ -85,6 +85,12 @@ typedef struct EL_ATTR_PACKED {
 } el_box_t;
 
 typedef struct EL_ATTR_PACKED {
+    uint16_t x;
+    uint16_t y;
+    uint8_t  target;
+} el_point_t;
+
+typedef struct EL_ATTR_PACKED {
     uint16_t score;
     uint16_t target;
 } el_class_t;

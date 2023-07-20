@@ -6,7 +6,7 @@
 #include "freertos/task.h"
 #include "yolo_model_data.h"
 
-#define kTensorArenaSize (1024 * 1024)
+#define kTensorArenaSize (1024 * 768)
 
 uint16_t color[] = {
   0x0000,
@@ -28,8 +28,8 @@ extern "C" void app_main(void) {
     auto* tensor_arena = heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     engine->init(tensor_arena, kTensorArenaSize);
     engine->load_model(g_yolo_model_data, g_yolo_model_data_len);
-    auto* algorithm = new Yolo(*engine);
-    algorithm->init();
+    auto* algorithm = new YOLO(engine);
+    // algorithm->init();
 
     EL_LOGI("done");
     while (1) {
@@ -41,14 +41,37 @@ extern "C" void app_main(void) {
         uint32_t run_time         = algorithm->get_run_time();
         uint32_t postprocess_time = algorithm->get_postprocess_time();
         uint8_t  i                = 0;
-        for (const auto& box : algorithm->get_results()) {   
-            el_printf(
-              "\tbox -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]\n", box.x, box.y, box.w, box.h, box.target, box.score);
+        for (const auto box : algorithm->get_results()) {
+            el_printf("\tbox -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]\n",
+                      box.x,
+                      box.y,
+                      box.w,
+                      box.h,
+                      box.target,
+                      box.score);
 
             uint16_t y = box.y - box.h / 2;
             uint16_t x = box.x - box.w / 2;
             el_draw_rect(&img, x, y, box.w, box.h, color[++i % 5], 4);
         }
+
+        // {
+        //     el_box_t b{
+        //       .x      = 1,
+        //       .y      = 2,
+        //       .w      = 3,
+        //       .h      = 4,
+        //       .score  = 6,
+        //       .target = 5,
+        //     };
+        //     // el_printf("\tp_b -> %p\n", &b);
+        //     // el_printf("\ttest0 -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+        //     // el_printf("\ttest1 -> cx_cy_w_h: [%3d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+        //     // el_printf("\ttest1 -> cx_cy_w_h: [%3d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+        //     // el_printf("\ttest2 -> cx_cy_w_h: [%3d, %3d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+        //     // el_printf("\ttest3 -> cx_cy_w_h: [%3d, %3d, %3d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+        //     // el_printf("\ttest4 -> cx_cy_w_h: [%3d, %3d, %3d, %3d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+        // }
 
         el_printf("preprocess: %d, run: %d, postprocess: %d\n", preprocess_time, run_time, postprocess_time);
         display->show(&img);

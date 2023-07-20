@@ -27,14 +27,16 @@
 #define _EL_ALGORITHM_H_
 
 #include "el_algorithm_fomo.hpp"
+#include "el_algorithm_pfld.hpp"
 #include "el_algorithm_yolo.hpp"
 #include "el_inference_base.h"
 #include "el_types.h"
 
 namespace edgelab {
 
-using Fomo = typename edgelab::algorithm::Fomo<edgelab::inference::base::Engine, el_img_t, el_box_t>;
-using Yolo = typename edgelab::algorithm::Yolo<edgelab::inference::base::Engine, el_img_t, el_box_t>;
+using FOMO = typename edgelab::algorithm::FOMO<edgelab::inference::base::Engine, el_img_t, el_box_t>;
+using PFLD = typename edgelab::algorithm::PFLD<edgelab::inference::base::Engine, el_img_t, el_point_t>;
+using YOLO = typename edgelab::algorithm::YOLO<edgelab::inference::base::Engine, el_img_t, el_box_t>;
 
 }  // namespace edgelab
 
