@@ -45,20 +45,21 @@ template <typename InferenceEngine, typename InputType, typename OutputType> cla
     uint32_t __postprocess_time;  // ms
 
    protected:
-    InferenceEngine* __p_engine;
-    InputType*       __p_input;
-
-    ScoreType __score_threshold;
+    InferenceEngine*              __p_engine;
+    InputType*                    __p_input;
+    el_shape_t                    __input_shape;
+    el_shape_t                    __output_shape;
+    el_quant_param_t              __input_quant;
+    el_quant_param_t              __output_quant;
+    ScoreType                     __score_threshold;
+    std::forward_list<OutputType> __results;
 
     virtual EL_STA preprocess()  = 0;
     virtual EL_STA postprocess() = 0;
 
    public:
-    Algorithm(InferenceEngine& engine, ScoreType score_threshold = 40);
+    Algorithm(InferenceEngine* engine, ScoreType score_threshold = 40);
     virtual ~Algorithm();
-
-    virtual EL_STA init()   = 0;
-    virtual EL_STA deinit() = 0;
 
     EL_STA run(InputType* input);
 
@@ -69,28 +70,37 @@ template <typename InferenceEngine, typename InputType, typename OutputType> cla
     EL_STA    set_score_threshold(ScoreType threshold);
     ScoreType get_score_threshold() const;
 
-    virtual const std::forward_list<OutputType>& get_results() = 0;
+    const std::forward_list<OutputType>& get_results() const;
 };
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-Algorithm<InferenceEngine, InputType, OutputType>::Algorithm(InferenceEngine& engine, ScoreType score_threshold)
-    : __p_engine(&engine), __p_input(nullptr), __score_threshold(score_threshold) {
-    __preprocess_time  = 0;
-    __run_time         = 0;
-    __postprocess_time = 0;
+Algorithm<InferenceEngine, InputType, OutputType>::Algorithm(InferenceEngine* engine, ScoreType score_threshold)
+    : __preprocess_time(0),
+      __run_time(0),
+      __postprocess_time(0),
+      __p_engine(engine),
+      __p_input(nullptr),
+      __score_threshold(score_threshold) {
+    __input_shape  = engine->get_input_shape(0);
+    __output_shape = engine->get_output_shape(0);
+    __input_quant  = engine->get_input_quant_param(0);
+    __output_quant = engine->get_output_quant_param(0);
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
 Algorithm<InferenceEngine, InputType, OutputType>::~Algorithm() {
-    __p_engine = nullptr;
-    __p_input  = nullptr;
+    __preprocess_time  = 0;
+    __run_time         = 0;
+    __postprocess_time = 0;
+    __p_engine         = nullptr;
+    __p_input          = nullptr;
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
 EL_STA Algorithm<InferenceEngine, InputType, OutputType>::run(InputType* input) {
-    EL_STA   ret        = EL_OK;
-    uint32_t start_time = 0;
-    uint32_t end_time   = 0;
+    EL_STA   ret{EL_OK};
+    uint32_t start_time{0};
+    uint32_t end_time{0};
 
     EL_ASSERT(__p_engine != nullptr);
 
@@ -150,6 +160,11 @@ template <typename InferenceEngine, typename InputType, typename OutputType>
 Algorithm<InferenceEngine, InputType, OutputType>::ScoreType
   Algorithm<InferenceEngine, InputType, OutputType>::get_score_threshold() const {
     return __score_threshold;
+}
+
+template <typename InferenceEngine, typename InputType, typename OutputType>
+const std::forward_list<OutputType>& Algorithm<InferenceEngine, InputType, OutputType>::get_results() const {
+    return __results;
 }
 
 }  // namespace base

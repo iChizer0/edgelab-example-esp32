@@ -26,6 +26,7 @@
 #ifndef _EL_ALGORITHM_YOLO_H_
 #define _EL_ALGORITHM_YOLO_H_
 
+#include <cassert>
 #include <forward_list>
 #include <utility>
 
@@ -43,15 +44,10 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageTy
     using NMSThresholdType = ScoreType;
 
    private:
-    std::forward_list<BoxType> _results;
-    ImageType                  _input_img;
-    el_shape_t                 _input_shape;
-    el_shape_t                 _output_shape;
-    el_quant_param_t           _input_quant;
-    el_quant_param_t           _output_quant;
-    float                      _w_scale;
-    float                      _h_scale;
-    NMSThresholdType           _nms_threshold;
+    ImageType        _input_img;
+    float            _w_scale;
+    float            _h_scale;
+    NMSThresholdType _nms_threshold;
 
     enum {
         INDEX_X = 0,
@@ -67,62 +63,44 @@ class Yolo : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageTy
     EL_STA postprocess() override;
 
    public:
-    Yolo(InferenceEngine& engine, ScoreType score_threshold = 50, NMSThresholdType nms_threshold = 45);
+    Yolo(InferenceEngine* engine, ScoreType score_threshold = 50, NMSThresholdType nms_threshold = 45);
     ~Yolo();
-
-    EL_STA init() override;
-    EL_STA deinit() override;
 
     EL_STA           set_nms_threshold(ScoreType threshold);
     NMSThresholdType get_nms_threshold() const;
-
-    const std::forward_list<BoxType>& get_results() override;
 };
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-Yolo<InferenceEngine, ImageType, BoxType>::Yolo(InferenceEngine& engine,
+Yolo<InferenceEngine, ImageType, BoxType>::Yolo(InferenceEngine* engine,
                                                 ScoreType        score_threshold,
                                                 NMSThresholdType nms_threshold)
     : edgelab::algorithm::base::Algorithm<InferenceEngine, ImageType, BoxType>(engine, score_threshold),
+      _w_scale(1.f),
+      _h_scale(1.f),
       _nms_threshold(nms_threshold) {
-    _w_scale = 1.f;
-    _h_scale = 1.f;
+    _input_img.data   = static_cast<decltype(ImageType::data)>(engine->get_input(0));
+    _input_img.width  = static_cast<decltype(ImageType::width)>(this->__input_shape.dims[1]),
+    _input_img.height = static_cast<decltype(ImageType::height)>(this->__input_shape.dims[2]),
+    _input_img.size =
+      static_cast<decltype(ImageType::size)>(_input_img.width * _input_img.height * this->__input_shape.dims[3]);
+    _input_img.format = EL_PIXEL_FORMAT_UNKNOWN;
+    _input_img.rotate = EL_PIXEL_ROTATE_0;
+
+    if (this->__input_shape.dims[3] == 3) {
+        _input_img.format = EL_PIXEL_FORMAT_RGB888;
+    } else if (this->__input_shape.dims[3] == 1) {
+        _input_img.format = EL_PIXEL_FORMAT_GRAYSCALE;
+    }
+
+    // EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
+    // EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
+    assert(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
+    assert(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
 Yolo<InferenceEngine, ImageType, BoxType>::~Yolo() {
-    deinit();
-}
-
-template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA Yolo<InferenceEngine, ImageType, BoxType>::init() {
-    _results.clear();
-    _input_shape  = this->__p_engine->get_input_shape(0);
-    _output_shape = this->__p_engine->get_output_shape(0);
-    _input_quant  = this->__p_engine->get_input_quant_param(0);
-    _output_quant = this->__p_engine->get_output_quant_param(0);
-
-    _input_img.data   = static_cast<decltype(ImageType::data)>(this->__p_engine->get_input(0));
-    _input_img.width  = static_cast<decltype(ImageType::width)>(_input_shape.dims[1]);
-    _input_img.height = static_cast<decltype(ImageType::height)>(_input_shape.dims[2]);
-    _input_img.size =
-      static_cast<decltype(ImageType::size)>(_input_img.width * _input_img.height * _input_shape.dims[3]);
-
-    if (_input_shape.dims[3] == 3) {
-        _input_img.format = EL_PIXEL_FORMAT_RGB888;
-    } else if (_input_shape.dims[3] == 1) {
-        _input_img.format = EL_PIXEL_FORMAT_GRAYSCALE;
-    } else {
-        return EL_EINVAL;
-    }
-
-    return EL_OK;
-}
-
-template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA Yolo<InferenceEngine, ImageType, BoxType>::deinit() {
-    _results.clear();
-    return EL_OK;
+    this->__results.clear();
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
@@ -149,17 +127,17 @@ EL_STA Yolo<InferenceEngine, ImageType, BoxType>::preprocess() {
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
 EL_STA Yolo<InferenceEngine, ImageType, BoxType>::postprocess() {
-    _results.clear();
+    this->__results.clear();
 
     // get output
     auto*   data{static_cast<int8_t*>(this->__p_engine->get_output(0))};
-    auto    width{_input_shape.dims[1]};
-    auto    height{_input_shape.dims[2]};
-    float   scale{_output_quant.scale};
+    auto    width{this->__input_shape.dims[1]};
+    auto    height{this->__input_shape.dims[2]};
+    float   scale{this->__output_quant.scale};
     bool    rescale{scale < 0.1f ? true : false};
-    int32_t zero_point{_output_quant.zero_point};
-    auto    num_record{_output_shape.dims[1]};
-    auto    num_element{_output_shape.dims[2]};
+    int32_t zero_point{this->__output_quant.zero_point};
+    auto    num_record{this->__output_shape.dims[1]};
+    auto    num_element{this->__output_shape.dims[2]};
     auto    num_class{static_cast<uint8_t>(num_element - 5)};
 
     // parse output
@@ -197,15 +175,15 @@ EL_STA Yolo<InferenceEngine, ImageType, BoxType>::postprocess() {
             box.w = EL_CLIP(w, 0, width);
             box.h = EL_CLIP(h, 0, height);
 
-            _results.emplace_front(std::move(box));
+            this->__results.emplace_front(std::move(box));
         }
     }
 
-    el_nms(_results, _nms_threshold, this->__score_threshold, false, true);
-    _results.sort([](const BoxType& a, const BoxType& b) { return a.x < b.x; });
+    el_nms(this->__results, _nms_threshold, this->__score_threshold, false, true);
+    this->__results.sort([](const BoxType& a, const BoxType& b) { return a.x < b.x; });
 
 #if CONFIG_EL_DEBUG >= 4
-    for (const auto& box : _results) {
+    for (const auto& box : this->__results) {
         LOG_D("\tbox (after nms, input space) -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]",
               box.x,
               box.y,
@@ -216,7 +194,7 @@ EL_STA Yolo<InferenceEngine, ImageType, BoxType>::postprocess() {
     }
 #endif
 
-    for (auto& box : _results) {
+    for (auto& box : this->__results) {
         box.x = static_cast<decltype(BoxType::x)>(box.x * _w_scale);
         box.y = static_cast<decltype(BoxType::y)>(box.y * _h_scale);
         box.w = static_cast<decltype(BoxType::w)>(box.w * _w_scale);
@@ -224,11 +202,6 @@ EL_STA Yolo<InferenceEngine, ImageType, BoxType>::postprocess() {
     }
 
     return EL_OK;
-}
-
-template <typename InferenceEngine, typename ImageType, typename BoxType>
-const std::forward_list<BoxType>& Yolo<InferenceEngine, ImageType, BoxType>::get_results() {
-    return _results;
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
