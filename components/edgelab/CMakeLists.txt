@@ -8,7 +8,7 @@ FILE(GLOB_RECURSE SRCS_EDGELAB
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 
-set(INCLUDS_EDGELAB
+set(INCLUDES_EDGELAB
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ports
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ports/espressif
@@ -16,31 +16,40 @@ set(INCLUDS_EDGELAB
     ${CMAKE_CURRENT_SOURCE_DIR}/src/inference
     ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/JPEGENC
 )
+
+if(CONFIG_EL_LIB_FLASHDB)
+    list(APPEND SRCS_EDGELAB
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fdb.c
+    )
+    list(APPEND INCLUDES_EDGELAB 
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB
+    )
+endif()
 
 if(CONFIG_EL_LIB_JPEGENC)
     list(APPEND SRCS_EDGELAB 
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/JPEGENC/JPEGENC.cpp
     )
-    list(APPEND INCLUDS_EDGELAB 
+    list(APPEND INCLUDES_EDGELAB 
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/JPEGENC
     )
 endif()
 
 message(STATUS "SRCS_EDGELAB: ${SRCS_EDGELAB}")
-message(STATUS "INCLUDS_EDGELAB: ${INCLUDS_EDGELAB}")
+message(STATUS "INCLUDES_EDGELAB: ${INCLUDES_EDGELAB}")
 
 set(priv_req tflite-lib screen esp32-camera)
 
-# include component requirements which were introduced after IDF version 4.1
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER "4.1")
-    list(APPEND priv_req esp_timer driver)
+    list(APPEND priv_req esp_timer driver spi_flash esp_partition)
 endif()
 
 idf_component_register(
             SRCS "${SRCS_EDGELAB}"
-            INCLUDE_DIRS "${INCLUDS_EDGELAB}"
+            INCLUDE_DIRS "${INCLUDES_EDGELAB}"
             REQUIRES ${pub_req}
             PRIV_REQUIRES ${priv_req})
 

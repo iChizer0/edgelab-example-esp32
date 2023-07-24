@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2023 Seeed Technology Co.,Ltd
+ * Copyright (c) 2023 Hongtai Liu (Seeed Technology Inc.)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,26 +23,37 @@
  *
  */
 
-#ifndef _EDGELAB_H
-#define _EDGELAB_H
+#ifndef _EL_FLASH_ESP_H
+#define _EL_FLASH_ESP_H
 
-// #include "el_algorithm_base.hpp"
-#include "el_algorithm.h"
-// #include "el_algorithm_yolo.hpp"
-#include "el_base64.h"
-#include "el_camera.h"
-#include "el_common.h"
-#include "el_cv.h"
-#include "el_device.h"
-#include "el_display.h"
-#include "el_flash.h"
-#include "el_inference.h"
-#include "el_misc.h"
-#include "el_nms.h"
-#include "el_repl.h"
+#define CONFIG_EL_LIB_FLASHDB
 
-#ifdef __cplusplus
-using namespace edgelab;
+#ifdef CONFIG_EL_LIB_FLASHDB
+    #define NOR_FLASH_DEV_NAME "norflash0"
+
+    #define FAL_FLASH_DEV_TABLE \
+        { &nor_flash0, }
+
+    #ifdef FAL_PART_HAS_TABLE_CFG
+        #define FAL_PART_TABLE                                                                     \
+            {                                                                                      \
+                {FAL_PART_MAGIC_WORD, "fdb_kvdb1", NOR_FLASH_DEV_NAME, 0, 16 * 1024, 0},           \
+                  {FAL_PART_MAGIC_WORD, "fdb_tsdb1", NOR_FLASH_DEV_NAME, 16 * 1024, 16 * 1024, 0}, \
+            }
+    #endif
+
+    #define FDB_USING_KVDB
+
+    #define FDB_USING_TSDB
+
+    #define FDB_USING_FAL_MODE
+
+    #define FDB_WRITE_GRAN 1
+
+    #define FDB_DEBUG_ENABLE
+
+extern const struct fal_flash_dev nor_flash0;
+
 #endif
 
-#endif /* EDGELAB_H */
+#endif
