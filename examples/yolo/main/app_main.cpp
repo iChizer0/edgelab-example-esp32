@@ -238,22 +238,79 @@ extern "C" void app_main() {
            size_flash_chip / (1024 * 1024),
            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
-    edgelab::data::PersistentMap map;
+    static uint32_t boot_count    = 0;
+    static time_t   boot_time[10] = {0, 1, 2, 3};
 
-    auto v = map["boot_time"];
+    static struct fdb_default_kv_node default_kv_table[] = {
+      {"username", (void*)("armink"), 0},              /* string KV */
+      {"password", (void*)("123456"), 0},              /* string KV */
+      {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
+      {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
+    };
 
-    printf("-------------- %s\n", v.name);
+    struct fdb_default_kv default_kv;
+    default_kv.kvs = default_kv_table;
+    default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
 
-    auto c = map["boot_time"];
+    edgelab::data::PersistentMap map(&default_kv);
+    // map.reset();
+   
+  //  map.reset();
 
-    printf("-------------- %s\n", c.name);
+    // auto v = map["boot_time"];
+
+    // printf("-------------- %s\n", v.name);
+
+    // auto c = map["boot_time"];
+
+    // printf("-------------- %s\n", c.name);
 
     for (const auto& a : map) 
       printf("-------------- %s\n", a.name);
 
-    // flashdb_demo();
+    struct fdb_blob blob;
+    // int             boot_count = 0;
+    fdb_blob_make(&blob, &boot_count, sizeof(boot_count));
 
-    for (int i = 1000; i >= 0; i--) {
+    map.emplace("boot_count", &blob);
+
+    // fdb_kv_t cur_kv{&map["boot_count"]};
+    // size_t   data_size;
+    // uint8_t* data_buf = (uint8_t*)malloc(data_size);
+
+    // fdb_kv_to_blob(cur_kv, fdb_blob_make(&blob, data_buf, data_size));
+
+      // printf("==================== kvdb_basic_sample ====================\n");
+
+      // { /* GET the KV value */
+      //     /* get the "boot_count" KV value */
+      //     fdb_kv_get_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+      //     /* the blob.saved.len is more than 0 when get the value successful */
+      //     if (blob.saved.len > 0) {
+      //         printf("get the 'boot_count' value is %d\n", boot_count);
+      //     } else {
+      //         printf("get the 'boot_count' failed\n");
+      //     }
+      // }
+
+      // { /* CHANGE the KV value */
+      //     /* increase the boot count */
+      //     boot_count++;
+      //     /* change the "boot_count" KV's value */
+      //     fdb_kv_set_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+      //     printf("set the 'boot_count' value to %d\n", boot_count);
+      // }
+
+      // printf("===========================================================\n");
+      // }
+
+      // map.erase("username");
+
+      //   for (const auto& a : map) printf("after e---------- %s\n", a.name);
+
+      // for (const auto& a : map) printf("after e it---------- %s\n", a.name);
+
+      for (int i = 1000; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

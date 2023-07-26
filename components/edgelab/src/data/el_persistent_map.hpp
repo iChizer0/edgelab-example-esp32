@@ -34,21 +34,13 @@
 #include <memory>
 #include <utility>
 
+#define CONFIG_EL_LIB_FLASHDB
+
 #ifdef CONFIG_EL_LIB_FLASHDB
 
     #include <flashdb.h>
 
 namespace edgelab::data {
-
-static uint32_t boot_count    = 0;
-static time_t   boot_time[10] = {0, 1, 2, 3};
-
-static struct fdb_default_kv_node default_kv_table[] = {
-  {"username", (void*)("armink"), 0},              /* string KV */
-  {"password", (void*)("123456"), 0},              /* string KV */
-  {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
-  {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
-};
 
 template <typename KeyType = const char*, typename ValType = struct fdb_kv> class PersistentMap {
    private:
@@ -66,38 +58,11 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
 
         ~Guard() noexcept { ___persistent_map->m_unlock(); }
 
+        Guard(const Guard&)            = delete;
+        Guard& operator=(const Guard&) = delete;
+
         const PersistentMap<KeyType, ValType>* const ___persistent_map;
     };
-
-   public:
-    PersistentMap() {
-        static SemaphoreHandle_t lock{xSemaphoreCreateCounting(1, 1)};
-        __lock = lock;
-
-        static struct fdb_kvdb kvdb {};
-        __kvdb = &kvdb;
-
-        struct fdb_default_kv default_kv;
-
-        default_kv.kvs = default_kv_table;
-        default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
-
-        auto ret{fdb_kvdb_init(__kvdb, "edgelab_db", "kvdb0", &default_kv, NULL)};
-
-        assert(__lock != NULL);
-        assert(ret != FDB_NO_ERR);
-    };
-
-    ~PersistentMap() = default;
-
-    PersistentMap(const PersistentMap&)            = delete;
-    PersistentMap& operator=(const PersistentMap&) = delete;
-
-    ValType& operator[](KeyType key) {
-        volatile const Guard guard(this);
-        static ValType       kv{};
-        return *fdb_kv_get_obj(__kvdb, key, &kv);
-    }
 
    protected:
     struct Iterator {
@@ -110,7 +75,7 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
         explicit Iterator(fdb_kvdb_t kvdb, SemaphoreHandle_t lock)
             : ___kvdb(kvdb), ___lock(lock), ___value(value_type()), ___reach_end(true) {
             xSemaphoreTake(___lock, portMAX_DELAY);
-            if (kvdb != NULL) {
+            if (___kvdb != NULL) [[likely]] {
                 fdb_kv_iterator_init(___kvdb, &___iterator);
                 ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
             }
@@ -121,17 +86,22 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
             ___value = ___iterator.curr_kv;
             return ___value;
         }
+
         pointer operator->() {
             ___value = ___iterator.curr_kv;
             return &___value;
         }
+
         Iterator& operator++() {
             xSemaphoreTake(___lock, portMAX_DELAY);
-            ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
+            if (___kvdb != NULL) [[likely]] {
+                ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
+            }
             xSemaphoreGive(___lock);
             return *this;
         }
-        Iterator operator++(int) {
+
+        Iterator& operator++(int) {
             Iterator tmp = *this;
             ++(*this);
             return tmp;
@@ -140,10 +110,12 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
         friend bool operator==(const Iterator& lfs, const Iterator& rhs) {
             return lfs.___reach_end == rhs.___reach_end;
         };
+
         friend bool operator!=(const Iterator& lfs, const Iterator& rhs) {
             return lfs.___reach_end != rhs.___reach_end;
         }
 
+       protected:
         struct fdb_kv_iterator ___iterator;
         fdb_kvdb_t             ___kvdb;
         SemaphoreHandle_t      ___lock;
@@ -152,7 +124,54 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
     };
 
    public:
+    explicit PersistentMap(struct fdb_default_kv* default_kv = NULL) {
+        static SemaphoreHandle_t lock{xSemaphoreCreateCounting(1, 1)};
+        __lock = lock;
+        assert(__lock != NULL);
+
+        static struct fdb_kvdb kvdb {};
+        __kvdb = &kvdb;
+
+        auto ret{fdb_kvdb_init(__kvdb, "edgelab_db", "kvdb0", default_kv, NULL)};
+        assert(ret != FDB_NO_ERR);
+        assert(__kvdb != NULL);
+    }
+
+    ~PersistentMap() = default;
+
+    PersistentMap(const PersistentMap&)            = delete;
+    PersistentMap& operator=(const PersistentMap&) = delete;
+
+    ValType& operator[](KeyType key) {
+        volatile const Guard guard(this);
+        static ValType       kv{};
+        return *fdb_kv_get_obj(__kvdb, key, &kv);
+    }
+
+    void emplace(KeyType key, const fdb_blob_t blob) {
+        volatile const Guard guard(this);
+        fdb_kv_set_blob(__kvdb, key, blob);
+    }
+
+    bool erase(KeyType key) {
+        volatile const Guard guard(this);
+        return fdb_kv_del(__kvdb, key) == FDB_NO_ERR;
+    }
+
+    void clear() {
+        volatile const Guard   guard(this);
+        struct fdb_kv_iterator iterator;
+        fdb_kv_iterator_init(__kvdb, &iterator);
+        while (fdb_kv_iterate(__kvdb, &iterator)) fdb_kv_del(__kvdb, iterator.curr_kv.name);
+    }
+
+    bool reset() {
+        volatile const Guard guard(this);
+        return fdb_kv_set_default(__kvdb) == FDB_NO_ERR;
+    }
+
     Iterator begin() { return Iterator(__kvdb, __lock); }
+
     Iterator end() { return Iterator(NULL, __lock); }
 };
 
