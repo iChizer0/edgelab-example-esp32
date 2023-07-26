@@ -252,7 +252,7 @@ extern "C" void app_main() {
     default_kv.kvs = default_kv_table;
     default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
 
-    edgelab::data::PersistentMap map(&default_kv);
+    edgelab::data::PersistentMap map;
     // map.reset();
    
   //  map.reset();
@@ -268,13 +268,24 @@ extern "C" void app_main() {
     for (const auto& a : map) 
       printf("-------------- %s\n", a.name);
 
-    struct fdb_blob blob;
-    // int             boot_count = 0;
-    fdb_blob_make(&blob, &boot_count, sizeof(boot_count));
+{
+    fdb_kv_t  cur_kv{map["boot_countss"]};
+    auto r = map.get<decltype(boot_count)>(cur_kv);
+    printf("rres %ld \n", r);
+}
 
+    boot_count += 1;
+
+    struct fdb_blob blob;
+    fdb_blob_make(&blob, &boot_count, sizeof(boot_count));
     map.emplace("boot_count", &blob);
 
-    // fdb_kv_t cur_kv{&map["boot_count"]};
+    {
+    fdb_kv_t cur_kv{map["boot_count"]};
+    auto   r = map.get<decltype(boot_count)>(cur_kv);
+    printf("rres %ld \n", r);
+    }
+
     // size_t   data_size;
     // uint8_t* data_buf = (uint8_t*)malloc(data_size);
 

@@ -142,10 +142,23 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
     PersistentMap(const PersistentMap&)            = delete;
     PersistentMap& operator=(const PersistentMap&) = delete;
 
-    ValType& operator[](KeyType key) {
+    ValType* operator[](KeyType key) {
         volatile const Guard guard(this);
         static ValType       kv{};
-        return *fdb_kv_get_obj(__kvdb, key, &kv);
+        return fdb_kv_get_obj(__kvdb, key, &kv);
+    }
+
+    template <typename TargetType> TargetType get(const ValType* kv) {
+        struct fdb_blob blob;
+        TargetType      data_buf{};
+        if (kv != NULL) [[unlikely]] {
+            auto data_size{kv->value_len};
+            assert(data_size == sizeof(TargetType));
+            fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                          fdb_kv_to_blob(const_cast<fdb_kv_t>(kv),
+                                         fdb_blob_make(&blob, reinterpret_cast<void*>(&data_buf), data_size)));
+        }
+        return data_buf;
     }
 
     void emplace(KeyType key, const fdb_blob_t blob) {
