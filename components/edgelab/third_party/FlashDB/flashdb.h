@@ -12,7 +12,7 @@
 #ifndef _FLASHDB_H_
 #define _FLASHDB_H_
 
-#include <el_flash.h>
+#include <fdb_cfg.h>
 
 #include <stdbool.h>
 #include <stddef.h>

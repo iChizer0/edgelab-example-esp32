@@ -15,6 +15,7 @@ set(INCLUDES_EDGELAB
     ${CMAKE_CURRENT_SOURCE_DIR}/src/repl
     ${CMAKE_CURRENT_SOURCE_DIR}/src/inference
     ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/JPEGENC
@@ -22,6 +23,14 @@ set(INCLUDES_EDGELAB
 
 if(CONFIG_EL_LIB_FLASHDB)
     list(APPEND SRCS_EDGELAB
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fal_flash.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fal_partition.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fal_rtt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fal.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fdb_file.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fdb_kvdb.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fdb_tsdb.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fdb_utils.c
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB/fdb.c
     )
     list(APPEND INCLUDES_EDGELAB 

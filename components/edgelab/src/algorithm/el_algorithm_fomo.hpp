@@ -26,12 +26,12 @@
 #ifndef _EL_ALGORITHM_FOMO_H_
 #define _EL_ALGORITHM_FOMO_H_
 
-#include <cassert>
-#include <forward_list>
+#include <cstdint>
 #include <type_traits>
 
 #include "el_algorithm_base.hpp"
 #include "el_cv.h"
+#include "el_debug.h"
 #include "el_types.h"
 
 namespace edgelab {
@@ -70,10 +70,8 @@ FOMO<InferenceEngine, ImageType, BoxType>::FOMO(InferenceEngine* engine, ScoreTy
         _input_img.format = EL_PIXEL_FORMAT_GRAYSCALE;
     }
 
-    // EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
-    // EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
-    assert(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
-    assert(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
+    EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
+    EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>

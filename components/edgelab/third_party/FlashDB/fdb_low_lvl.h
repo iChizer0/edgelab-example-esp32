@@ -12,7 +12,7 @@
 #ifndef _FDB_LOW_LVL_H_
 #define _FDB_LOW_LVL_H_
 
-#include <fdb_cfg.h>
+#include <fal_cfg.h>
 #include <fdb_def.h>
 
 #if (FDB_WRITE_GRAN == 1)

@@ -37,6 +37,6 @@ class DeviceEsp : public Device {
     ~DeviceEsp();
 };
 
-} // namespace edgelab
+}  // namespace edgelab
 
 #endif /* EL_DEVICE_ESP_H */

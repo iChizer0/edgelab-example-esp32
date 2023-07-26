@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2023 Hongtai Liu (Seeed Technology Inc.)
+ * Copyright (c) 2023 nullptr (Seeed Technology Inc.)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,36 +23,42 @@
  *
  */
 
-#ifndef _EL_FLASH_ESP_H
-#define _EL_FLASH_ESP_H
+#ifndef _EL_FLASH_ESP_H_
+#define _EL_FLASH_ESP_H_
 
-#define CONFIG_EL_LIB_FLASHDB
+#include "el_common.h"
+#include "esp_partition.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 #ifdef CONFIG_EL_LIB_FLASHDB
-    #define NOR_FLASH_DEV_NAME "norflash0"
+    #include <fal_def.h>
 
+    #define NOR_FLASH_DEV_NAME "nor_flash0"
     #define FAL_FLASH_DEV_TABLE \
-        { &nor_flash0, }
+        { &el_flash_nor_flash0, }
 
+    #define FAL_PART_HAS_TABLE_CFG
     #ifdef FAL_PART_HAS_TABLE_CFG
-        #define FAL_PART_TABLE                                                                     \
-            {                                                                                      \
-                {FAL_PART_MAGIC_WORD, "fdb_kvdb1", NOR_FLASH_DEV_NAME, 0, 16 * 1024, 0},           \
-                  {FAL_PART_MAGIC_WORD, "fdb_tsdb1", NOR_FLASH_DEV_NAME, 16 * 1024, 16 * 1024, 0}, \
-            }
+        #define FAL_PART_TABLE \
+            { {FAL_PART_MAGIC_WORD, "kvdb0", NOR_FLASH_DEV_NAME, 0, 64 * 1024, 0}, }
     #endif
 
     #define FDB_USING_KVDB
-
-    #define FDB_USING_TSDB
-
+    #ifdef FDB_USING_KVDB
+        #define FDB_KV_AUTO_UPDATE
+    #endif
     #define FDB_USING_FAL_MODE
-
     #define FDB_WRITE_GRAN 1
-
     #define FDB_DEBUG_ENABLE
 
-extern const struct fal_flash_dev nor_flash0;
+    #define FLASH_ERASE_MIN_SIZE (4 * 1024)
+
+static SemaphoreHandle_t el_flash_lock = NULL;
+
+const static esp_partition_t* el_flash_partition;
+extern const struct fal_flash_dev el_flash_nor_flash0;
 
 #endif
 

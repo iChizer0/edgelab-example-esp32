@@ -26,6 +26,7 @@
 #ifndef _EL_ALGORITHM_BASE_HPP_
 #define _EL_ALGORITHM_BASE_HPP_
 
+#include <cstdint>
 #include <forward_list>
 
 #include "el_debug.h"

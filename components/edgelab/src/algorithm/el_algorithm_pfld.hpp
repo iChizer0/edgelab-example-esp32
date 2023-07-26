@@ -26,6 +26,12 @@
 #ifndef _EL_ALGORITHM_PFLD_H_
 #define _EL_ALGORITHM_PFLD_H_
 
+#include <cstdint>
+
+#include "el_algorithm_base.hpp"
+#include "el_debug.h"
+#include "el_types.h"
+
 namespace edgelab {
 namespace algorithm {
 
@@ -60,10 +66,8 @@ PFLD<InferenceEngine, ImageType, PointType>::PFLD(InferenceEngine* engine)
         _input_img.format = EL_PIXEL_FORMAT_GRAYSCALE;
     }
 
-    // EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
-    // EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
-    assert(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
-    assert(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
+    EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
+    EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 }
 
 template <typename InferenceEngine, typename ImageType, typename PointType>

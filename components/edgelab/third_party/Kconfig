@@ -1,5 +1,5 @@
 menu "Third Party"
-    config EL_LIB_FlashDB
+    config EL_LIB_FLASHDB
         bool "FlashDB"
         default y
         help

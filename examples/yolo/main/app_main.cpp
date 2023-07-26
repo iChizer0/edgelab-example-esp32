@@ -90,17 +90,21 @@
 #include <flashdb.h>
 #include <stdio.h>
 
-#include "el_flash.h"
+// #include "el_flash.hpp"
 #include "esp_chip_info.h"
 #include "esp_flash.h"
+// #include "esp_flash.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#define FDB_USING_KVDB
 
 #define FDB_LOG_TAG "[main]"
 
-static uint32_t boot_count    = 0;
+// extern "C" {
+
+  static uint32_t boot_count    = 0;
 static time_t   boot_time[10] = {0, 1, 2, 3};
 /* default KV nodes */
 static struct fdb_default_kv_node default_kv_table[] = {
@@ -115,16 +119,44 @@ static struct fdb_kvdb kvdb = {0};
 struct fdb_tsdb tsdb = {0};
 /* counts for simulated timestamp */
 static int               counts = 0;
-static SemaphoreHandle_t s_lock = NULL;
+static SemaphoreHandle_t ss_lock = NULL;
 
-extern void kvdb_basic_sample(fdb_kvdb_t kvdb);
-extern void kvdb_type_string_sample(fdb_kvdb_t kvdb);
-extern void kvdb_type_blob_sample(fdb_kvdb_t kvdb);
-extern void tsdb_sample(fdb_tsdb_t tsdb);
+void kvdb_basic_sample(fdb_kvdb_t kvdb);
+// extern void kvdb_type_string_sample(fdb_kvdb_t kvdb);
+// extern void kvdb_type_blob_sample(fdb_kvdb_t kvdb);
+// extern void tsdb_sample(fdb_tsdb_t tsdb);
 
-static void lock(fdb_db_t db) { xSemaphoreTake(s_lock, portMAX_DELAY); }
+void kvdb_basic_sample(fdb_kvdb_t kvdb) {
+    struct fdb_blob blob;
+    int             boot_count = 0;
 
-static void unlock(fdb_db_t db) { xSemaphoreGive(s_lock); }
+    printf("==================== kvdb_basic_sample ====================\n");
+
+    { /* GET the KV value */
+        /* get the "boot_count" KV value */
+        fdb_kv_get_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+        /* the blob.saved.len is more than 0 when get the value successful */
+        if (blob.saved.len > 0) {
+            printf("get the 'boot_count' value is %d\n", boot_count);
+        } else {
+            printf("get the 'boot_count' failed\n");
+        }
+    }
+
+    { /* CHANGE the KV value */
+        /* increase the boot count */
+        boot_count++;
+        /* change the "boot_count" KV's value */
+        fdb_kv_set_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+        printf("set the 'boot_count' value to %d\n", boot_count);
+    }
+
+    printf("===========================================================\n");
+}
+
+static void lock(fdb_db_t db) { xSemaphoreTake(ss_lock, portMAX_DELAY); }
+
+static void unlock(fdb_db_t db) { xSemaphoreGive(ss_lock); }
 
 static fdb_time_t get_time(void) {
     /* Using the counts instead of timestamp.
@@ -136,10 +168,12 @@ static fdb_time_t get_time(void) {
 int flashdb_demo(void) {
     fdb_err_t result;
 
-    if (s_lock == NULL) {
-        s_lock = xSemaphoreCreateCounting(1, 1);
-        assert(s_lock != NULL);
+    if (ss_lock == NULL) {
+        ss_lock = xSemaphoreCreateCounting(1, 1);
+        assert(ss_lock != NULL);
     }
+
+#define FDB_USING_KVDB
 
 #ifdef FDB_USING_KVDB
     { /* KVDB Sample */
@@ -148,8 +182,8 @@ int flashdb_demo(void) {
         default_kv.kvs = default_kv_table;
         default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
         /* set the lock and unlock function if you want */
-        fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_LOCK, lock);
-        fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_UNLOCK, unlock);
+        fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_LOCK, (void*)lock);
+        fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_UNLOCK, (void*)unlock);
         /* Key-Value database initialization
          *
          *       &kvdb: database object
@@ -159,51 +193,33 @@ int flashdb_demo(void) {
          * &default_kv: The default KV nodes. It will auto add to KVDB when first initialize successfully.
          *        NULL: The user data if you need, now is empty.
          */
-        result = fdb_kvdb_init(&kvdb, "env", "fdb_kvdb1", &default_kv, NULL);
+        result = fdb_kvdb_init(&kvdb, "edgelab_db", "kvdb0", &default_kv, NULL);
+
+        printf("---------kvkvkvkv");
 
         if (result != FDB_NO_ERR) {
             return -1;
         }
+
+        printf("---------kvkvkvkv");
 
         /* run basic KV samples */
         kvdb_basic_sample(&kvdb);
         /* run string KV samples */
-        kvdb_type_string_sample(&kvdb);
+        // kvdb_type_string_sample(&kvdb);
         /* run blob KV samples */
-        kvdb_type_blob_sample(&kvdb);
+        // kvdb_type_blob_sample(&kvdb);
     }
 #endif /* FDB_USING_KVDB */
 
-#ifdef FDB_USING_TSDB
-    { /* TSDB Sample */
-        /* set the lock and unlock function if you want */
-        fdb_tsdb_control(&tsdb, FDB_TSDB_CTRL_SET_LOCK, lock);
-        fdb_tsdb_control(&tsdb, FDB_TSDB_CTRL_SET_UNLOCK, unlock);
-        /* Time series database initialization
-         *
-         *       &tsdb: database object
-         *       "log": database name
-         * "fdb_tsdb1": The flash partition name base on FAL. Please make sure it's in FAL partition table.
-         *              Please change to YOUR partition name.
-         *    get_time: The get current timestamp function.
-         *         128: maximum length of each log
-         *        NULL: The user data if you need, now is empty.
-         */
-        result = fdb_tsdb_init(&tsdb, "log", "fdb_tsdb1", get_time, 128, NULL);
-        /* read last saved time for simulated timestamp */
-        fdb_tsdb_control(&tsdb, FDB_TSDB_CTRL_GET_LAST_TIME, &counts);
 
-        if (result != FDB_NO_ERR) {
-            return -1;
-        }
-
-        /* run TSDB sample */
-        tsdb_sample(&tsdb);
-    }
-#endif /* FDB_USING_TSDB */
 
     return 0;
 }
+
+// }
+
+#include "el_data.h"
 
 extern "C" void app_main() {
     printf("FlashDB ESP32 SPI Flash Demo\n");
@@ -218,9 +234,24 @@ extern "C" void app_main() {
     uint32_t size_flash_chip;
     esp_flash_get_size(NULL, &size_flash_chip);
 
-    printf("%ldMB %s flash\n", size_flash_chip, (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+    printf("%ldMB %s flash\n",
+           size_flash_chip / (1024 * 1024),
+           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
-    flashdb_demo();
+    edgelab::data::PersistentMap map;
+
+    auto v = map["boot_time"];
+
+    printf("-------------- %s\n", v.name);
+
+    auto c = map["boot_time"];
+
+    printf("-------------- %s\n", c.name);
+
+    for (const auto& a : map) 
+      printf("-------------- %s\n", a.name);
+
+    // flashdb_demo();
 
     for (int i = 1000; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);

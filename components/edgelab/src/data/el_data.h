@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2023 Seeed Technology Co.,Ltd
+ * Copyright (c) 2023 nullptr (Seeed Technology Inc.)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,9 @@
  * THE SOFTWARE.
  *
  */
+#ifndef _EL_DATA_H_
+#define _EL_DATA_H_
 
-#ifndef _EL_FLASH_H_
-#define _EL_FLASH_H_
-
-#include "el_types.h"
-
-#ifdef CONFIG_EL_TARGET_ESPPRESSIF
-    #include "el_flash_esp.h"
-#endif
+#include "el_persistent_map.hpp"
 
 #endif
-

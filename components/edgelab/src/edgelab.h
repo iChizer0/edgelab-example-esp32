@@ -35,7 +35,7 @@
 #include "el_cv.h"
 #include "el_device.h"
 #include "el_display.h"
-#include "el_flash.h"
+// #include "el_flash.h"
 #include "el_inference.h"
 #include "el_misc.h"
 #include "el_nms.h"
