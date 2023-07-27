@@ -27,4 +27,8 @@
 
 #include "el_persistent_map.hpp"
 
+// TODO: avoid expose the namespace to global
+using namespace edgelab::data;
+using namespace edgelab::data::types;
+
 #endif

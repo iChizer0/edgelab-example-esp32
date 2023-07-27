@@ -286,10 +286,32 @@ extern "C" void app_main() {
 //     printf("rres %ld \n", r);
 //     }
 
-    auto t0 = edgelab::data::types::el_make_map_kv("test0", "ok");
-    auto t1 = edgelab::data::types::el_make_map_kv("test1", int(1));
+    int test1 = 0;
 
-    map << t0 << t1;
+    auto t0 = el_make_map_kv("oo", "not ok");
+    auto t1 = edgelab::data::types::el_make_map_kv("test1", test1);
+
+    map << t1 << t0;
+
+    for (const auto& a : map) printf("-------------- %s\n", a.name);
+
+    auto ss = edgelab::data::types::el_make_map_kv("oo", "");
+    map >> t1 >> ss;
+
+printf("------------------------------\n ");
+    for (int i = 0; i < ss.size; i ++)
+      printf("%c", ss.value[i]);
+
+    printf("test1 _> %d, %s %s\n", t1.value, t0.value, ss.value);
+
+    test1 = 3;
+    auto t2    = edgelab::data::types::el_make_map_kv("test1", test1);
+    map << t2;
+
+    auto t3 = edgelab::data::types::el_make_map_kv("test1", int());
+    map >> t3;
+    printf("test3 _> %d\n", t3.value);
+
     // edgelab::data::types::Map mm;
     // mm << xx << xx;
 
@@ -298,37 +320,37 @@ extern "C" void app_main() {
 
     // fdb_kv_to_blob(cur_kv, fdb_blob_make(&blob, data_buf, data_size));
 
-      // printf("==================== kvdb_basic_sample ====================\n");
+    // printf("==================== kvdb_basic_sample ====================\n");
 
-      // { /* GET the KV value */
-      //     /* get the "boot_count" KV value */
-      //     fdb_kv_get_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
-      //     /* the blob.saved.len is more than 0 when get the value successful */
-      //     if (blob.saved.len > 0) {
-      //         printf("get the 'boot_count' value is %d\n", boot_count);
-      //     } else {
-      //         printf("get the 'boot_count' failed\n");
-      //     }
-      // }
+    // { /* GET the KV value */
+    //     /* get the "boot_count" KV value */
+    //     fdb_kv_get_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+    //     /* the blob.saved.len is more than 0 when get the value successful */
+    //     if (blob.saved.len > 0) {
+    //         printf("get the 'boot_count' value is %d\n", boot_count);
+    //     } else {
+    //         printf("get the 'boot_count' failed\n");
+    //     }
+    // }
 
-      // { /* CHANGE the KV value */
-      //     /* increase the boot count */
-      //     boot_count++;
-      //     /* change the "boot_count" KV's value */
-      //     fdb_kv_set_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
-      //     printf("set the 'boot_count' value to %d\n", boot_count);
-      // }
+    // { /* CHANGE the KV value */
+    //     /* increase the boot count */
+    //     boot_count++;
+    //     /* change the "boot_count" KV's value */
+    //     fdb_kv_set_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+    //     printf("set the 'boot_count' value to %d\n", boot_count);
+    // }
 
-      // printf("===========================================================\n");
-      // }
+    // printf("===========================================================\n");
+    // }
 
-      // map.erase("username");
+    // map.erase("username");
 
-      //   for (const auto& a : map) printf("after e---------- %s\n", a.name);
+    //   for (const auto& a : map) printf("after e---------- %s\n", a.name);
 
-      // for (const auto& a : map) printf("after e it---------- %s\n", a.name);
+    // for (const auto& a : map) printf("after e it---------- %s\n", a.name);
 
-      for (int i = 1000; i >= 0; i--) {
+    for (int i = 1000; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

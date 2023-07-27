@@ -36,8 +36,6 @@
 #include <type_traits>
 #include <utility>
 
-#define CONFIG_EL_LIB_FLASHDB
-
 #ifdef CONFIG_EL_LIB_FLASHDB
 
     #include <flashdb.h>
@@ -52,12 +50,13 @@ struct is_c_str : std::integral_constant<bool,
                                            std::is_same<char*, typename std::decay<T>::type>::value> {};
 
 template <typename KeyType, typename ContainedType, typename UnderlyingType> struct el_map_kv_t {
-    el_map_kv_t() {}
-
     explicit el_map_kv_t(KeyType key_, ContainedType value_, size_t size_ = 0, UnderlyingType underlying_ = {})
-        : key(key_), value(value_), size(size_), underlying(underlying_) {}
+        : key(key_), value(value_), size(size_), underlying(underlying_), __call_delete(false) {}
 
-    ~el_map_kv_t() = default;
+    ~el_map_kv_t() {
+        if constexpr (is_c_str<ContainedType>::value == std::true_type::value)
+            if (__call_delete) delete[] value;
+    };
 
     operator ContainedType() { return value; }
 
@@ -65,6 +64,7 @@ template <typename KeyType, typename ContainedType, typename UnderlyingType> str
     ContainedType  value;
     size_t         size;
     UnderlyingType underlying;
+    bool           __call_delete;
 };
 
 // Disabling perfect forwarding due to char* type contained
@@ -74,7 +74,7 @@ template <typename KeyType, typename ContainedType, typename UnderlyingType> str
 //     if constexpr (is_c_str<ContainedType>::value != std::true_type::value) {
 //         size = sizeof(value);
 //     } else {
-//         size = strlen(value);
+//         size = strlen(value) + 1;
 //     }
 //     return el_map_kv_t<KeyType, ContainedType, UnderlyingType>(
 //       std::forward<KeyType>(key), std::forward<ContainedType>(value), size);
@@ -85,10 +85,11 @@ constexpr el_map_kv_t<KeyType, ContainedType, UnderlyingType> el_make_map_kv(Key
     size_t size{0};
     if constexpr (is_c_str<ContainedType>::value != std::true_type::value) {
         size = sizeof(value);
+        return el_map_kv_t<KeyType, ContainedType, UnderlyingType>(key, value, size);
     } else {
-        size = strlen(value);
+        size = std::strlen(value) + 1;
+        return el_map_kv_t<KeyType, typename std::remove_const<ContainedType>::type, UnderlyingType>(key, value, size);
     }
-    return el_map_kv_t<KeyType, ContainedType, UnderlyingType>(key, value, size);
 }
 
 }  // namespace types
@@ -199,21 +200,19 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
         return fdb_kv_get_obj(__kvdb, key, &kv);
     }
 
-    template <typename TargetType, size_t Size> TargetType get(const ValType* kv) {
+    template <typename TargetType> TargetType* get(const ValType* kv, TargetType* data_buf, size_t size) {
         volatile const Guard guard(this);
         struct fdb_blob      blob;
-        TargetType           data_buf{};
-        if (kv != NULL && kv->value_len == Size) [[unlikely]] {
-            fdb_blob_read(
-              reinterpret_cast<fdb_db_t>(__kvdb),
-              fdb_kv_to_blob(const_cast<fdb_kv_t>(kv), fdb_blob_make(&blob, reinterpret_cast<void*>(&data_buf), Size)));
+        if (kv != NULL || kv->value_len == size) [[likely]] {
+            fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                          fdb_kv_to_blob(const_cast<fdb_kv_t>(kv), fdb_blob_make(&blob, data_buf, size)));
         }
         return data_buf;
     }
 
-    void emplace(KeyType key, const fdb_blob_t blob) {
+    bool emplace(KeyType key, const fdb_blob_t blob) {
         volatile const Guard guard(this);
-        fdb_kv_set_blob(__kvdb, key, blob);
+        return fdb_kv_set_blob(__kvdb, key, blob) == FDB_NO_ERR;
     }
 
     bool erase(KeyType key) {
@@ -246,6 +245,35 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
         } else {
             emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size));
         }
+        return *this;
+    }
+
+    template <typename ContainedType>
+    PersistentMap& operator>>(types::el_map_kv_t<KeyType, ContainedType, ValType>& rhs) {
+        volatile const Guard guard(this);
+
+        struct fdb_blob blob;
+        ValType         kv{};
+        ValType*        p_kv{fdb_kv_get_obj(__kvdb, rhs.key, &kv)};
+        if (p_kv == NULL) return *this;
+
+        if constexpr (types::is_c_str<ContainedType>::value != std::true_type::value) {
+            if (p_kv->value_len != rhs.size) return *this;
+            ContainedType buffer{};
+            rhs.size =
+              fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                            fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, &buffer, p_kv->value_len)));
+            rhs.value      = buffer;
+            rhs.underlying = *p_kv;
+        } else {
+            char* buffer{new char[p_kv->value_len]()};
+            rhs.size =
+              fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                            fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, buffer, p_kv->value_len)));
+            rhs.value         = buffer;
+            rhs.__call_delete = true;
+        }
+
         return *this;
     }
 
