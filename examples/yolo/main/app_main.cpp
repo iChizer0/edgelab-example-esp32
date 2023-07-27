@@ -268,23 +268,30 @@ extern "C" void app_main() {
     for (const auto& a : map) 
       printf("-------------- %s\n", a.name);
 
-{
-    fdb_kv_t  cur_kv{map["boot_countss"]};
-    auto r = map.get<decltype(boot_count)>(cur_kv);
-    printf("rres %ld \n", r);
-}
+// {
+//     fdb_kv_t  cur_kv{map["boot_countss"]};
+//     auto r = map.get<decltype(boot_count)>(cur_kv);
+//     printf("rres %ld \n", r);
+// }
 
-    boot_count += 1;
+//     boot_count += 1;
 
-    struct fdb_blob blob;
-    fdb_blob_make(&blob, &boot_count, sizeof(boot_count));
-    map.emplace("boot_count", &blob);
+//     struct fdb_blob blob;
+//     fdb_blob_make(&blob, &boot_count, sizeof(boot_count));
+//     map.emplace("boot_count", &blob);
 
-    {
-    fdb_kv_t cur_kv{map["boot_count"]};
-    auto   r = map.get<decltype(boot_count)>(cur_kv);
-    printf("rres %ld \n", r);
-    }
+//     {
+//     fdb_kv_t cur_kv{map["boot_count"]};
+//     auto   r = map.get<decltype(boot_count)>(cur_kv);
+//     printf("rres %ld \n", r);
+//     }
+
+    auto t0 = edgelab::data::types::el_make_map_kv("test0", "ok");
+    auto t1 = edgelab::data::types::el_make_map_kv("test1", int(1));
+
+    map << t0 << t1;
+    // edgelab::data::types::Map mm;
+    // mm << xx << xx;
 
     // size_t   data_size;
     // uint8_t* data_buf = (uint8_t*)malloc(data_size);

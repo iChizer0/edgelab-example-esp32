@@ -30,8 +30,10 @@
 #include <freertos/semphr.h>
 
 #include <cstddef>
+#include <cstring>
 #include <iterator>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 #define CONFIG_EL_LIB_FLASHDB
@@ -41,6 +43,55 @@
     #include <flashdb.h>
 
 namespace edgelab::data {
+
+namespace types {
+
+template <class T>
+struct is_c_str : std::integral_constant<bool,
+                                         std::is_same<char const*, typename std::decay<T>::type>::value ||
+                                           std::is_same<char*, typename std::decay<T>::type>::value> {};
+
+template <typename KeyType, typename ContainedType, typename UnderlyingType> struct el_map_kv_t {
+    el_map_kv_t() {}
+
+    explicit el_map_kv_t(KeyType key_, ContainedType value_, size_t size_ = 0, UnderlyingType underlying_ = {})
+        : key(key_), value(value_), size(size_), underlying(underlying_) {}
+
+    ~el_map_kv_t() = default;
+
+    operator ContainedType() { return value; }
+
+    KeyType        key;
+    ContainedType  value;
+    size_t         size;
+    UnderlyingType underlying;
+};
+
+// Disabling perfect forwarding due to char* type contained
+// template <typename KeyType = const char*, typename ContainedType, typename UnderlyingType = struct fdb_kv>
+// constexpr el_map_kv_t<KeyType, ContainedType, UnderlyingType> el_make_map_kv(KeyType&& key, ContainedType&& value) {
+//     size_t size{0};
+//     if constexpr (is_c_str<ContainedType>::value != std::true_type::value) {
+//         size = sizeof(value);
+//     } else {
+//         size = strlen(value);
+//     }
+//     return el_map_kv_t<KeyType, ContainedType, UnderlyingType>(
+//       std::forward<KeyType>(key), std::forward<ContainedType>(value), size);
+// }
+
+template <typename KeyType = const char*, typename ContainedType, typename UnderlyingType = struct fdb_kv>
+constexpr el_map_kv_t<KeyType, ContainedType, UnderlyingType> el_make_map_kv(KeyType key, ContainedType value) {
+    size_t size{0};
+    if constexpr (is_c_str<ContainedType>::value != std::true_type::value) {
+        size = sizeof(value);
+    } else {
+        size = strlen(value);
+    }
+    return el_map_kv_t<KeyType, ContainedType, UnderlyingType>(key, value, size);
+}
+
+}  // namespace types
 
 template <typename KeyType = const char*, typename ValType = struct fdb_kv> class PersistentMap {
    private:
@@ -148,15 +199,14 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
         return fdb_kv_get_obj(__kvdb, key, &kv);
     }
 
-    template <typename TargetType> TargetType get(const ValType* kv) {
-        struct fdb_blob blob;
-        TargetType      data_buf{};
-        if (kv != NULL) [[unlikely]] {
-            auto data_size{kv->value_len};
-            assert(data_size == sizeof(TargetType));
-            fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
-                          fdb_kv_to_blob(const_cast<fdb_kv_t>(kv),
-                                         fdb_blob_make(&blob, reinterpret_cast<void*>(&data_buf), data_size)));
+    template <typename TargetType, size_t Size> TargetType get(const ValType* kv) {
+        volatile const Guard guard(this);
+        struct fdb_blob      blob;
+        TargetType           data_buf{};
+        if (kv != NULL && kv->value_len == Size) [[unlikely]] {
+            fdb_blob_read(
+              reinterpret_cast<fdb_db_t>(__kvdb),
+              fdb_kv_to_blob(const_cast<fdb_kv_t>(kv), fdb_blob_make(&blob, reinterpret_cast<void*>(&data_buf), Size)));
         }
         return data_buf;
     }
@@ -183,8 +233,23 @@ template <typename KeyType = const char*, typename ValType = struct fdb_kv> clas
         return fdb_kv_set_default(__kvdb) == FDB_NO_ERR;
     }
 
-    Iterator begin() { return Iterator(__kvdb, __lock); }
+    bool destory() {
+        m_lock();
+        return fdb_kvdb_deinit(__kvdb) == FDB_NO_ERR;
+    }
 
+    template <typename ContainedType>
+    PersistentMap& operator<<(const types::el_map_kv_t<KeyType, ContainedType, ValType>& rhs) {
+        struct fdb_blob blob;
+        if constexpr (types::is_c_str<ContainedType>::value != std::true_type::value) {
+            emplace(rhs.key, fdb_blob_make(&blob, &rhs.value, rhs.size));
+        } else {
+            emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size));
+        }
+        return *this;
+    }
+
+    Iterator begin() { return Iterator(__kvdb, __lock); }
     Iterator end() { return Iterator(NULL, __lock); }
 };
 
