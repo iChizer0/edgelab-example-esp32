@@ -189,32 +189,28 @@ extern "C" void app_main() {
     default_kv.kvs = default_kv_table;
     default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
 
-    edgelab::data::PersistentMap map(&default_kv);
+    edgelab::data::PersistentMap map("edgelab_db", "kvdb0", &default_kv);
     // map.destory();
     int i = 0;
 
     printf("quering init ->\n");
     for (const auto& a : map) printf("\t%s\n", a.name);
 
-
-    printf("test %d\n", i);
+    // printf("test %d\n", i);
     auto t0 = el_make_map_kv("t0", 0);
-    map << t0;
-    printf("quering %d ->\n", i);
-    for (const auto& a : map) printf("\t%s\n", a.name);
+    // map << t0;
+    // printf("quering %d ->\n", i);
+    // for (const auto& a : map) printf("\t%s\n", a.name);
 
+    // printf("test %d\n", ++i);
+    // map.erase("t0");
+    // printf("quering %d ->\n", i);
+    // for (const auto& a : map) printf("\t%s\n", a.name);
 
-    printf("test %d\n", ++i);
-    map.erase("t0");
-    printf("quering %d ->\n", i);
-    for (const auto& a : map) printf("\t%s\n", a.name);
-
-
-    printf("test %d\n", ++i);
-    map.erase("not exist");
-    printf("quering %d ->\n", i);
-    for (const auto& a : map) printf("\t%s\n", a.name);
-
+    // printf("test %d\n", ++i);
+    // map.erase("not exist");
+    // printf("quering %d ->\n", i);
+    // for (const auto& a : map) printf("\t%s\n", a.name);
 
     for (int i = 1000; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
