@@ -26,23 +26,35 @@
 #ifndef _EL_FLASH_ESP_H_
 #define _EL_FLASH_ESP_H_
 
-#include "el_common.h"
-#include "esp_partition.h"
+#include <assert.h>
 
+#include "esp_partition.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+
+#define EL_FLASH_PARTITION_NAME        "db"
+#define EL_FLASH_PARTITION_MOUNT_POINT "nor_flash0"
+#define EL_FLASH_PARTITION_FS_NAME_0   "kvdb0"
+#define EL_FLASH_PARTITION_FS_SIZE_0   (64 * 1024)
 
 #ifdef CONFIG_EL_LIB_FLASHDB
     #include <fal_def.h>
 
-    #define NOR_FLASH_DEV_NAME "nor_flash0"
+    #define NOR_FLASH_DEV_NAME EL_FLASH_PARTITION_MOUNT_POINT
     #define FAL_FLASH_DEV_TABLE \
         { &el_flash_nor_flash0, }
 
     #define FAL_PART_HAS_TABLE_CFG
     #ifdef FAL_PART_HAS_TABLE_CFG
-        #define FAL_PART_TABLE \
-            { {FAL_PART_MAGIC_WORD, "kvdb0", NOR_FLASH_DEV_NAME, 0, 64 * 1024, 0}, }
+        #define FAL_PART_TABLE                 \
+            {                                  \
+                {FAL_PART_MAGIC_WORD,          \
+                 EL_FLASH_PARTITION_FS_NAME_0, \
+                 NOR_FLASH_DEV_NAME,           \
+                 0,                            \
+                 EL_FLASH_PARTITION_FS_SIZE_0, \
+                 0},                           \
+            }
     #endif
 
     #define FDB_USING_KVDB
@@ -57,7 +69,7 @@
 
 static SemaphoreHandle_t el_flash_lock = NULL;
 
-const static esp_partition_t* el_flash_partition;
+const static esp_partition_t*     el_flash_partition;
 extern const struct fal_flash_dev el_flash_nor_flash0;
 
 #endif

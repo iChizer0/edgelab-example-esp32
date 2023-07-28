@@ -1,444 +1,226 @@
-#include <inttypes.h>
-#include <stdio.h>
-
-#include "edgelab.h"
-#include "esp_partition.h"
-#include "esp_spi_flash.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-// #include "yolo_model_data.h"
-
-#define kTensorArenaSize (1024 * 768)
-
-uint16_t color[] = {
-  0x0000,
-  0x03E0,
-  0x001F,
-  0x7FE0,
-  0xFFFF,
-};
-
-extern "C" void app_main(void) {
-    Device*  device  = Device::get_device();
-    Display* display = device->get_display();
-    Camera*  camera  = device->get_camera();
-
-    camera->init(240, 240);
-    display->init();
-
-    auto* engine       = new InferenceEngine<EngineName::TFLite>();
-    auto* tensor_arena = heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    engine->init(tensor_arena, kTensorArenaSize);
-
-    // algorithm->init();
-
-    // const uint32_t* flash_addr = (const uint32_t*)0x400000;
-    // for (size_t i = 0; i < 4; ++i) {
-    //   uint32_t buf = *flash_addr++;
-    //   printf("p-> %p, data -> %ld", flash_addr, buf);
-    // }
-
-    // printf("model addr -> %p\n", g_yolo_model_data);
-    static const esp_partition_t* p =
-      esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, "models");
-
-    printf("mem addr -> %p, flash addr -> %#08x\n", p, int(p->address));
-
-    const uint8_t*          flash_mapped_ptr;
-    esp_err_t               ret;
-    spi_flash_mmap_handle_t handle;
-    ret = spi_flash_mmap(0x400000, 0x800000 - 0x400000, SPI_FLASH_MMAP_DATA, (const void**)&flash_mapped_ptr, &handle);
-
-    const uint8_t* data_ptr = flash_mapped_ptr;
-    // static const size_t model_size = 0x41400;  // 267264
-
-    if (ret == ESP_OK) {
-        printf("mmap ptr -> %p\n", data_ptr);
-
-        for (int i = 0; i < 64; ++i) {
-            printf("%#02x\t", int(*(data_ptr + i)));
-            if ((i + 1) % 8 == 0) printf("\n");
-        }
-        printf("\n");
-
-        uint8_t model = 0b00000000;  // pre 1
-        uint8_t index = 0;
-
-        const int32_t model_max_size = 0x100000;
-
-// #define MODEL_MAGIC_NUM 0x4C485400
-#define MODEL_MAGIC_NUM 0x4C485400
-
-        for (uint8_t i = 0; i < 4; i++) {
-            int offset      = i * model_max_size;
-            index               = i + 1;
-            const uint8_t* model_addr = data_ptr + offset;
-
-            if (((*(uint32_t*)model_addr) & 0xFFFFFF00) == MODEL_MAGIC_NUM) {
-                index = (*(uint32_t*)model_addr) & 0xFF;  // get index form model header
-                model_addr += 4;
-                printf("ok!\n");
-            } 
-            else {
-                printf("error loading model -> \n\tmodel_addr: %p\n\toffset: %#08x\n\tmagic (reversed): %#08x\n",
-                       model_addr,
-                       int(offset),
-                       int(((*(uint32_t*)model_addr) & 0xFFFFFF00)));
-
-
-                continue;
-                // for (int i = 1000; i >= 0; i--) {
-                //     printf("Restarting in %d seconds...\n", i);
-                //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-                // }
-                // printf("Restarting now.\n");
-                // fflush(stdout);
-                // esp_restart();
-            }
-
-            printf("p -> %p\n", model_addr);
-
-            engine->load_model(model_addr, model_max_size);
-            model |= 1 << (index);
-
-            // if (::tflite::GetModel((void*)model_addr)->version() == TFLITE_SCHEMA_VERSION) {
-            //     model |= 1 << (index);  // if model vaild, then set bit
-            // }
-        }
-
-        
-    }
-
-#define TEST_MAIN
-
-#ifdef TEST_MAIN
-    auto* algorithm = new YOLO(engine);
-
-  
-
-    printf("done\n");
-    while (1) {
-        el_img_t img;
-        camera->start_stream();
-        camera->get_frame(&img);
-        algorithm->run(&img);
-        uint32_t preprocess_time  = algorithm->get_preprocess_time();
-        uint32_t run_time         = algorithm->get_run_time();
-        uint32_t postprocess_time = algorithm->get_postprocess_time();
-        uint8_t  i                = 0;
-        for (const auto box : algorithm->get_results()) {
-            el_printf("\tbox -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]\n",
-                      box.x,
-                      box.y,
-                      box.w,
-                      box.h,
-                      box.target,
-                      box.score);
-
-            uint16_t y = box.y - box.h / 2;
-            uint16_t x = box.x - box.w / 2;
-            el_draw_rect(&img, x, y, box.w, box.h, color[++i % 5], 4);
-        }
-
-        // {
-        //     el_box_t b{
-        //       .x      = 1,
-        //       .y      = 2,
-        //       .w      = 3,
-        //       .h      = 4,
-        //       .score  = 6,
-        //       .target = 5,
-        //     };
-        //     // el_printf("\tp_b -> %p\n", &b);
-        //     el_printf("\ttest0 -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
-        //     // el_printf("\ttest1 -> cx_cy_w_h: [%3d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
-        //     // el_printf("\ttest1 -> cx_cy_w_h: [%3d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
-        //     // el_printf("\ttest2 -> cx_cy_w_h: [%3d, %3d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
-        //     // el_printf("\ttest3 -> cx_cy_w_h: [%3d, %3d, %3d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
-        //     el_printf("\ttest4 -> cx_cy_w_h: [%3d, %3d, %3d, %3d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
-        // }
-
-        el_printf("preprocess: %d, run: %d, postprocess: %d\n", preprocess_time, run_time, postprocess_time);
-        display->show(&img);
-        camera->stop_stream();
-    }
-#endif
-}
-
-/* FlashDB ESP32 SPI Flash Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
-// #include <flashdb.h>
+// #include <inttypes.h>
 // #include <stdio.h>
 
-// // #include "el_flash.hpp"
-// #include "esp_chip_info.h"
-// #include "esp_flash.h"
-// // #include "esp_flash.h"
-// #include "esp_system.h"
+// #include "edgelab.h"
+// #include "esp_partition.h"
+// #include "esp_spi_flash.h"
 // #include "freertos/FreeRTOS.h"
-// #include "freertos/semphr.h"
 // #include "freertos/task.h"
-// #define FDB_USING_KVDB
+// // #include "yolo_model_data.h"
 
-// #define FDB_LOG_TAG "[main]"
+// #define kTensorArenaSize (1024 * 768)
 
-// // extern "C" {
-
-//   static uint32_t boot_count    = 0;
-// static time_t   boot_time[10] = {0, 1, 2, 3};
-// /* default KV nodes */
-// static struct fdb_default_kv_node default_kv_table[] = {
-//   {"username", (void*)("armink"), 0},                       /* string KV */
-//   {"password", (void*)("123456"), 0},                       /* string KV */
-//   {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
-//   {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
+// uint16_t color[] = {
+//   0x0000,
+//   0x03E0,
+//   0x001F,
+//   0x7FE0,
+//   0xFFFF,
 // };
-// /* KVDB object */
-// static struct fdb_kvdb kvdb = {0};
-// /* TSDB object */
-// struct fdb_tsdb tsdb = {0};
-// /* counts for simulated timestamp */
-// static int               counts = 0;
-// static SemaphoreHandle_t ss_lock = NULL;
 
-// void kvdb_basic_sample(fdb_kvdb_t kvdb);
-// // extern void kvdb_type_string_sample(fdb_kvdb_t kvdb);
-// // extern void kvdb_type_blob_sample(fdb_kvdb_t kvdb);
-// // extern void tsdb_sample(fdb_tsdb_t tsdb);
+// extern "C" void app_main(void) {
+//     Device*  device  = Device::get_device();
+//     Display* display = device->get_display();
+//     Camera*  camera  = device->get_camera();
 
-// void kvdb_basic_sample(fdb_kvdb_t kvdb) {
-//     struct fdb_blob blob;
-//     int             boot_count = 0;
+//     camera->init(240, 240);
+//     display->init();
 
-//     printf("==================== kvdb_basic_sample ====================\n");
+//     auto* engine       = new InferenceEngine<EngineName::TFLite>();
+//     auto* tensor_arena = heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+//     engine->init(tensor_arena, kTensorArenaSize);
 
-//     { /* GET the KV value */
-//         /* get the "boot_count" KV value */
-//         fdb_kv_get_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
-//         /* the blob.saved.len is more than 0 when get the value successful */
-//         if (blob.saved.len > 0) {
-//             printf("get the 'boot_count' value is %d\n", boot_count);
-//         } else {
-//             printf("get the 'boot_count' failed\n");
+//     // algorithm->init();
+
+//     // const uint32_t* flash_addr = (const uint32_t*)0x400000;
+//     // for (size_t i = 0; i < 4; ++i) {
+//     //   uint32_t buf = *flash_addr++;
+//     //   printf("p-> %p, data -> %ld", flash_addr, buf);
+//     // }
+
+//     // printf("model addr -> %p\n", g_yolo_model_data);
+//     static const esp_partition_t* p =
+//       esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, "models");
+
+//     printf("mem addr -> %p, flash addr -> %#08x\n", p, int(p->address));
+
+//     const uint8_t*          flash_mapped_ptr;
+//     esp_err_t               ret;
+//     spi_flash_mmap_handle_t handle;
+//     ret = spi_flash_mmap(0x400000, 0x800000 - 0x400000, SPI_FLASH_MMAP_DATA, (const void**)&flash_mapped_ptr, &handle);
+
+//     const uint8_t* data_ptr = flash_mapped_ptr;
+//     // static const size_t model_size = 0x41400;  // 267264
+
+//     if (ret == ESP_OK) {
+//         printf("mmap ptr -> %p\n", data_ptr);
+
+//         for (int i = 0; i < 64; ++i) {
+//             printf("%#02x\t", int(*(data_ptr + i)));
+//             if ((i + 1) % 8 == 0) printf("\n");
 //         }
-//     }
+//         printf("\n");
 
-//     { /* CHANGE the KV value */
-//         /* increase the boot count */
-//         boot_count++;
-//         /* change the "boot_count" KV's value */
-//         fdb_kv_set_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
-//         printf("set the 'boot_count' value to %d\n", boot_count);
-//     }
+//         uint8_t model = 0b00000000;  // pre 1
+//         uint8_t index = 0;
 
-//     printf("===========================================================\n");
-// }
+//         const int32_t model_max_size = 0x100000;
 
-// static void lock(fdb_db_t db) { xSemaphoreTake(ss_lock, portMAX_DELAY); }
+// // #define MODEL_MAGIC_NUM 0x4C485400
+// #define MODEL_MAGIC_NUM 0x4C485400
 
-// static void unlock(fdb_db_t db) { xSemaphoreGive(ss_lock); }
+//         for (uint8_t i = 0; i < 4; i++) {
+//             int offset      = i * model_max_size;
+//             index               = i + 1;
+//             const uint8_t* model_addr = data_ptr + offset;
 
-// static fdb_time_t get_time(void) {
-//     /* Using the counts instead of timestamp.
-//      * Please change this function to return RTC time.
-//      */
-//     return ++counts;
-// }
+//             if (((*(uint32_t*)model_addr) & 0xFFFFFF00) == MODEL_MAGIC_NUM) {
+//                 index = (*(uint32_t*)model_addr) & 0xFF;  // get index form model header
+//                 model_addr += 4;
+//                 printf("ok!\n");
+//             }
+//             else {
+//                 printf("error loading model -> \n\tmodel_addr: %p\n\toffset: %#08x\n\tmagic (reversed): %#08x\n",
+//                        model_addr,
+//                        int(offset),
+//                        int(((*(uint32_t*)model_addr) & 0xFFFFFF00)));
 
-// int flashdb_demo(void) {
-//     fdb_err_t result;
+//                 continue;
+//                 // for (int i = 1000; i >= 0; i--) {
+//                 //     printf("Restarting in %d seconds...\n", i);
+//                 //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+//                 // }
+//                 // printf("Restarting now.\n");
+//                 // fflush(stdout);
+//                 // esp_restart();
+//             }
 
-//     if (ss_lock == NULL) {
-//         ss_lock = xSemaphoreCreateCounting(1, 1);
-//         assert(ss_lock != NULL);
-//     }
+//             printf("p -> %p\n", model_addr);
 
-// #define FDB_USING_KVDB
+//             engine->load_model(model_addr, model_max_size);
+//             model |= 1 << (index);
 
-// #ifdef FDB_USING_KVDB
-//     { /* KVDB Sample */
-//         struct fdb_default_kv default_kv;
-
-//         default_kv.kvs = default_kv_table;
-//         default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
-//         /* set the lock and unlock function if you want */
-//         fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_LOCK, (void*)lock);
-//         fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_UNLOCK, (void*)unlock);
-//         /* Key-Value database initialization
-//          *
-//          *       &kvdb: database object
-//          *       "env": database name
-//          * "fdb_kvdb1": The flash partition name base on FAL. Please make sure it's in FAL partition table.
-//          *              Please change to YOUR partition name.
-//          * &default_kv: The default KV nodes. It will auto add to KVDB when first initialize successfully.
-//          *        NULL: The user data if you need, now is empty.
-//          */
-//         result = fdb_kvdb_init(&kvdb, "edgelab_db", "kvdb0", &default_kv, NULL);
-
-//         printf("---------kvkvkvkv");
-
-//         if (result != FDB_NO_ERR) {
-//             return -1;
+//             // if (::tflite::GetModel((void*)model_addr)->version() == TFLITE_SCHEMA_VERSION) {
+//             //     model |= 1 << (index);  // if model vaild, then set bit
+//             // }
 //         }
 
-//         printf("---------kvkvkvkv");
-
-//         /* run basic KV samples */
-//         kvdb_basic_sample(&kvdb);
-//         /* run string KV samples */
-//         // kvdb_type_string_sample(&kvdb);
-//         /* run blob KV samples */
-//         // kvdb_type_blob_sample(&kvdb);
 //     }
-// #endif /* FDB_USING_KVDB */
 
-//     return 0;
+// #define TEST_MAIN
+
+// #ifdef TEST_MAIN
+//     auto* algorithm = new YOLO(engine);
+
+//     printf("done\n");
+//     while (1) {
+//         el_img_t img;
+//         camera->start_stream();
+//         camera->get_frame(&img);
+//         algorithm->run(&img);
+//         uint32_t preprocess_time  = algorithm->get_preprocess_time();
+//         uint32_t run_time         = algorithm->get_run_time();
+//         uint32_t postprocess_time = algorithm->get_postprocess_time();
+//         uint8_t  i                = 0;
+//         for (const auto box : algorithm->get_results()) {
+//             el_printf("\tbox -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]\n",
+//                       box.x,
+//                       box.y,
+//                       box.w,
+//                       box.h,
+//                       box.target,
+//                       box.score);
+
+//             uint16_t y = box.y - box.h / 2;
+//             uint16_t x = box.x - box.w / 2;
+//             el_draw_rect(&img, x, y, box.w, box.h, color[++i % 5], 4);
+//         }
+
+//         // {
+//         //     el_box_t b{
+//         //       .x      = 1,
+//         //       .y      = 2,
+//         //       .w      = 3,
+//         //       .h      = 4,
+//         //       .score  = 6,
+//         //       .target = 5,
+//         //     };
+//         //     // el_printf("\tp_b -> %p\n", &b);
+//         //     el_printf("\ttest0 -> cx_cy_w_h: [%d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+//         //     // el_printf("\ttest1 -> cx_cy_w_h: [%3d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+//         //     // el_printf("\ttest1 -> cx_cy_w_h: [%3d, %d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+//         //     // el_printf("\ttest2 -> cx_cy_w_h: [%3d, %3d, %d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+//         //     // el_printf("\ttest3 -> cx_cy_w_h: [%3d, %3d, %3d, %d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+//         //     el_printf("\ttest4 -> cx_cy_w_h: [%3d, %3d, %3d, %3d] t: [%d] s: [%d]\n", b.x, b.y, b.w, b.h, b.target, b.score);
+//         // }
+
+//         el_printf("preprocess: %d, run: %d, postprocess: %d\n", preprocess_time, run_time, postprocess_time);
+//         display->show(&img);
+//         camera->stop_stream();
+//     }
+// #endif
 // }
 
-// // }
+#include <stdio.h>
 
-// #include "el_data.h"
+#include "el_data.h"
+#include "esp_chip_info.h"
+#include "esp_flash.h"
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
+#include "nvs_flash.h"
 
-// extern "C" void app_main() {
-//     printf("FlashDB ESP32 SPI Flash Demo\n");
+extern "C" void app_main() {
+    printf("==================== test flash ====================\n");
 
-//     /* Print chip information */
-//     esp_chip_info_t chip_info;
-//     esp_chip_info(&chip_info);
-//     printf("This is ESP32 chip with %d CPU cores, WiFi, ", chip_info.cores);
+    static int boot_count  = 0;
+    static int boot_time[] = {1, 2, 3, 4};
 
-//     printf("silicon revision %d, ", chip_info.revision);
+    static struct fdb_default_kv_node default_kv_table[] = {
+      {"username", (void*)("armink"), 0},              /* string KV */
+      {"password", (void*)("123456"), 0},              /* string KV */
+      {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
+      {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
+    };
 
-//     uint32_t size_flash_chip;
-//     esp_flash_get_size(NULL, &size_flash_chip);
+    struct fdb_default_kv default_kv;
+    default_kv.kvs = default_kv_table;
+    default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
 
-//     printf("%ldMB %s flash\n",
-//            size_flash_chip / (1024 * 1024),
-//            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+    edgelab::data::PersistentMap map(&default_kv);
+    // map.destory();
+    int i = 0;
 
-//     static uint32_t boot_count    = 0;
-//     static time_t   boot_time[10] = {0, 1, 2, 3};
+    printf("quering init ->\n");
+    for (const auto& a : map) printf("\t%s\n", a.name);
 
-//     static struct fdb_default_kv_node default_kv_table[] = {
-//       {"username", (void*)("armink"), 0},              /* string KV */
-//       {"password", (void*)("123456"), 0},              /* string KV */
-//       {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
-//       {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
-//     };
 
-//     struct fdb_default_kv default_kv;
-//     default_kv.kvs = default_kv_table;
-//     default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
+    printf("test %d\n", i);
+    auto t0 = el_make_map_kv("t0", 0);
+    map << t0;
+    printf("quering %d ->\n", i);
+    for (const auto& a : map) printf("\t%s\n", a.name);
 
-//     edgelab::data::PersistentMap map;
-//     // map.reset();
 
-//   //  map.reset();
+    printf("test %d\n", ++i);
+    map.erase("t0");
+    printf("quering %d ->\n", i);
+    for (const auto& a : map) printf("\t%s\n", a.name);
 
-//     // auto v = map["boot_time"];
 
-//     // printf("-------------- %s\n", v.name);
+    printf("test %d\n", ++i);
+    map.erase("not exist");
+    printf("quering %d ->\n", i);
+    for (const auto& a : map) printf("\t%s\n", a.name);
 
-//     // auto c = map["boot_time"];
 
-//     // printf("-------------- %s\n", c.name);
-
-//     for (const auto& a : map)
-//       printf("-------------- %s\n", a.name);
-
-// // {
-// //     fdb_kv_t  cur_kv{map["boot_countss"]};
-// //     auto r = map.get<decltype(boot_count)>(cur_kv);
-// //     printf("rres %ld \n", r);
-// // }
-
-// //     boot_count += 1;
-
-// //     struct fdb_blob blob;
-// //     fdb_blob_make(&blob, &boot_count, sizeof(boot_count));
-// //     map.emplace("boot_count", &blob);
-
-// //     {
-// //     fdb_kv_t cur_kv{map["boot_count"]};
-// //     auto   r = map.get<decltype(boot_count)>(cur_kv);
-// //     printf("rres %ld \n", r);
-// //     }
-
-//     int test1 = 0;
-
-//     auto t0 = el_make_map_kv("oo", "not ok");
-//     auto t1 = edgelab::data::types::el_make_map_kv("test1", test1);
-
-//     map << t1 << t0;
-
-//     for (const auto& a : map) printf("-------------- %s\n", a.name);
-
-//     auto ss = edgelab::data::types::el_make_map_kv("oo", "");
-//     map >> t1 >> ss;
-
-// printf("------------------------------\n ");
-//     for (int i = 0; i < ss.size; i ++)
-//       printf("%c", ss.value[i]);
-
-//     printf("test1 _> %d, %s %s\n", t1.value, t0.value, ss.value);
-
-//     test1 = 3;
-//     auto t2    = edgelab::data::types::el_make_map_kv("test1", test1);
-//     map << t2;
-
-//     auto t3 = edgelab::data::types::el_make_map_kv("test1", int());
-//     map >> t3;
-//     printf("test3 _> %d\n", t3.value);
-
-//     // edgelab::data::types::Map mm;
-//     // mm << xx << xx;
-
-//     // size_t   data_size;
-//     // uint8_t* data_buf = (uint8_t*)malloc(data_size);
-
-//     // fdb_kv_to_blob(cur_kv, fdb_blob_make(&blob, data_buf, data_size));
-
-//     // printf("==================== kvdb_basic_sample ====================\n");
-
-//     // { /* GET the KV value */
-//     //     /* get the "boot_count" KV value */
-//     //     fdb_kv_get_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
-//     //     /* the blob.saved.len is more than 0 when get the value successful */
-//     //     if (blob.saved.len > 0) {
-//     //         printf("get the 'boot_count' value is %d\n", boot_count);
-//     //     } else {
-//     //         printf("get the 'boot_count' failed\n");
-//     //     }
-//     // }
-
-//     // { /* CHANGE the KV value */
-//     //     /* increase the boot count */
-//     //     boot_count++;
-//     //     /* change the "boot_count" KV's value */
-//     //     fdb_kv_set_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
-//     //     printf("set the 'boot_count' value to %d\n", boot_count);
-//     // }
-
-//     // printf("===========================================================\n");
-//     // }
-
-//     // map.erase("username");
-
-//     //   for (const auto& a : map) printf("after e---------- %s\n", a.name);
-
-//     // for (const auto& a : map) printf("after e it---------- %s\n", a.name);
-
-//     for (int i = 1000; i >= 0; i--) {
-//         printf("Restarting in %d seconds...\n", i);
-//         vTaskDelay(1000 / portTICK_PERIOD_MS);
-//     }
-//     printf("Restarting now.\n");
-//     fflush(stdout);
-//     esp_restart();
-// }
+    for (int i = 1000; i >= 0; i--) {
+        printf("Restarting in %d seconds...\n", i);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    printf("Restarting now.\n");
+    fflush(stdout);
+    esp_restart();
+}

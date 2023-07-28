@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef _EL_PERSISTENT_MAP_HPP_
-#define _EL_PERSISTENT_MAP_HPP_
+#ifndef _EL_DATA_PERSISTENT_MAP_HPP_
+#define _EL_DATA_PERSISTENT_MAP_HPP_
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -35,6 +35,8 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+
+#define CONFIG_EL_LIB_FLASHDB
 
 #ifdef CONFIG_EL_LIB_FLASHDB
 

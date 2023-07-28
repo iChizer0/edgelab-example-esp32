@@ -25,8 +25,8 @@
 #ifndef _EL_DATA_H_
 #define _EL_DATA_H_
 
-#include "el_persistent_map.hpp"
-#include "el_models.hpp"
+#include "el_data_persistent_map.hpp"
+#include "el_data_models.hpp"
 
 // TODO: avoid expose the namespace to global
 using namespace edgelab::data;
