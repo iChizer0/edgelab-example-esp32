@@ -3,10 +3,10 @@
 
 #include "edgelab.h"
 #include "esp_partition.h"
+#include "esp_spi_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_spi_flash.h"
-#include "yolo_model_data.h"
+// #include "yolo_model_data.h"
 
 #define kTensorArenaSize (1024 * 768)
 
@@ -38,36 +38,75 @@ extern "C" void app_main(void) {
     //   printf("p-> %p, data -> %ld", flash_addr, buf);
     // }
 
-    printf("model addr -> %p\n", g_yolo_model_data);
+    // printf("model addr -> %p\n", g_yolo_model_data);
     static const esp_partition_t* p =
       esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, "models");
 
     printf("mem addr -> %p, flash addr -> %#08x\n", p, int(p->address));
 
-    const uint8_t* flash_mapped_ptr;
-    esp_err_t ret;
+    const uint8_t*          flash_mapped_ptr;
+    esp_err_t               ret;
     spi_flash_mmap_handle_t handle;
     ret = spi_flash_mmap(0x400000, 0x800000 - 0x400000, SPI_FLASH_MMAP_DATA, (const void**)&flash_mapped_ptr, &handle);
 
     const uint8_t* data_ptr = flash_mapped_ptr;
-    static const size_t model_size = 0x41400;  // 267264
+    // static const size_t model_size = 0x41400;  // 267264
 
     if (ret == ESP_OK) {
         printf("mmap ptr -> %p\n", data_ptr);
 
-        for(int i = 0; i < 64; ++i) {
-          printf("%#02x\t", int(*(data_ptr + i)));
-          if ((i + 1) % 8 == 0) printf("\n");
+        for (int i = 0; i < 64; ++i) {
+            printf("%#02x\t", int(*(data_ptr + i)));
+            if ((i + 1) % 8 == 0) printf("\n");
         }
         printf("\n");
 
-        for (int i = model_size - 1; i > model_size - 64 - 1; --i) {
-          printf("%#02x\t", int(*(data_ptr + i)));
-          if ((i + 1) % 8 == 0) printf("\n");
-        }
-        printf("\n");
+        uint8_t model = 0b00000000;  // pre 1
+        uint8_t index = 0;
 
-        engine->load_model(data_ptr, model_size);
+        const int32_t model_max_size = 0x100000;
+
+// #define MODEL_MAGIC_NUM 0x4C485400
+#define MODEL_MAGIC_NUM 0x4C485400
+
+        for (uint8_t i = 0; i < 4; i++) {
+            int offset      = i * model_max_size;
+            index               = i + 1;
+            const uint8_t* model_addr = data_ptr + offset;
+
+            if (((*(uint32_t*)model_addr) & 0xFFFFFF00) == MODEL_MAGIC_NUM) {
+                index = (*(uint32_t*)model_addr) & 0xFF;  // get index form model header
+                model_addr += 4;
+                printf("ok!\n");
+            } 
+            else {
+                printf("error loading model -> \n\tmodel_addr: %p\n\toffset: %#08x\n\tmagic (reversed): %#08x\n",
+                       model_addr,
+                       int(offset),
+                       int(((*(uint32_t*)model_addr) & 0xFFFFFF00)));
+
+
+                continue;
+                // for (int i = 1000; i >= 0; i--) {
+                //     printf("Restarting in %d seconds...\n", i);
+                //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+                // }
+                // printf("Restarting now.\n");
+                // fflush(stdout);
+                // esp_restart();
+            }
+
+            printf("p -> %p\n", model_addr);
+
+            engine->load_model(model_addr, model_max_size);
+            model |= 1 << (index);
+
+            // if (::tflite::GetModel((void*)model_addr)->version() == TFLITE_SCHEMA_VERSION) {
+            //     model |= 1 << (index);  // if model vaild, then set bit
+            // }
+        }
+
+        
     }
 
 #define TEST_MAIN
@@ -75,13 +114,7 @@ extern "C" void app_main(void) {
 #ifdef TEST_MAIN
     auto* algorithm = new YOLO(engine);
 
-    // for (int i = 1000; i >= 0; i--) {
-    //     printf("Restarting in %d seconds...\n", i);
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // }
-    // printf("Restarting now.\n");
-    // fflush(stdout);
-    // esp_restart();
+  
 
     printf("done\n");
     while (1) {
@@ -129,7 +162,7 @@ extern "C" void app_main(void) {
         display->show(&img);
         camera->stop_stream();
     }
-    #endif
+#endif
 }
 
 /* FlashDB ESP32 SPI Flash Example
