@@ -45,7 +45,6 @@
 namespace edgelab::data {
 
 namespace types {
-
 using ELMapKeyType       = const char*;
 using ELMapKVHandlerType = fdb_kv_t;
 
@@ -63,8 +62,7 @@ struct is_c_str
 template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[Size]) { return Size * sizeof(T); }
 
 // please be careful when using pointer type as ValueType, please always access value from el_map_kv_t when using value
-template <typename ValueType, typename HandlerType> struct el_map_kv_t {
-    using KeyType = ELMapKeyType;
+template <typename KeyType, typename ValueType, typename HandlerType> struct el_map_kv_t {
     explicit el_map_kv_t(KeyType     key_,
                          ValueType   value_,
                          size_t      size_              = 0ul,
@@ -73,12 +71,10 @@ template <typename ValueType, typename HandlerType> struct el_map_kv_t {
                          bool        call_handel_delete = false) noexcept
         : key(key_),
           value(value_),
+          size(size_),
           handle(handle_),
-          __size(size_),
           __call_value_delete(call_value_delete),
-          __call_handel_delete(call_handel_delete) {
-        assert(__size > 0ul);
-    }
+          __call_handel_delete(call_handel_delete) {}
 
     ~el_map_kv_t() {
         if constexpr (std::is_pointer<ValueType>::value)
@@ -92,12 +88,12 @@ template <typename ValueType, typename HandlerType> struct el_map_kv_t {
 
     KeyType     key;
     ValueType   value;
+    size_t      size;
     HandlerType handle;
 
    protected:
-    size_t __size;
-    bool   __call_value_delete{false};
-    bool   __call_handel_delete{false};
+    bool __call_value_delete{false};
+    bool __call_handel_delete{false};
 };
 
 template <typename KeyType,
@@ -106,9 +102,8 @@ template <typename KeyType,
           typename ValueTypeBase = typename std::decay<ValueType>::type,
           typename std::enable_if<std::is_convertible<KeyType, ELMapKeyType>::value ||
                                   std::is_same<KeyTypeBase, ELMapKeyType>::value>::type* = nullptr>
-inline constexpr el_map_kv_t<ValueTypeBase, ELMapKVHandlerType> el_make_map_kv(KeyType&&   key,
-                                                                               ValueType&& value,
-                                                                               size_t      size = 0ul) noexcept {
+inline constexpr el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerType> el_make_map_kv(
+  KeyType&& key, ValueType&& value, size_t size = 0ul) noexcept {
     using ValueTypeNoRef = typename std::remove_reference<ValueType>::type;
     if (size == 0ul) [[likely]] {
         if constexpr (is_c_str<ValueTypeNoRef>::value)
@@ -120,13 +115,13 @@ inline constexpr el_map_kv_t<ValueTypeBase, ELMapKVHandlerType> el_make_map_kv(K
         else if constexpr (std::is_trivially_constructible<ValueTypeNoRef>::value)
             size = sizeof(*value);
     }
-    return el_map_kv_t<ValueTypeBase, ELMapKVHandlerType>(
-      std::forward<ELMapKeyType>(key), std::forward<ValueTypeBase>(value), size);
+    return el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerType>(
+      std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size);
 }
 
 }  // namespace types
 
-template <typename KeyType = typename types::ELMapKeyType,
+template <typename KeyType = types::ELMapKeyType,
           typename HandlerType =
             typename std::remove_pointer<typename std::decay<types::ELMapKVHandlerType>::type>::type>
 class PersistentMap {
@@ -220,7 +215,7 @@ class PersistentMap {
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
         __kvdb                  = new struct fdb_kvdb();
-        __is_initialize_success = fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr) != FDB_NO_ERR;
+        __is_initialize_success = fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr) == FDB_NO_ERR;
     }
 
     ~PersistentMap() {
@@ -274,56 +269,46 @@ class PersistentMap {
         return fdb_kv_set_default(__kvdb) == FDB_NO_ERR;
     }
 
-    // template <typename ContainedType>
-    // PersistentMap& operator<<(const types::el_map_kv_t<KeyType, ContainedType,  HandlerType>& rhs) {
-    //     struct fdb_blob blob;
-    //     if constexpr (types::is_c_str<ContainedType>::value != std::true_type::value) {
-    //         emplace(rhs.key, fdb_blob_make(&blob, &rhs.value, rhs.size));
-    //     } else {
-    //         emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size));
-    //     }
-    //     return *this;
-    // }
+    template <typename KT, typename CT, typename HT>
+    PersistentMap& operator<<(const types::el_map_kv_t<KT, CT, HT>& rhs) {
+        struct fdb_blob blob;
 
-    // template <typename ContainedType>
-    // PersistentMap& operator<<(const types::el_map_kv_t<KeyType, ContainedType, HandlerType>& rhs) {
-    //     struct fdb_blob blob;
-    //     if constexpr (types::is_c_str<ContainedType>::value != std::true_type::value) {
-    //         emplace(rhs.key, fdb_blob_make(&blob, &rhs.value, rhs.size));
-    //     } else {
-    //         emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size));
-    //     }
-    //     return *this;
-    // }
+        if constexpr (std::is_pointer<CT>::value) [[unlikely]]
+            emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size));
+        else
+            emplace(rhs.key, fdb_blob_make(&blob, &rhs.value, rhs.size));
 
-    // template <typename ContainedType>
-    // PersistentMap& operator>>(types::el_map_kv_t<KeyType, ContainedType,  HandlerType>& rhs) {
-    //     volatile const Guard guard(this);
+        return *this;
+    }
 
-    //     struct fdb_blob blob;
-    //      HandlerType         kv{};
-    //      HandlerType*        p_kv{fdb_kv_get_obj(__kvdb, rhs.key, &kv)};
-    //     if (p_kv == NULL) return *this;
+    template <typename KT, typename CT, typename HT>
+    PersistentMap& operator>>(types::el_map_kv_t<KT, CT, HT>& rhs) {
+        volatile const Guard guard(this);
 
-    //     if constexpr (types::is_c_str<ContainedType>::value != std::true_type::value) {
-    //         if (p_kv->value_len != rhs.size) return *this;
-    //         ContainedType buffer{};
-    //         rhs.size =
-    //           fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
-    //                         fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, &buffer, p_kv->value_len)));
-    //         rhs.value      = buffer;
-    //         rhs.underlying = *p_kv;
-    //     } else {
-    //         char* buffer{new char[p_kv->value_len]()};
-    //         rhs.size =
-    //           fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
-    //                         fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, buffer, p_kv->value_len)));
-    //         rhs.value         = buffer;
-    //         rhs.__call_delete = true;
-    //     }
+        struct fdb_blob blob;
+         HandlerType         kv{};
+         HandlerType*        p_kv{fdb_kv_get_obj(__kvdb, rhs.key, &kv)};
+        if (p_kv == NULL) return *this;
 
-    //     return *this;
-    // }
+        if constexpr (types::is_c_str<ContainedType>::value != std::true_type::value) {
+            if (p_kv->value_len != rhs.size) return *this;
+            ContainedType buffer{};
+            rhs.size =
+              fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                            fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, &buffer, p_kv->value_len)));
+            rhs.value      = buffer;
+            rhs.underlying = *p_kv;
+        } else {
+            char* buffer{new char[p_kv->value_len]()};
+            rhs.size =
+              fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                            fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, buffer, p_kv->value_len)));
+            rhs.value         = buffer;
+            rhs.__call_delete = true;
+        }
+
+        return *this;
+    }
 
     Iterator<PersistentMap<KeyType, HandlerType>> begin() {
         return Iterator<PersistentMap<KeyType, HandlerType>>(this);
