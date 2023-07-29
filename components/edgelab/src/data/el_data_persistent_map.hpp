@@ -45,30 +45,34 @@
 namespace edgelab::data {
 
 namespace types {
-using ELMapKeyType       = const char*;
-using ELMapKVHandlerType = fdb_kv_t;
 
+using ELMapKeyType              = const char*;
+using ELMapKVHandlerPointerType = fdb_kv_t;
+
+// TODO: move to traits namespace
 template <typename T> struct remove_const_from_pointer {
     using type =
       typename std::add_pointer<typename std::remove_const<typename std::remove_pointer<T>::type>::type>::type;
 };
 
+// TODO: move to traits namespace
 template <typename T>
 struct is_c_str
     : std::integral_constant<
         bool,
         std::is_same<char*, typename remove_const_from_pointer<typename std::decay<T>::type>::type>::value> {};
 
+// TODO: move to traits namespace
 template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[Size]) { return Size * sizeof(T); }
 
 // please be careful when using pointer type as ValueType, please always access value from el_map_kv_t when using value
-template <typename KeyType, typename ValueType, typename HandlerType> struct el_map_kv_t {
-    explicit el_map_kv_t(KeyType     key_,
-                         ValueType   value_,
-                         size_t      size_              = 0ul,
-                         HandlerType handle_            = nullptr,
-                         bool        call_value_delete  = false,
-                         bool        call_handel_delete = false) noexcept
+template <typename KeyType, typename ValueType, typename HandlerPointerType> struct el_map_kv_t {
+    explicit el_map_kv_t(KeyType            key_,
+                         ValueType          value_,
+                         size_t             size_              = 0ul,
+                         HandlerPointerType handle_            = nullptr,
+                         bool               call_value_delete  = false,
+                         bool               call_handel_delete = false) noexcept
         : key(key_),
           value(value_),
           size(size_),
@@ -79,30 +83,31 @@ template <typename KeyType, typename ValueType, typename HandlerType> struct el_
     ~el_map_kv_t() {
         if constexpr (std::is_pointer<ValueType>::value)
             if (__call_value_delete && value != nullptr) delete[] value;
-        if constexpr (std::is_pointer<HandlerType>::value)
-            if (__call_handel_delete && handle != nullptr) delete[] handle;
+        if constexpr (std::is_pointer<HandlerPointerType>::value)
+            if (__call_handel_delete && handle != nullptr) delete handle;
     }
 
     using ValueTypeBase = typename std::decay<ValueType>::type;
     operator ValueTypeBase() const { return static_cast<ValueTypeBase>(value); }
 
-    KeyType     key;
-    ValueType   value;
-    size_t      size;
-    HandlerType handle;
+    KeyType            key;
+    ValueType          value;
+    size_t             size;
+    HandlerPointerType handle;
 
-   protected:
-    bool __call_value_delete{false};
-    bool __call_handel_delete{false};
+    // TODO: this should be protected, use friend to enable access from other classes
+    bool __call_value_delete;
+    bool __call_handel_delete;
 };
 
+// TODO: move to utility namespace
 template <typename KeyType,
           typename ValueType,
           typename KeyTypeBase   = typename std::decay<KeyType>::type,
           typename ValueTypeBase = typename std::decay<ValueType>::type,
           typename std::enable_if<std::is_convertible<KeyType, ELMapKeyType>::value ||
                                   std::is_same<KeyTypeBase, ELMapKeyType>::value>::type* = nullptr>
-inline constexpr el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerType> el_make_map_kv(
+inline constexpr el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerPointerType> el_make_map_kv(
   KeyType&& key, ValueType&& value, size_t size = 0ul) noexcept {
     using ValueTypeNoRef = typename std::remove_reference<ValueType>::type;
     if (size == 0ul) [[likely]] {
@@ -115,16 +120,16 @@ inline constexpr el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerType> el_
         else if constexpr (std::is_trivially_constructible<ValueTypeNoRef>::value)
             size = sizeof(*value);
     }
-    return el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerType>(
+    return el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerPointerType>(
       std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size);
 }
 
 }  // namespace types
 
-template <typename KeyType = types::ELMapKeyType,
-          typename HandlerType =
-            typename std::remove_pointer<typename std::decay<types::ELMapKVHandlerType>::type>::type>
 class PersistentMap {
+    using KeyType     = types::ELMapKeyType;
+    using HandlerType = typename std::remove_pointer<typename std::decay<types::ELMapKVHandlerPointerType>::type>::type;
+
    private:
     mutable SemaphoreHandle_t __lock;
     fdb_kvdb_t                __kvdb;
@@ -134,8 +139,7 @@ class PersistentMap {
     inline void m_unlock() const noexcept { xSemaphoreGive(__lock); }
 
     struct Guard {
-        Guard(const PersistentMap<KeyType, HandlerType>* const persistent_map) noexcept
-            : ___persistent_map(persistent_map) {
+        Guard(const PersistentMap* const persistent_map) noexcept : ___persistent_map(persistent_map) {
             ___persistent_map->m_lock();
         }
 
@@ -144,7 +148,7 @@ class PersistentMap {
         Guard(const Guard&)            = delete;
         Guard& operator=(const Guard&) = delete;
 
-        const PersistentMap<KeyType, HandlerType>* const ___persistent_map;
+        const PersistentMap* const ___persistent_map;
     };
 
    protected:
@@ -227,12 +231,18 @@ class PersistentMap {
     PersistentMap(const PersistentMap&)            = delete;
     PersistentMap& operator=(const PersistentMap&) = delete;
 
-    HandlerType&& operator[](KeyType key) const {
+    template <typename KT,
+              typename std::enable_if<std::is_convertible<KT, KeyType>::value ||
+                                      std::is_same<typename std::decay<KT>::type, KeyType>::value>::type* = nullptr>
+    HandlerType operator[](KT&& key) const {
         volatile const Guard guard(this);
-        HandlerType          handler{};
-        if (__is_initialize_success && __kvdb) [[likely]]
-            handler = *fdb_kv_get_obj(__kvdb, key, &handler);
-        return std::move(handler);
+        HandlerType          handler;
+        if (__is_initialize_success && __kvdb) [[likely]] {
+            typename std::add_pointer<HandlerType>::type p_handler{
+              fdb_kv_get_obj(__kvdb, static_cast<KeyType>(key), &handler)};
+            if (p_handler) handler = *p_handler;
+        }
+        return handler;
     }
 
     // size of the buffer should be equal to handler->value_len
@@ -247,14 +257,22 @@ class PersistentMap {
         return buffer;
     }
 
-    bool emplace(KeyType key, const fdb_blob_t blob) {
+    template <typename KT,
+              typename std::enable_if<std::is_convertible<KT, KeyType>::value ||
+                                      std::is_same<typename std::decay<KT>::type, KeyType>::value>::type* = nullptr>
+    bool emplace(KT&& key, const fdb_blob_t blob) {
         volatile const Guard guard(this);
-        return __is_initialize_success && __kvdb ? fdb_kv_set_blob(__kvdb, key, blob) == FDB_NO_ERR : false;
+        return __is_initialize_success && __kvdb
+                 ? fdb_kv_set_blob(__kvdb, static_cast<KeyType>(key), blob) == FDB_NO_ERR
+                 : false;
     }
 
-    bool erase(KeyType key) {
+    template <typename KT,
+              typename std::enable_if<std::is_convertible<KT, KeyType>::value ||
+                                      std::is_same<typename std::decay<KT>::type, KeyType>::value>::type* = nullptr>
+    bool erase(KT&& key) {
         volatile const Guard guard(this);
-        return __is_initialize_success && __kvdb ? fdb_kv_del(__kvdb, key) == FDB_NO_ERR : false;
+        return __is_initialize_success && __kvdb ? fdb_kv_del(__kvdb, static_cast<KeyType>(key)) == FDB_NO_ERR : false;
     }
 
     void clear() {
@@ -269,8 +287,8 @@ class PersistentMap {
         return fdb_kv_set_default(__kvdb) == FDB_NO_ERR;
     }
 
-    template <typename KT, typename CT, typename HT>
-    PersistentMap& operator<<(const types::el_map_kv_t<KT, CT, HT>& rhs) {
+    template <typename KT, typename CT, typename HPT>
+    PersistentMap& operator<<(const types::el_map_kv_t<KT, CT, HPT>& rhs) {
         struct fdb_blob blob;
 
         if constexpr (std::is_pointer<CT>::value) [[unlikely]]
@@ -281,47 +299,54 @@ class PersistentMap {
         return *this;
     }
 
-    template <typename KT, typename CT, typename HT>
-    PersistentMap& operator>>(types::el_map_kv_t<KT, CT, HT>& rhs) {
+    // currently we're always allocating new memory on the heap for CT types
+    // TODO: automatically determine whether to allocate new memory based on the type of CT
+    template <typename KT, typename CT, typename HPT> PersistentMap& operator>>(types::el_map_kv_t<KT, CT, HPT>& rhs) {
         volatile const Guard guard(this);
+        if (!__is_initialize_success || !__kvdb) return *this;
+
+        using CTNoRef = typename std::remove_reference<CT>::type;
+        using HT      = typename std::remove_pointer<HPT>::type;
+
+        // HPT of rhs should always be pointer type (currently we're not going to check it)
+        HT  kv;
+        HPT p_kv{fdb_kv_get_obj(__kvdb, rhs.key, &kv)};
+
+        if (!p_kv) return *this;
+
+        rhs.handle               = new HT(*p_kv);
+        rhs.__call_handel_delete = true;
 
         struct fdb_blob blob;
-         HandlerType         kv{};
-         HandlerType*        p_kv{fdb_kv_get_obj(__kvdb, rhs.key, &kv)};
-        if (p_kv == NULL) return *this;
+        if constexpr (types::is_c_str<CTNoRef>::value || std::is_array<CTNoRef>::value ||
+                      std::is_pointer<CTNoRef>::value) {
+            using CIT = typename std::remove_const<
+              typename std::remove_pointer<typename std::remove_all_extents<CTNoRef>::type>::type>::type;
+            using CIPT = typename std::add_pointer<CIT>::type;
 
-        if constexpr (types::is_c_str<ContainedType>::value != std::true_type::value) {
-            if (p_kv->value_len != rhs.size) return *this;
-            ContainedType buffer{};
-            rhs.size =
-              fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
-                            fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, &buffer, p_kv->value_len)));
-            rhs.value      = buffer;
-            rhs.underlying = *p_kv;
-        } else {
-            char* buffer{new char[p_kv->value_len]()};
+            CIPT buffer{new CIT[p_kv->value_len]};
             rhs.size =
               fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
                             fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, buffer, p_kv->value_len)));
-            rhs.value         = buffer;
-            rhs.__call_delete = true;
+
+            rhs.value               = buffer;
+            rhs.__call_value_delete = true;
+        } else {
+            CTNoRef value;
+            rhs.size =
+              fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                            fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, &value, p_kv->value_len)));
+
+            rhs.value = value;
         }
 
         return *this;
     }
 
-    Iterator<PersistentMap<KeyType, HandlerType>> begin() {
-        return Iterator<PersistentMap<KeyType, HandlerType>>(this);
-    }
-    Iterator<PersistentMap<KeyType, HandlerType>> end() {
-        return Iterator<PersistentMap<KeyType, HandlerType>>(nullptr);
-    }
-    Iterator<PersistentMap<KeyType, HandlerType>> cbegin() {
-        return Iterator<PersistentMap<KeyType, HandlerType>>(this);
-    }
-    Iterator<PersistentMap<KeyType, HandlerType>> cend() {
-        return Iterator<PersistentMap<KeyType, HandlerType>>(nullptr);
-    }
+    Iterator<PersistentMap> begin() { return Iterator<PersistentMap>(this); }
+    Iterator<PersistentMap> end() { return Iterator<PersistentMap>(nullptr); }
+    Iterator<PersistentMap> cbegin() { return Iterator<PersistentMap>(this); }
+    Iterator<PersistentMap> cend() { return Iterator<PersistentMap>(nullptr); }
 };
 
 }  // namespace edgelab::data
