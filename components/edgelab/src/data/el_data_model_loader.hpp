@@ -23,14 +23,37 @@
  *
  */
 
-#ifndef _EL_DATA_H_
-#define _EL_DATA_H_
+#ifndef _EL_MODEL_LOADER_HPP_
+#define _EL_MODELS_LOADER_HPP_
 
-#include "el_data_persistent_map.hpp"
-#include "el_data_models.hpp"
+#include <cstdint>
 
-// TODO: avoid expose the namespace to global
-using namespace edgelab::data;
-using namespace edgelab::data::types;
+namespace edgelab {
+
+namespace types {
+
+    struct el_model_t {
+        uint8_t type;
+        uint8_t index;
+        uint32_t size;
+        const uint8_t* addr_flash;
+        const uint8_t* addr_memory;
+    };
+
+}
+
+class ModelLoader {
+public:
+    ModelLoader(const char* partition_name) {
+
+    }
+
+    el_model_t get_model() {
+        
+    }
+
+};
+
+}
 
 #endif
