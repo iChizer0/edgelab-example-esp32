@@ -215,6 +215,7 @@ class PersistentMap {
     };
 
    public:
+    // currently the consistent of PersistentMap is only ensured on a single instance if there're multiple instances that has same name and save path
     explicit PersistentMap(const char* name, const char* path, struct fdb_default_kv* default_kv = nullptr) noexcept
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
