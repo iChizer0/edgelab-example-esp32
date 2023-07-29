@@ -193,24 +193,69 @@ extern "C" void app_main() {
     // map.destory();
     int i = 0;
 
+
     printf("quering init ->\n");
     for (const auto& a : map) printf("\t%s\n", a.name);
 
-    // printf("test %d\n", i);
+
+    printf("test %d\n", i);
     auto t0 = el_make_map_kv("t0", 0);
-    // map << t0;
-    // printf("quering %d ->\n", i);
-    // for (const auto& a : map) printf("\t%s\n", a.name);
+    map << t0;
+    printf("quering %d ->\n", i);
+    for (const auto& a : map) printf("\t%s\n", a.name);
 
-    // printf("test %d\n", ++i);
-    // map.erase("t0");
-    // printf("quering %d ->\n", i);
-    // for (const auto& a : map) printf("\t%s\n", a.name);
+    printf("test %d\n", ++i);
+    map.erase("t0");
+    printf("quering %d ->\n", i);
+    for (const auto& a : map) printf("\t%s\n", a.name);
 
-    // printf("test %d\n", ++i);
-    // map.erase("not exist");
-    // printf("quering %d ->\n", i);
-    // for (const auto& a : map) printf("\t%s\n", a.name);
+    printf("test %d\n", ++i);
+    map.erase("not exist");
+    printf("quering %d ->\n", i);
+    for (const auto& a : map) printf("\t%s\n", a.name);
+
+    printf("test %d\n", ++i);
+    map["t0"];
+
+    printf("test %d\n", ++i);
+    auto t1 = el_make_map_kv("t0", 0);
+    map >> t1;
+    printf("\t value: %d\n", t1.value);
+
+    printf("test %d\n", ++i);
+    auto t2 = el_make_map_kv("boot_count", 0);
+    map >> t2;
+    printf("\t boot_count: %d\n", t2.value);
+
+    printf("test %d\n", ++i);
+    auto t3 = el_make_map_kv("boot_count", t2.value + 1);
+    map << t3;
+    printf("\t setting boot_count to %d\n", t3.value);
+
+    printf("test %d\n", ++i);
+    auto t4 = el_make_map_kv("boot_count", 0);
+    map >> t4;
+    printf("\t boot_count: %d\n", t4.value);
+
+    printf("test %d\n", ++i);
+    auto t5 = el_make_map_kv("string", "hello");
+    map << t5;
+    for (const auto& a : map) printf("\t%s\n", a.name);
+
+    printf("test %d\n", ++i);
+    auto t6 = el_make_map_kv("string", "");
+    map >> t6;
+    printf("\t string: %s\n", t6.value);
+
+    printf("test %d\n", ++i);
+    auto t7 = el_make_map_kv("string", "hello world!");
+    map << t7;
+    printf("\t string: %s\n", t6.value);
+
+    printf("test %d\n", ++i);
+    auto t8 = el_make_map_kv("string", "");
+    map >> t8;
+    printf("\t string: %s\n", t8.value);
 
     for (int i = 1000; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
