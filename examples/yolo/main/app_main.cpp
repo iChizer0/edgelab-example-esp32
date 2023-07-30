@@ -1,24 +1,24 @@
-// #include <inttypes.h>
-// #include <stdio.h>
+#include <inttypes.h>
+#include <stdio.h>
 
-// #include "edgelab.h"
-// #include "esp_partition.h"
-// #include "esp_spi_flash.h"
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
+#include "edgelab.h"
+#include "esp_partition.h"
+#include "esp_spi_flash.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 // // #include "yolo_model_data.h"
 
-// #define kTensorArenaSize (1024 * 768)
+#define kTensorArenaSize (1024 * 768)
 
-// uint16_t color[] = {
-//   0x0000,
-//   0x03E0,
-//   0x001F,
-//   0x7FE0,
-//   0xFFFF,
-// };
+uint16_t color[] = {
+  0x0000,
+  0x03E0,
+  0x001F,
+  0x7FE0,
+  0xFFFF,
+};
 
-// extern "C" void app_main(void) {
+extern "C" void app_main(void) {
 //     Device*  device  = Device::get_device();
 //     Display* display = device->get_display();
 //     Camera*  camera  = device->get_camera();
@@ -105,7 +105,7 @@
 //             // }
 //         }
 
-//     }
+    }
 
 // #define TEST_MAIN
 
@@ -161,107 +161,107 @@
 // #endif
 // }
 
-#include <stdio.h>
+// #include <stdio.h>
 
-#include "el_data.h"
-#include "esp_chip_info.h"
-#include "esp_flash.h"
-#include "esp_system.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
-#include "nvs_flash.h"
+// #include "el_data.h"
+// #include "esp_chip_info.h"
+// #include "esp_flash.h"
+// #include "esp_system.h"
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/semphr.h"
+// #include "freertos/task.h"
+// #include "nvs_flash.h"
 
-extern "C" void app_main() {
-    printf("==================== test flash ====================\n");
+// extern "C" void app_main() {
+//     printf("==================== test flash ====================\n");
 
-    static int boot_count  = 0;
-    static int boot_time[] = {1, 2, 3, 4};
+//     static int boot_count  = 0;
+//     static int boot_time[] = {1, 2, 3, 4};
 
-    static struct fdb_default_kv_node default_kv_table[] = {
-      {"username", (void*)("armink"), 0},              /* string KV */
-      {"password", (void*)("123456"), 0},              /* string KV */
-      {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
-      {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
-    };
+//     static struct fdb_default_kv_node default_kv_table[] = {
+//       {"username", (void*)("armink"), 0},              /* string KV */
+//       {"password", (void*)("123456"), 0},              /* string KV */
+//       {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
+//       {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
+//     };
 
-    struct fdb_default_kv default_kv;
-    default_kv.kvs = default_kv_table;
-    default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
+//     struct fdb_default_kv default_kv;
+//     default_kv.kvs = default_kv_table;
+//     default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
 
-    edgelab::data::PersistentMap map("edgelab_db", "kvdb0", &default_kv);
-    // map.destory();
-    int i = 0;
-
-
-    printf("quering init ->\n");
-    for (const auto& a : map) printf("\t%s\n", a.name);
+//     edgelab::data::PersistentMap map(CONFIG_EL_DATA_PERSISTENT_MAP_NAME, CONFIG_EL_DATA_PERSISTENT_MAP_PATH, &default_kv);
+//     // map.destory();
+//     int i = 0;
 
 
-    printf("test %d\n", i);
-    auto t0 = el_make_map_kv("t0", 0);
-    map << t0;
-    printf("quering %d ->\n", i);
-    for (const auto& a : map) printf("\t%s\n", a.name);
+//     printf("quering init ->\n");
+//     for (const auto& a : map) printf("\t%s\n", a.name);
 
-    printf("test %d\n", ++i);
-    map.erase("t0");
-    printf("quering %d ->\n", i);
-    for (const auto& a : map) printf("\t%s\n", a.name);
 
-    printf("test %d\n", ++i);
-    map.erase("not exist");
-    printf("quering %d ->\n", i);
-    for (const auto& a : map) printf("\t%s\n", a.name);
+//     printf("test %d\n", i);
+//     auto t0 = el_make_map_kv("t0", 0);
+//     map << t0;
+//     printf("quering %d ->\n", i);
+//     for (const auto& a : map) printf("\t%s\n", a.name);
 
-    printf("test %d\n", ++i);
-    map["t0"];
+//     printf("test %d\n", ++i);
+//     map.erase("t0");
+//     printf("quering %d ->\n", i);
+//     for (const auto& a : map) printf("\t%s\n", a.name);
 
-    printf("test %d\n", ++i);
-    auto t1 = el_make_map_kv("t0", 0);
-    map >> t1;
-    printf("\t value: %d\n", t1.value);
+//     printf("test %d\n", ++i);
+//     map.erase("not exist");
+//     printf("quering %d ->\n", i);
+//     for (const auto& a : map) printf("\t%s\n", a.name);
 
-    printf("test %d\n", ++i);
-    auto t2 = el_make_map_kv("boot_count", 0);
-    map >> t2;
-    printf("\t boot_count: %d\n", t2.value);
+//     printf("test %d\n", ++i);
+//     map["t0"];
 
-    printf("test %d\n", ++i);
-    auto t3 = el_make_map_kv("boot_count", t2.value + 1);
-    map << t3;
-    printf("\t setting boot_count to %d\n", t3.value);
+//     printf("test %d\n", ++i);
+//     auto t1 = el_make_map_kv("t0", 0);
+//     map >> t1;
+//     printf("\t value: %d\n", t1.value);
 
-    printf("test %d\n", ++i);
-    auto t4 = el_make_map_kv("boot_count", 0);
-    map >> t4;
-    printf("\t boot_count: %d\n", t4.value);
+//     printf("test %d\n", ++i);
+//     auto t2 = el_make_map_kv("boot_count", 0);
+//     map >> t2;
+//     printf("\t boot_count: %d\n", t2.value);
 
-    printf("test %d\n", ++i);
-    auto t5 = el_make_map_kv("string", "hello");
-    map << t5;
-    for (const auto& a : map) printf("\t%s\n", a.name);
+//     printf("test %d\n", ++i);
+//     auto t3 = el_make_map_kv("boot_count", t2.value + 1);
+//     map << t3;
+//     printf("\t setting boot_count to %d\n", t3.value);
 
-    printf("test %d\n", ++i);
-    auto t6 = el_make_map_kv("string", "");
-    map >> t6;
-    printf("\t string: %s\n", t6.value);
+//     printf("test %d\n", ++i);
+//     auto t4 = el_make_map_kv("boot_count", 0);
+//     map >> t4;
+//     printf("\t boot_count: %d\n", t4.value);
 
-    printf("test %d\n", ++i);
-    auto t7 = el_make_map_kv("string", "hello world!");
-    map << t7;
-    printf("\t string: %s\n", t6.value);
+//     printf("test %d\n", ++i);
+//     auto t5 = el_make_map_kv("string", "hello");
+//     map << t5;
+//     for (const auto& a : map) printf("\t%s\n", a.name);
 
-    printf("test %d\n", ++i);
-    auto t8 = el_make_map_kv("string", "");
-    map >> t8;
-    printf("\t string: %s\n", t8.value);
+//     printf("test %d\n", ++i);
+//     auto t6 = el_make_map_kv("string", "");
+//     map >> t6;
+//     printf("\t string: %s\n", t6.value);
 
-    for (int i = 1000; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
-}
+//     printf("test %d\n", ++i);
+//     auto t7 = el_make_map_kv("string", "hello world!");
+//     map << t7;
+//     printf("\t string: %s\n", t6.value);
+
+//     printf("test %d\n", ++i);
+//     auto t8 = el_make_map_kv("string", "");
+//     map >> t8;
+//     printf("\t string: %s\n", t8.value);
+
+//     for (int i = 1000; i >= 0; i--) {
+//         printf("Restarting in %d seconds...\n", i);
+//         vTaskDelay(1000 / portTICK_PERIOD_MS);
+//     }
+//     printf("Restarting now.\n");
+//     fflush(stdout);
+//     esp_restart();
+// }

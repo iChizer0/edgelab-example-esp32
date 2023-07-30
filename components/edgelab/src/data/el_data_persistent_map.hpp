@@ -29,6 +29,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+#include <cassert>
 #include <cstddef>
 #include <cstring>
 #include <iterator>
@@ -36,49 +37,51 @@
 #include <type_traits>
 #include <utility>
 
-#define CONFIG_EL_LIB_FLASHDB
-
 #ifdef CONFIG_EL_LIB_FLASHDB
 
     #include <flashdb.h>
 
 namespace edgelab::data {
 
-namespace types {
+namespace traits {
 
-using ELMapKeyType              = const char*;
-using ELMapKVHandlerPointerType = fdb_kv_t;
-
-// TODO: move to traits namespace
 template <typename T> struct remove_const_from_pointer {
     using type =
       typename std::add_pointer<typename std::remove_const<typename std::remove_pointer<T>::type>::type>::type;
 };
 
-// TODO: move to traits namespace
 template <typename T>
 struct is_c_str
     : std::integral_constant<
         bool,
         std::is_same<char*, typename remove_const_from_pointer<typename std::decay<T>::type>::type>::value> {};
 
-// TODO: move to traits namespace
 template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[Size]) { return Size * sizeof(T); }
+
+}
+
+namespace types {
+
+using ELMapKeyType              = const char*;
+using ELMapKVHandlerPointerType = fdb_kv_t;
+
 
 // please be careful when using pointer type as ValueType, please always access value from el_map_kv_t when using value
 template <typename KeyType, typename ValueType, typename HandlerPointerType> struct el_map_kv_t {
     explicit el_map_kv_t(KeyType            key_,
                          ValueType          value_,
-                         size_t             size_              = 0ul,
+                         size_t             size_in_bytes_     = 0ul,
                          HandlerPointerType handle_            = nullptr,
                          bool               call_value_delete  = false,
                          bool               call_handel_delete = false) noexcept
         : key(key_),
           value(value_),
-          size(size_),
+          size_in_bytes(size_in_bytes_),
           handle(handle_),
           __call_value_delete(call_value_delete),
-          __call_handel_delete(call_handel_delete) {}
+          __call_handel_delete(call_handel_delete) {
+        assert(size_in_bytes > 0)
+    }
 
     ~el_map_kv_t() {
         if constexpr (std::is_pointer<ValueType>::value)
@@ -92,7 +95,7 @@ template <typename KeyType, typename ValueType, typename HandlerPointerType> str
 
     KeyType            key;
     ValueType          value;
-    size_t             size;
+    size_t             size_in_bytes;
     HandlerPointerType handle;
 
     // TODO: this should be protected, use friend to enable access from other classes
@@ -100,31 +103,35 @@ template <typename KeyType, typename ValueType, typename HandlerPointerType> str
     bool __call_handel_delete;
 };
 
+}  // namespace types
+
+namespace utility {
+
 // TODO: move to utility namespace
 template <typename KeyType,
           typename ValueType,
           typename KeyTypeBase   = typename std::decay<KeyType>::type,
           typename ValueTypeBase = typename std::decay<ValueType>::type,
-          typename std::enable_if<std::is_convertible<KeyType, ELMapKeyType>::value ||
-                                  std::is_same<KeyTypeBase, ELMapKeyType>::value>::type* = nullptr>
-inline constexpr el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerPointerType> el_make_map_kv(
-  KeyType&& key, ValueType&& value, size_t size = 0ul) noexcept {
+          typename std::enable_if<std::is_convertible<KeyType, edgelab::data::types::ELMapKeyType>::value ||
+                                  std::is_same<KeyTypeBase, edgelab::data::types::ELMapKeyType>::value>::type* = nullptr>
+inline constexpr edgelab::data::types::el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType> el_make_map_kv(
+  KeyType&& key, ValueType&& value, size_t size_in_bytes = 0ul) noexcept {
     using ValueTypeNoRef = typename std::remove_reference<ValueType>::type;
-    if (size == 0ul) [[likely]] {
-        if constexpr (is_c_str<ValueTypeNoRef>::value)
-            size = std::strlen(value) + 1ul;  // add 1 for '\0' terminator
+    if (size_in_bytes == 0ul) [[likely]] {
+        if constexpr (edgelab::data::traits::is_c_str<ValueTypeNoRef>::value)
+            size_in_bytes = std::strlen(value) + 1ul;  // add 1 for '\0' terminator
         else if constexpr (std::is_array<ValueTypeNoRef>::value)
-            size = sizeof_c_array(std::forward<ValueType>(value));
+            size_in_bytes = edgelab::data::traits::sizeof_c_array(std::forward<ValueType>(value));
         else if constexpr (!std::is_pointer<ValueTypeNoRef>::value)
-            size = sizeof(value);
+            size_in_bytes = sizeof(value);
         else if constexpr (std::is_trivially_constructible<ValueTypeNoRef>::value)
-            size = sizeof(*value);
+            size_in_bytes = sizeof(*value);
     }
-    return el_map_kv_t<KeyTypeBase, ValueTypeBase, ELMapKVHandlerPointerType>(
-      std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size);
+    return edgelab::data::types::el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType>(
+      std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size_in_bytes);
 }
 
-}  // namespace types
+}
 
 class PersistentMap {
     using KeyType     = types::ELMapKeyType;
@@ -133,7 +140,6 @@ class PersistentMap {
    private:
     mutable SemaphoreHandle_t __lock;
     fdb_kvdb_t                __kvdb;
-    volatile bool             __is_initialize_success;
 
     inline void m_lock() const noexcept { xSemaphoreTake(__lock, portMAX_DELAY); }
     inline void m_unlock() const noexcept { xSemaphoreGive(__lock); }
@@ -219,13 +225,13 @@ class PersistentMap {
     explicit PersistentMap(const char* name, const char* path, struct fdb_default_kv* default_kv = nullptr) noexcept
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
-        __kvdb                  = new struct fdb_kvdb();
-        __is_initialize_success = fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr) == FDB_NO_ERR;
+        __kvdb = new struct fdb_kvdb();
+        assert(fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr) == FDB_NO_ERR);
     }
 
     ~PersistentMap() {
         volatile const Guard guard(this);
-        if (__is_initialize_success && __kvdb && (fdb_kvdb_deinit(__kvdb) == FDB_NO_ERR)) [[likely]]
+        if (__kvdb && (fdb_kvdb_deinit(__kvdb) == FDB_NO_ERR)) [[likely]]
             delete __kvdb;
     };
 
@@ -238,11 +244,8 @@ class PersistentMap {
     HandlerType operator[](KT&& key) const {
         volatile const Guard guard(this);
         HandlerType          handler;
-        if (__is_initialize_success && __kvdb) [[likely]] {
-            typename std::add_pointer<HandlerType>::type p_handler{
-              fdb_kv_get_obj(__kvdb, static_cast<KeyType>(key), &handler)};
-            if (p_handler) handler = *p_handler;
-        }
+        typename std::add_pointer<HandlerType>::type p_handler{fdb_kv_get_obj(__kvdb, static_cast<KeyType>(key), &handler)};
+        if (p_handler) handler = *p_handler;
         return handler;
     }
 
@@ -250,7 +253,7 @@ class PersistentMap {
     template <typename TargetType> TargetType* get(const HandlerType* handler, TargetType* buffer) const {
         volatile const Guard guard(this);
         struct fdb_blob      blob;
-        if (__is_initialize_success && __kvdb && handler && handler->value_len) [[likely]] {
+        if (__kvdb && handler && handler->value_len) [[likely]] {
             fdb_blob_read(
               reinterpret_cast<fdb_db_t>(__kvdb),
               fdb_kv_to_blob(const_cast<fdb_kv_t>(handler), fdb_blob_make(&blob, buffer, handler->value_len)));
@@ -263,9 +266,7 @@ class PersistentMap {
                                       std::is_same<typename std::decay<KT>::type, KeyType>::value>::type* = nullptr>
     bool emplace(KT&& key, const fdb_blob_t blob) {
         volatile const Guard guard(this);
-        return __is_initialize_success && __kvdb
-                 ? fdb_kv_set_blob(__kvdb, static_cast<KeyType>(key), blob) == FDB_NO_ERR
-                 : false;
+        return fdb_kv_set_blob(__kvdb, static_cast<KeyType>(key), blob) == FDB_NO_ERR;
     }
 
     template <typename KT,
@@ -273,19 +274,20 @@ class PersistentMap {
                                       std::is_same<typename std::decay<KT>::type, KeyType>::value>::type* = nullptr>
     bool erase(KT&& key) {
         volatile const Guard guard(this);
-        return __is_initialize_success && __kvdb ? fdb_kv_del(__kvdb, static_cast<KeyType>(key)) == FDB_NO_ERR : false;
+        return fdb_kv_del(__kvdb, static_cast<KeyType>(key)) == FDB_NO_ERR;
     }
 
     void clear() {
         volatile const Guard   guard(this);
         struct fdb_kv_iterator iterator;
+        if (!__kvdb) return;
         fdb_kv_iterator_init(__kvdb, &iterator);
         while (fdb_kv_iterate(__kvdb, &iterator)) fdb_kv_del(__kvdb, iterator.curr_kv.name);
     }
 
     bool reset() {
         volatile const Guard guard(this);
-        return fdb_kv_set_default(__kvdb) == FDB_NO_ERR;
+        return __kvdb ? fdb_kv_set_default(__kvdb) == FDB_NO_ERR : false;
     }
 
     template <typename KT, typename CT, typename HPT>
@@ -293,9 +295,9 @@ class PersistentMap {
         struct fdb_blob blob;
 
         if constexpr (std::is_pointer<CT>::value) [[unlikely]]
-            emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size));
+            emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size_in_bytes));
         else
-            emplace(rhs.key, fdb_blob_make(&blob, &rhs.value, rhs.size));
+            emplace(rhs.key, fdb_blob_make(&blob, &rhs.value, rhs.size_in_bytes));
 
         return *this;
     }
@@ -304,7 +306,7 @@ class PersistentMap {
     // TODO: automatically determine whether to allocate new memory based on the type of CT
     template <typename KT, typename CT, typename HPT> PersistentMap& operator>>(types::el_map_kv_t<KT, CT, HPT>& rhs) {
         volatile const Guard guard(this);
-        if (!__is_initialize_success || !__kvdb) return *this;
+        if (!__kvdb) return *this;
 
         using CTNoRef = typename std::remove_reference<CT>::type;
         using HT      = typename std::remove_pointer<HPT>::type;
@@ -319,14 +321,14 @@ class PersistentMap {
         rhs.__call_handel_delete = true;
 
         struct fdb_blob blob;
-        if constexpr (types::is_c_str<CTNoRef>::value || std::is_array<CTNoRef>::value ||
+        if constexpr (traits::is_c_str<CTNoRef>::value || std::is_array<CTNoRef>::value ||
                       std::is_pointer<CTNoRef>::value) {
             using CIT = typename std::remove_const<
               typename std::remove_pointer<typename std::remove_all_extents<CTNoRef>::type>::type>::type;
             using CIPT = typename std::add_pointer<CIT>::type;
 
             CIPT buffer{new CIT[p_kv->value_len]};
-            rhs.size =
+            rhs.size_in_bytes =
               fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
                             fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, buffer, p_kv->value_len)));
 
@@ -334,7 +336,7 @@ class PersistentMap {
             rhs.__call_value_delete = true;
         } else {
             CTNoRef value;
-            rhs.size =
+            rhs.size_in_bytes =
               fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
                             fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, &value, p_kv->value_len)));
 

@@ -27,10 +27,20 @@
 #define _EL_DATA_H_
 
 #include "el_data_persistent_map.hpp"
-#include "el_data_models.hpp"
+#include "el_data_model_loader.hpp"
+
+#define CONFIG_EL_MODELS_PARTITION_NAME     "models"
+#define CONFIG_EL_DATA_PERSISTENT_MAP_NAME  "edgelab_db"
+#define CONFIG_EL_DATA_PERSISTENT_MAP_PATH  "kvdb0"
+
+namespace edgelab {
+    using ModelLoader = data::ModelLoader;
+    using PersistentMap = data::PersistentMap;
+}
 
 // TODO: avoid expose the namespace to global
-using namespace edgelab::data;
+using namespace edgelab::data::traits;
 using namespace edgelab::data::types;
+using namespace edgelab::data::utility;
 
 #endif

@@ -24,11 +24,19 @@
  */
 
 #ifndef _EL_MODEL_LOADER_HPP_
-#define _EL_MODELS_LOADER_HPP_
+#define _EL_MODEL_LOADER_HPP_
 
+#include <cassert>
 #include <cstdint>
+#include <vector>
 
-namespace edgelab {
+// TODO: should be moved to port later
+#include <esp_partition.h>
+#include <esp_spi_flash.h>
+
+#define CONFIG_EL_MINIMAL_MODEL_SIZE (10240)
+
+namespace edgelab::data {
 
 namespace types {
 
@@ -43,14 +51,49 @@ namespace types {
 }
 
 class ModelLoader {
+private:
+    const uint8_t*                 __partition_start_addr;
+    size_t                         __partition_size;
+    const uint8_t*                 __flash_2_memory_map;
+    spi_flash_mmap_handle_t        __mmap_handler; // TODO: use define for mmap handler type
+    std::vector<types::el_model_t> __models;
+
 public:
-    ModelLoader(const char* partition_name) {
+    // TODO: abstract API call later
+    explicit ModelLoader(const char* partition_name) {
+        const esp_partition_t* partition{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, partition_name)};
+        assert(partition != nullptr);
+        __partition_start_addr = partition->address;
+        __partition_size       = partition->size;
 
+        assert(spi_flash_mmap(
+            __partition_start_addr,
+            __partition_size,
+            SPI_FLASH_MMAP_DATA,
+            reinterpret_cast<const void**>(&__flash_2_memory_map),
+            &__mmap_handler) != ESP_OK);
     }
 
-    el_model_t get_model() {
+    ~ModelLoader() {
+        spi_flash_mmap(__mmap_handler);
+    }
+
+    void clear() {
+        // TODO: clear model partition
+    }
+
+    const std::vector<types::el_model_t>* get_models() {
+        return &__models;
+    }
+
+protected:
+    bool seek_models_from_flash() {
         
-    }
+
+
+
+        return false;
+    } 
 
 };
 
