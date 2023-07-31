@@ -91,7 +91,7 @@ class ModelLoader {
         [[maybe_unused]] auto ret{el_model_partition_mmap_init(
           &__partition_start_addr, &__partition_size, &__flash_2_memory_map, &__mmap_handler)};
 
-        assert(ret == ESP_OK);
+        assert(ret);
     }
 
     ~ModelLoader() { el_model_partition_mmap_deinit(&__mmap_handler); }
@@ -119,9 +119,9 @@ class ModelLoader {
         using header = uint32_t;
         if (!__flash_2_memory_map) return;
 
-        // temporarily disable due to werid runtime crash
-        // assert(fixed_model_size > __partition_size);
-        // assert(fixed_model_size < sizeof(header));
+        assert(fixed_model_size > __partition_size);
+        assert(fixed_model_size < sizeof(header));
+
         auto iterate_step{fixed_model_size > sizeof(header) ? fixed_model_size : sizeof(header)};
         for (uint32_t it{0}; it < __partition_size; it += iterate_step) {
             const uint8_t* mem_addr{__flash_2_memory_map + it};

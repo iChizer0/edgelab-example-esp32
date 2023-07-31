@@ -47,28 +47,28 @@ bool el_model_partition_mmap_init(uint32_t*                partition_start_addr,
 
 void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler);
 
-#define EL_FLASH_PARTITION_NAME        "db"
-#define EL_FLASH_PARTITION_MOUNT_POINT "nor_flash0"
-#define EL_FLASH_PARTITION_FS_NAME_0   "kvdb0"
-#define EL_FLASH_PARTITION_FS_SIZE_0   (64 * 1024)
+#define EL_FLASH_DB_PARTITION_NAME        "db"
+#define EL_FLASH_DB_PARTITION_MOUNT_POINT "nor_flash0"
+#define EL_FLASH_DB_PARTITION_FS_NAME_0   "kvdb0"
+#define EL_FLASH_DB_PARTITION_FS_SIZE_0   (64 * 1024)
 
 #ifdef CONFIG_EL_LIB_FLASHDB
     #include <fal_def.h>
 
-    #define NOR_FLASH_DEV_NAME EL_FLASH_PARTITION_MOUNT_POINT
+    #define NOR_FLASH_DEV_NAME EL_FLASH_DB_PARTITION_MOUNT_POINT
     #define FAL_FLASH_DEV_TABLE \
-        { &el_flash_nor_flash0, }
+        { &el_flash_db_nor_flash0, }
 
     #define FAL_PART_HAS_TABLE_CFG
     #ifdef FAL_PART_HAS_TABLE_CFG
-        #define FAL_PART_TABLE                 \
-            {                                  \
-                {FAL_PART_MAGIC_WORD,          \
-                 EL_FLASH_PARTITION_FS_NAME_0, \
-                 NOR_FLASH_DEV_NAME,           \
-                 0,                            \
-                 EL_FLASH_PARTITION_FS_SIZE_0, \
-                 0},                           \
+        #define FAL_PART_TABLE                    \
+            {                                     \
+                {FAL_PART_MAGIC_WORD,             \
+                 EL_FLASH_DB_PARTITION_FS_NAME_0, \
+                 NOR_FLASH_DEV_NAME,              \
+                 0,                               \
+                 EL_FLASH_DB_PARTITION_FS_SIZE_0, \
+                 0},                              \
             }
     #endif
 
@@ -82,7 +82,7 @@ void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler);
 
     #define FLASH_ERASE_MIN_SIZE (4 * 1024)
 
-extern const struct fal_flash_dev el_flash_nor_flash0;
+extern const struct fal_flash_dev el_flash_db_nor_flash0;
 
 #endif
 

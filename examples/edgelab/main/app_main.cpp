@@ -7,8 +7,8 @@
 extern "C" void app_main(void) {
     ModelLoader model_loader;
     auto        models{model_loader.get_models()};
-
     printf("found modles: %d\n", models.size());
+
 
     for (int i = 1000; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
