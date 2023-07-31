@@ -45,8 +45,8 @@ class Serial {
     ~Serial() override;
     EL_STA init() override;
     EL_STA deinit() override;
-    EL_STA get_line(char* buffer, size_t max_size, const char terminator = '\n') override;
-    EL_STA write_bytes(const char* buffer, size_t size) override;
+    size_t get_line(char* buffer, size_t size, const char terminator = '\n') override;
+    size_t write_bytes(const char* buffer, size_t size) override;
 
     operator bool() { return _is_present; }
 };

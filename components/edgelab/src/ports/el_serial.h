@@ -35,12 +35,12 @@ class Serial {
     bool _is_present;
 
    public:
-    Serial()                                                                             = default;
-    virtual ~Serial()                                                                    = default;
-    virtual EL_STA init()                                                                = 0;
-    virtual EL_STA deinit()                                                              = 0;
-    virtual EL_STA get_line(char* buffer, size_t max_size, const char terminator = '\n') = 0;
-    virtual EL_STA write_bytes(const char* buffer, size_t size)                          = 0;
+    Serial()                                                                         = default;
+    virtual ~Serial()                                                                = default;
+    virtual EL_STA init()                                                            = 0;
+    virtual EL_STA deinit()                                                          = 0;
+    virtual size_t get_line(char* buffer, size_t size, const char terminator = '\n') = 0;
+    virtual size_t write_bytes(const char* buffer, size_t size)                      = 0;
 
     operator bool() { return _is_present; }
 };

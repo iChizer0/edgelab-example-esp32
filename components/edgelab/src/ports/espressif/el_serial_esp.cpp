@@ -33,12 +33,30 @@ Serial::~Serial() {
     deinit();
 }
 
-Serial::init() {
+EL_STA Serial::init() {
     [[maybe_unused]] auto ret{usb_serial_jtag_driver_install(&_driver_config)};
     assert(ret == ESP_OK);
 }
 
-Serial::deinit() { usb_serial_jtag_driver_uninstall(); }
+EL_STA Serial::deinit() { usb_serial_jtag_driver_uninstall(); }
+
+size_t Serial::get_line(char* buffer, size_t size, const char terminator = '\n') {
+    size_t s{0};
+    char   c{'\0'};
+    while (++s < size && usb_serial_jtag_read_bytes(&c, 1, 10 / portTICK_PERIOD_MS)) {
+        if (c == '\n') [[unlikely]] {
+            buffer[s] = '\0';
+            break;
+        }
+        buffer[s] = c;
+    }
+    return s;
+
+}
+
+size_t Serial::write_bytes(const char* buffer, size_t size) {
+
+}
 
 
 
