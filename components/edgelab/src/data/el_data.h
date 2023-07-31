@@ -29,7 +29,6 @@
 #include "el_data_model_loader.hpp"
 #include "el_data_persistent_map.hpp"
 
-#define CONFIG_EL_MODELS_PARTITION_NAME    "models"
 #define CONFIG_EL_DATA_PERSISTENT_MAP_NAME "edgelab_db"
 #define CONFIG_EL_DATA_PERSISTENT_MAP_PATH "kvdb0"
 

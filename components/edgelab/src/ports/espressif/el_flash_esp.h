@@ -27,10 +27,25 @@
 #define _EL_FLASH_ESP_H_
 
 #include <assert.h>
+#include <esp_partition.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <spi_flash_mmap.h>
 
-#include "esp_partition.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define CONFIG_EL_MODELS_PARTITION_NAME "models"
+
+typedef spi_flash_mmap_handle_t el_model_mmap_handler_t;
+
+bool el_model_partition_mmap_init(uint32_t*                partition_start_addr,
+                                  uint32_t*                partition_size,
+                                  const uint8_t**          flash_2_memory_map,
+                                  spi_flash_mmap_handle_t* mmap_handler);
+
+void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler);
 
 #define EL_FLASH_PARTITION_NAME        "db"
 #define EL_FLASH_PARTITION_MOUNT_POINT "nor_flash0"
@@ -67,11 +82,12 @@
 
     #define FLASH_ERASE_MIN_SIZE (4 * 1024)
 
-static SemaphoreHandle_t el_flash_lock = NULL;
-
-const static esp_partition_t*     el_flash_partition;
 extern const struct fal_flash_dev el_flash_nor_flash0;
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

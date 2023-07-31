@@ -2,8 +2,6 @@
 #include <stdio.h>
 
 #include "edgelab.h"
-#include "esp_partition.h"
-#include "esp_spi_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 // // #include "yolo_model_data.h"
@@ -19,12 +17,28 @@ uint16_t color[] = {
 };
 
 extern "C" void app_main(void) {
-//     Device*  device  = Device::get_device();
-//     Display* display = device->get_display();
-//     Camera*  camera  = device->get_camera();
+    // Device*  device  = Device::get_device();
+    // Display* display = device->get_display();
+    // Camera*  camera  = device->get_camera();
 
-//     camera->init(240, 240);
-//     display->init();
+    // camera->init(240, 240);
+    // display->init();
+
+    ModelLoader model_loader;
+    auto models{model_loader.get_models()};
+
+    printf("found modles: %d\n", models.size());
+
+
+
+    for (int i = 1000; i >= 0; i--) {
+        printf("Restarting in %d seconds...\n", i);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    printf("Restarting now.\n");
+    fflush(stdout);
+    esp_restart();
+}
 
 //     auto* engine       = new InferenceEngine<EngineName::TFLite>();
 //     auto* tensor_arena = heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -87,7 +101,19 @@ extern "C" void app_main(void) {
 
 //                 continue;
 //                 // for (int i = 1000; i >= 0; i--) {
-//                 //     printf("Restarting in %d seconds...\n", i);
+//             }
+
+//             printf("p -> %p\n", model_addr);
+
+//             engine->load_model(model_addr, model_max_size);
+//             model |= 1 << (index);
+
+//             // if (::tflite::GetModel((void*)model_addr)->version() == TFLITE_SCHEMA_VERSION) {
+//             //     model |= 1 << (index);  // if model vaild, then set bit
+//             // }
+//         }
+
+//     }                //     printf("Restarting in %d seconds...\n", i);
 //                 //     vTaskDelay(1000 / portTICK_PERIOD_MS);
 //                 // }
 //                 // printf("Restarting now.\n");
@@ -105,7 +131,8 @@ extern "C" void app_main(void) {
 //             // }
 //         }
 
-    }
+//     }
+//     }
 
 // #define TEST_MAIN
 
@@ -241,7 +268,7 @@ extern "C" void app_main(void) {
 //     auto t5 = el_make_map_kv("string", "hello");
 //     map << t5;
 //     for (const auto& a : map) printf("\t%s\n", a.name);
-
+          
 //     printf("test %d\n", ++i);
 //     auto t6 = el_make_map_kv("string", "");
 //     map >> t6;

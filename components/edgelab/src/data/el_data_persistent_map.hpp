@@ -228,7 +228,7 @@ class PersistentMap {
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
         __kvdb = new struct fdb_kvdb();
-        auto ret{fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr)};
+        [[maybe_unused]] auto ret{fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr)};
         assert(ret == FDB_NO_ERR);
     }
 
