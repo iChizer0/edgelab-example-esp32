@@ -23,39 +23,28 @@
  *
  */
 
-#ifndef _EL_DEVICE_H_
-#define _EL_DEVICE_H_
+#ifndef _EL_SERIAL_H_
+#define _EL_SERIAL_H_
 
-#include "el_camera.h"
-#include "el_common.h"
-#include "el_display.h"
-#include "el_repl.h"
-#include "el_serial.h"
+#include "el_types.h"
 
 namespace edgelab {
 
-class Device {
+class Serial {
    protected:
-    const char* _device_name;
-    uint32_t    _device_id;
-
-    ReplServer* _repl;
-    Camera*     _camera;
-    Display*    _display;
+    bool _is_present;
 
    public:
-    Device(/* args */){};
-    ~Device(){};
+    Serial()                                                                             = default;
+    virtual ~Serial()                                                                    = default;
+    virtual EL_STA init()                                                                = 0;
+    virtual EL_STA deinit()                                                              = 0;
+    virtual EL_STA get_line(char* buffer, size_t max_size, const char terminator = '\n') = 0;
+    virtual EL_STA write_bytes(const char* buffer, size_t size)                          = 0;
 
-    ReplServer* get_repl() { return _repl; }
-    Camera*     get_camera() { return _camera; }
-    Display*    get_display() { return _display; }
-    uint32_t    get_device_id() { return _device_id; }
-    const char* get_device_name() { return _device_name; }
-
-    static Device* get_device();
+    operator bool() { return _is_present; }
 };
 
 }  // namespace edgelab
 
-#endif /* _EL_Device_H_ */
+#endif

@@ -23,39 +23,23 @@
  *
  */
 
-#ifndef _EL_DEVICE_H_
-#define _EL_DEVICE_H_
-
-#include "el_camera.h"
-#include "el_common.h"
-#include "el_display.h"
-#include "el_repl.h"
-#include "el_serial.h"
+#include "el_serial_esp.h"
 
 namespace edgelab {
 
-class Device {
-   protected:
-    const char* _device_name;
-    uint32_t    _device_id;
+Serial::Serial() : _driver_config(USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT()) {}
 
-    ReplServer* _repl;
-    Camera*     _camera;
-    Display*    _display;
+Serial::~Serial() {
+    deinit();
+}
 
-   public:
-    Device(/* args */){};
-    ~Device(){};
+Serial::init() {
+    [[maybe_unused]] auto ret{usb_serial_jtag_driver_install(&_driver_config)};
+    assert(ret == ESP_OK);
+}
 
-    ReplServer* get_repl() { return _repl; }
-    Camera*     get_camera() { return _camera; }
-    Display*    get_display() { return _display; }
-    uint32_t    get_device_id() { return _device_id; }
-    const char* get_device_name() { return _device_name; }
+Serial::deinit() { usb_serial_jtag_driver_uninstall(); }
 
-    static Device* get_device();
-};
+
 
 }  // namespace edgelab
-
-#endif /* _EL_Device_H_ */
