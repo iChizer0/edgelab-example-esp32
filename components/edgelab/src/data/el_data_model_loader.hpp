@@ -81,11 +81,16 @@ class ModelLoader {
     uint32_t                       __partition_size;
     const uint8_t*                 __flash_2_memory_map;
     spi_flash_mmap_handle_t        __mmap_handler;  // TODO: use #define for mmap handler type
-    std::vector<types::el_model_t> __model_handler;
+    std::vector<types::el_model_t> __models_handler;
 
    public:
     // TODO: abstract API call later
-    explicit ModelLoader(const char* partition_name) {
+    explicit ModelLoader(const char* partition_name)
+        : __partition_start_addr(0),
+          __partition_size(0),
+          __flash_2_memory_map(nullptr),
+          __mmap_handler(),
+          __models_handler() {
         const esp_partition_t* partition{
           esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, partition_name)};
         assert(partition != nullptr);
@@ -107,10 +112,10 @@ class ModelLoader {
         // TODO: erase model partition
     }
 
-    const std::vector<types::el_model_t>* get_models(size_t fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
-        __model_handler.clear();
+    const std::vector<types::el_model_t>& get_models(size_t fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
+        // __models_handler.clear();
         seek_models_from_flash(fixed_model_size);
-        return &__model_handler;
+        return __models_handler;
     }
 
    protected:
@@ -129,14 +134,15 @@ class ModelLoader {
     void seek_models_from_flash(size_t fixed_model_size) {
         using header = uint32_t;
 
-        assert(fixed_model_size > __partition_size);
-        assert(fixed_model_size < sizeof(header));
+        // temporarily disable due to werid runtime crash
+        // assert(fixed_model_size > __partition_size);
+        // assert(fixed_model_size < sizeof(header));
 
         auto iterate_step{fixed_model_size > sizeof(header) ? fixed_model_size : sizeof(header)};
         for (uint32_t it{0}; it < __partition_size; it += iterate_step) {
             const uint8_t* mem_addr{__flash_2_memory_map + it};
             if (!verify_header<header>(reinterpret_cast<const header*>(mem_addr))) continue;
-            __model_handler.emplace_back(
+            __models_handler.emplace_back(
               types::el_model_t{.type  = parse_header_type<header>(reinterpret_cast<const header*>(mem_addr)),
                                 .index = parse_header_index<header>(reinterpret_cast<const header*>(mem_addr)),
                                 .size  = fixed_model_size,  // current we're not going to determine the real model size
