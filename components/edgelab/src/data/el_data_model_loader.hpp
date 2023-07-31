@@ -32,7 +32,6 @@
 #include <type_traits>
 #include <vector>
 
-// TODO: should be moved to port later
 #include "el_flash.h"
 
 #define CONFIG_EL_MODEL_HEADER      0x4C485400  // bigendian
@@ -79,11 +78,10 @@ class ModelLoader {
     uint32_t                       __partition_start_addr;
     uint32_t                       __partition_size;
     const uint8_t*                 __flash_2_memory_map;
-    el_model_mmap_handler_t        __mmap_handler;  // TODO: use #define for mmap handler type
+    el_model_mmap_handler_t        __mmap_handler;
     std::vector<types::el_model_t> __models_handler;
 
    public:
-    // TODO: abstract API call later
     explicit ModelLoader()
         : __partition_start_addr(0),
           __partition_size(0),
@@ -119,11 +117,11 @@ class ModelLoader {
 
     void seek_models_from_flash(size_t fixed_model_size) {
         using header = uint32_t;
+        if (!__flash_2_memory_map) return;
 
         // temporarily disable due to werid runtime crash
         // assert(fixed_model_size > __partition_size);
         // assert(fixed_model_size < sizeof(header));
-
         auto iterate_step{fixed_model_size > sizeof(header) ? fixed_model_size : sizeof(header)};
         for (uint32_t it{0}; it < __partition_size; it += iterate_step) {
             const uint8_t* mem_addr{__flash_2_memory_map + it};
