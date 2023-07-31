@@ -26,16 +26,14 @@
 #ifndef _EDGELAB_H
 #define _EDGELAB_H
 
-// #include "el_algorithm_base.hpp"
 #include "el_algorithm.h"
-// #include "el_algorithm_yolo.hpp"
 #include "el_base64.h"
 #include "el_camera.h"
 #include "el_common.h"
 #include "el_cv.h"
+#include "el_data.h"
 #include "el_device.h"
 #include "el_display.h"
-// #include "el_flash.h"
 #include "el_inference.h"
 #include "el_misc.h"
 #include "el_nms.h"

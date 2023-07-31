@@ -58,13 +58,12 @@ struct is_c_str
 
 template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[Size]) { return Size * sizeof(T); }
 
-}
+}  // namespace traits
 
 namespace types {
 
 using ELMapKeyType              = const char*;
 using ELMapKVHandlerPointerType = fdb_kv_t;
-
 
 // please be careful when using pointer type as ValueType, please always access value from el_map_kv_t when using value
 template <typename KeyType, typename ValueType, typename HandlerPointerType> struct el_map_kv_t {
@@ -108,14 +107,16 @@ template <typename KeyType, typename ValueType, typename HandlerPointerType> str
 namespace utility {
 
 // TODO: move to utility namespace
-template <typename KeyType,
-          typename ValueType,
-          typename KeyTypeBase   = typename std::decay<KeyType>::type,
-          typename ValueTypeBase = typename std::decay<ValueType>::type,
-          typename std::enable_if<std::is_convertible<KeyType, edgelab::data::types::ELMapKeyType>::value ||
-                                  std::is_same<KeyTypeBase, edgelab::data::types::ELMapKeyType>::value>::type* = nullptr>
-inline constexpr edgelab::data::types::el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType> el_make_map_kv(
-  KeyType&& key, ValueType&& value, size_t size_in_bytes = 0ul) noexcept {
+template <
+  typename KeyType,
+  typename ValueType,
+  typename KeyTypeBase   = typename std::decay<KeyType>::type,
+  typename ValueTypeBase = typename std::decay<ValueType>::type,
+  typename std::enable_if<std::is_convertible<KeyType, edgelab::data::types::ELMapKeyType>::value ||
+                          std::is_same<KeyTypeBase, edgelab::data::types::ELMapKeyType>::value>::type* = nullptr>
+inline constexpr edgelab::data::types::
+  el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType>
+  el_make_map_kv(KeyType&& key, ValueType&& value, size_t size_in_bytes = 0ul) noexcept {
     using ValueTypeNoRef = typename std::remove_reference<ValueType>::type;
     if (size_in_bytes == 0ul) [[likely]] {
         if constexpr (edgelab::data::traits::is_c_str<ValueTypeNoRef>::value)
@@ -127,11 +128,12 @@ inline constexpr edgelab::data::types::el_map_kv_t<KeyTypeBase, ValueTypeBase, e
         else if constexpr (std::is_trivially_constructible<ValueTypeNoRef>::value)
             size_in_bytes = sizeof(*value);
     }
-    return edgelab::data::types::el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType>(
-      std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size_in_bytes);
+    return edgelab::data::types::
+      el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType>(
+        std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size_in_bytes);
 }
 
-}
+}  // namespace utility
 
 class PersistentMap {
     using KeyType     = types::ELMapKeyType;
@@ -226,7 +228,8 @@ class PersistentMap {
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
         __kvdb = new struct fdb_kvdb();
-        assert(fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr) == FDB_NO_ERR);
+        auto ret{fdb_kvdb_init(__kvdb, name, path, default_kv, nullptr)};
+        assert(ret == FDB_NO_ERR);
     }
 
     ~PersistentMap() {
@@ -242,9 +245,10 @@ class PersistentMap {
               typename std::enable_if<std::is_convertible<KT, KeyType>::value ||
                                       std::is_same<typename std::decay<KT>::type, KeyType>::value>::type* = nullptr>
     HandlerType operator[](KT&& key) const {
-        volatile const Guard guard(this);
-        HandlerType          handler;
-        typename std::add_pointer<HandlerType>::type p_handler{fdb_kv_get_obj(__kvdb, static_cast<KeyType>(key), &handler)};
+        volatile const Guard                         guard(this);
+        HandlerType                                  handler;
+        typename std::add_pointer<HandlerType>::type p_handler{
+          fdb_kv_get_obj(__kvdb, static_cast<KeyType>(key), &handler)};
         if (p_handler) handler = *p_handler;
         return handler;
     }
