@@ -1,7 +1,7 @@
 menu "Inference Engine"
     config EL_TFLITE
         bool "Enable TFLite"
-        default n
+        default y
         help
             Enable TFLite inference engine
     menu "TFLite options"
@@ -15,7 +15,7 @@ menu "Inference Engine"
                 
         config EL_TFLITE_OP_ADD
             bool "ADD"
-            default n
+            default y
             help
                 ADD
 
@@ -93,13 +93,13 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_CONCATENATION
             bool "CONCATENATION"
-            default n
+            default y
             help
                 CONCATENATION
 
         config EL_TFLITE_OP_CONV_2D
             bool "CONV_2D"
-            default n
+            default y
             help
                 CONV_2D
 
@@ -250,7 +250,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_LEAKY_RELU
             bool "LEAKY_RELU"
-            default n
+            default y
             help
                 LEAKY_RELU
 
@@ -292,7 +292,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_LOGISTIC
             bool "LOGISTIC"
-            default n
+            default y
             help
                 LOGISTIC
 
@@ -304,7 +304,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_MAX_POOL_2D
             bool "MAX_POOL_2D"
-            default n
+            default y
             help
                 MAX_POOL_2D
 
@@ -316,7 +316,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_MEAN
             bool "MEAN"
-            default n
+            default y
             help
                 MEAN
 
@@ -334,7 +334,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_MUL
             bool "MUL"
-            default n
+            default y
             help
                 MUL
 
@@ -358,13 +358,13 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_PAD
             bool "PAD"
-            default n
+            default y
             help
                 PAD
 
         config EL_TFLITE_OP_PADV2
             bool "PADV2"
-            default n
+            default y
             help
                 PADV2
 
@@ -376,7 +376,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_QUANTIZE
             bool "QUANTIZE"
-            default n
+            default y
             help
                 QUANTIZE
 
@@ -394,7 +394,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_RELU
             bool "RELU"
-            default n
+            default y
             help
                 RELU
 
@@ -406,7 +406,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_RESHAPE
             bool "RESHAPE"
-            default n
+            default y
             help
                 RESHAPE
 
@@ -418,7 +418,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_RESIZE_NEAREST_NEIGHBOR
             bool "RESIZE_NEAREST_NEIGHBOR"
-            default n
+            default y
             help
                 RESIZE_NEAREST_NEIGHBOR
 
@@ -442,7 +442,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_SHAPE
             bool "SHAPE"
-            default n
+            default y
             help
                 SHAPE
 
@@ -460,7 +460,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_SOFTMAX
             bool "SOFTMAX"
-            default n
+            default y
             help
                 SOFTMAX
 
@@ -478,13 +478,13 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_SPLIT
             bool "SPLIT"
-            default n
+            default y
             help
                 SPLIT
 
         config EL_TFLITE_OP_SPLIT_V
             bool "SPLIT_V"
-            default n
+            default y
             help
                 SPLIT_V
 
@@ -514,13 +514,13 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_STRIDED_SLICE
             bool "STRIDED_SLICE"
-            default n
+            default y
             help
                 STRIDED_SLICE
 
         config EL_TFLITE_OP_SUB
             bool "SUB"
-            default n
+            default y
             help
                 SUB
 
@@ -544,7 +544,7 @@ menu "Inference Engine"
 
         config EL_TFLITE_OP_TRANSPOSE
             bool "TRANSPOSE"
-            default n
+            default y
             help
                 TRANSPOSE
 
