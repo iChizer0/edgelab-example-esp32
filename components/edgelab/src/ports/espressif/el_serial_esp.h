@@ -33,7 +33,7 @@
 
 namespace edgelab {
 
-class SerialEsp : Serial {
+class SerialEsp : public Serial {
    private:
     usb_serial_jtag_driver_config_t _driver_config;
 

@@ -42,6 +42,7 @@ class Device {
     ReplServer* _repl;
     Camera*     _camera;
     Display*    _display;
+    Serial*     _serial;
 
    public:
     Device(/* args */){};
@@ -50,6 +51,7 @@ class Device {
     ReplServer* get_repl() { return _repl; }
     Camera*     get_camera() { return _camera; }
     Display*    get_display() { return _display; }
+    Serial*     get_serial() { return _serial; }
     uint32_t    get_device_id() { return _device_id; }
     const char* get_device_name() { return _device_name; }
 

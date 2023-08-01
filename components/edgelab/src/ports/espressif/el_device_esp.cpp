@@ -27,25 +27,22 @@
 
 #include "el_camera_esp.h"
 #include "el_display_esp.h"
+#include "el_serial_esp.h"
 
 namespace edgelab {
-    
 
-DeviceEsp::DeviceEsp()
-{
-    this->_camera = static_cast<CameraEsp *>(new CameraEsp());
-    this->_display = static_cast<DisplayEsp *>(new DisplayEsp());
-    this->_repl = nullptr;
-    this->_device_name = "esp32";
+DeviceEsp::DeviceEsp() {
+    this->_camera      = static_cast<CameraEsp*>(new CameraEsp());
+    this->_display     = static_cast<DisplayEsp*>(new DisplayEsp());
+    this->_serial      = static_cast<SerialEsp*>(new SerialEsp());
+    this->_repl        = nullptr;
+    this->_device_name = "Seeed Studio XIAO (ESP32-S3)";
 }
-DeviceEsp::~DeviceEsp()
-{
-}
+DeviceEsp::~DeviceEsp() {}
 
-Device *Device::get_device()
-{
+Device* Device::get_device() {
     static DeviceEsp device;
     return &device;
 }
 
-} // namespace edgelab
+}  // namespace edgelab
