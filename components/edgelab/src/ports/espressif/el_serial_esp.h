@@ -26,7 +26,6 @@
 #ifndef _EL_SERIAL_ESP_H_
 #define _EL_SERIAL_ESP_H_
 
-#include <assert.h>
 #include <driver/usb_serial_jtag.h>
 
 #include "el_serial.h"
@@ -45,7 +44,7 @@ class SerialEsp : public Serial {
     ~SerialEsp() override;
     EL_STA init() override;
     EL_STA deinit() override;
-    char   echo() override;
+    char   echo(bool only_visible = true) override;
     char   get_char() override;
     size_t get_line(char* buffer, size_t size, const char delim = 0x0d) override;
     size_t write_bytes(const char* buffer, size_t size) override;

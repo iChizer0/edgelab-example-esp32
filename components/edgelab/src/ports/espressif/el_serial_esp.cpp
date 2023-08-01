@@ -25,8 +25,10 @@
 
 #include "el_serial_esp.h"
 
-namespace edgelab {
+#include <assert.h>
+#include <ctype.h>
 
+namespace edgelab {
 SerialEsp::SerialEsp(usb_serial_jtag_driver_config_t driver_config) : _driver_config(driver_config) {}
 
 SerialEsp::~SerialEsp() { deinit(); }
@@ -43,8 +45,9 @@ EL_STA SerialEsp::deinit() {
     return !_is_present ? EL_OK : EL_EIO;
 }
 
-char SerialEsp::echo() {
+char SerialEsp::echo(bool only_visible) {
     char c{get_char()};
+    if (only_visible && !isprint(c)) return c;
     write_bytes(&c, sizeof(c));
     return c;
 }
