@@ -31,7 +31,8 @@ extern "C" void app_main(void) {
         int size = serial.get_line(buf, 10);;
         if (size > 0) {
             printf("\tsize -> %d\n\tdata ->\n\t", size);
-            for (int i = 0; i < size; ++i) printf("%c", buf[i]);
+            // printf("%s", buf);
+            serial.write_bytes(buf, size);
             printf("\n");
         }
     }

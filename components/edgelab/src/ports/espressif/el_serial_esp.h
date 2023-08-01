@@ -41,11 +41,11 @@ class SerialEsp : Serial {
     bool _is_present;
 
    public:
-    SerialEsp();
+    SerialEsp(usb_serial_jtag_driver_config_t driver_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT());
     ~SerialEsp() override;
     EL_STA init() override;
     EL_STA deinit() override;
-    size_t get_line(char* buffer, size_t size, const char terminator = '\n') override;
+    size_t get_line(char* buffer, size_t size, const char delim = 0x0d) override;
     size_t write_bytes(const char* buffer, size_t size) override;
 
     operator bool() { return _is_present; }

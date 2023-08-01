@@ -39,7 +39,7 @@ class Serial {
     virtual ~Serial()                                                                = default;
     virtual EL_STA init()                                                            = 0;
     virtual EL_STA deinit()                                                          = 0;
-    virtual size_t get_line(char* buffer, size_t size, const char terminator = '\n') = 0;
+    virtual size_t get_line(char* buffer, size_t size, const char delim = 0x0d)      = 0;
     virtual size_t write_bytes(const char* buffer, size_t size)                      = 0;
 
     operator bool() { return _is_present; }

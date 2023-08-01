@@ -27,7 +27,7 @@
 
 namespace edgelab {
 
-SerialEsp::SerialEsp() : _driver_config(USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT()) {}
+SerialEsp::SerialEsp(usb_serial_jtag_driver_config_t driver_config) : _driver_config(driver_config) {}
 
 SerialEsp::~SerialEsp() { deinit(); }
 
@@ -43,13 +43,13 @@ EL_STA SerialEsp::deinit() {
     return !_is_present ? EL_OK : EL_EIO;
 }
 
-size_t SerialEsp::get_line(char* buffer, size_t size, const char terminator) {
+size_t SerialEsp::get_line(char* buffer, size_t size, const char delim) {
     size_t pos{0};
     char   c{'\0'};
     while (pos < size - 1) {
         if (!usb_serial_jtag_read_bytes(&c, 1, 10 / portTICK_PERIOD_MS)) continue;
 
-        if (c == 0x0d || c == 0x00) [[unlikely]] {
+        if (c == delim || c == 0x00) [[unlikely]] {
             buffer[pos++] = '\0';
             return pos;
         }
