@@ -296,6 +296,16 @@ EL_STA ReplServer::_exec_cmd(std::string& cmd) {
 
     std::transform(cmd_name.begin(), cmd_name.end(), cmd_name.begin(), ::toupper);
 
+    if (cmd_name.compare("AT") == 0) {
+        el_printf("{\"AT\": \"OK\"}\n");
+        return EL_OK;
+    }
+
+    if (cmd_name.compare("HELP") == 0) {
+        print_help();
+        return EL_OK;
+    }
+
     if (cmd_name.rfind("AT+", 0) != 0) {
         el_printf("Unknown command: %s\n", cmd_name.c_str());
         return EL_ELOG;

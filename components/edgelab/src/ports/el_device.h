@@ -38,6 +38,7 @@ class Device {
    protected:
     const char* _device_name;
     uint32_t    _device_id;
+    uint32_t    _revision_id;
 
     ReplServer* _repl;
     Camera*     _camera;
@@ -52,8 +53,11 @@ class Device {
     Camera*     get_camera() { return _camera; }
     Display*    get_display() { return _display; }
     Serial*     get_serial() { return _serial; }
+    uint32_t    get_chip_revision_id() { return _revision_id; }
     uint32_t    get_device_id() { return _device_id; }
     const char* get_device_name() { return _device_name; }
+
+    virtual void restart() = 0;
 
     static Device* get_device();
 };

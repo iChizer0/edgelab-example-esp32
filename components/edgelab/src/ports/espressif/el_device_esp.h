@@ -35,6 +35,8 @@ class DeviceEsp : public Device {
    public:
     DeviceEsp();
     ~DeviceEsp();
+
+    void restart() override;
 };
 
 }  // namespace edgelab
