@@ -40,4 +40,8 @@ using YOLO = typename edgelab::algorithm::YOLO<edgelab::inference::base::Engine,
 
 }  // namespace edgelab
 
+// TODO: avoid expose this name space globally
+using namespace edgelab::algorithm::types;
+using namespace edgelab::algorithm::data;
+
 #endif

@@ -68,6 +68,9 @@ PFLD<InferenceEngine, ImageType, PointType>::PFLD(InferenceEngine* engine)
 
     EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
     EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
+
+    // edgelab::algorithm::data::el_registered_algorithms.emplace_back(
+    //   edgelab::algorithm::types::el_algorithm_t{.type = 2, .categroy = 2, .parameters = {0, 0, 0, 0, 0, 0}});
 }
 
 template <typename InferenceEngine, typename ImageType, typename PointType>

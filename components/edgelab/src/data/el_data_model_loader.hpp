@@ -44,7 +44,7 @@ namespace types {
 
 struct el_model_t {
     uint8_t        type;
-    uint8_t        index;
+    uint8_t        id;
     uint32_t       size;
     uint32_t       addr_flash;
     const uint8_t* addr_memory;
@@ -111,7 +111,7 @@ class ModelLoader {
         return (utility::swap_endian(*bytes) & CONFIG_EL_MODEL_HEADER_MASK) & 0xFF;
     }
 
-    template <typename T> uint8_t parse_header_index(const T* bytes) {
+    template <typename T> uint8_t parse_header_id(const T* bytes) {
         return (utility::swap_endian(*bytes) & CONFIG_EL_MODEL_HEADER_MASK) & 0xFF;
     }
 
@@ -128,7 +128,7 @@ class ModelLoader {
             if (!verify_header<header>(reinterpret_cast<const header*>(mem_addr))) continue;
             __models_handler.emplace_back(
               types::el_model_t{.type  = parse_header_type<header>(reinterpret_cast<const header*>(mem_addr)),
-                                .index = parse_header_index<header>(reinterpret_cast<const header*>(mem_addr)),
+                                .id = parse_header_id<header>(reinterpret_cast<const header*>(mem_addr)),
                                 .size  = fixed_model_size,  // current we're not going to determine the real model size
                                 .addr_flash  = __partition_start_addr + it,
                                 .addr_memory = mem_addr});

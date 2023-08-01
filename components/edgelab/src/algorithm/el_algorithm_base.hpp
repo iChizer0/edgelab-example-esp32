@@ -28,12 +28,32 @@
 
 #include <cstdint>
 #include <forward_list>
+#include <utility>
+#include <vector>
 
 #include "el_debug.h"
 #include "el_types.h"
 
 namespace edgelab {
 namespace algorithm {
+
+namespace types {
+
+struct el_algorithm_t {
+    uint8_t type;
+    uint8_t categroy;
+    uint8_t parameters[6];
+};
+
+}  // namespace types
+
+namespace data {
+
+// unordered_map would be better, currently using vector due to resource limit
+static std::vector<edgelab::algorithm::types::el_algorithm_t> el_registered_algorithms;
+
+}  // namespace data
+
 namespace base {
 
 template <typename InferenceEngine, typename InputType, typename OutputType> class Algorithm {
