@@ -33,7 +33,7 @@
 
 namespace edgelab {
 
-class Serial {
+class SerialEsp : Serial {
    private:
     usb_serial_jtag_driver_config_t _driver_config;
 
@@ -41,8 +41,8 @@ class Serial {
     bool _is_present;
 
    public:
-    Serial();
-    ~Serial() override;
+    SerialEsp();
+    ~SerialEsp() override;
     EL_STA init() override;
     EL_STA deinit() override;
     size_t get_line(char* buffer, size_t size, const char terminator = '\n') override;

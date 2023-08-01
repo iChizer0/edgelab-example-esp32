@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "edgelab.h"
+#include "el_serial_esp.h"
 
 extern "C" void app_main(void) {
     ModelLoader model_loader;
@@ -15,21 +16,24 @@ extern "C" void app_main(void) {
       .rx_buffer_size = 256,
     };
 
-    int ret = usb_serial_jtag_driver_install(&config);
-    printf("jtag serial: %d\n", ret);
+    SerialEsp serial;
+    serial.init();
+
+    // int ret = usb_serial_jtag_driver_install(&config);
+    // printf("jtag serial: %d\n", ret);
+
+
 
     char* buf = new char[256];
 
-    for (int i = 1000; i >= 0; i--) {
-        // printf(".");
-        int size = usb_serial_jtag_read_bytes(buf, 10, 100 / portTICK_PERIOD_MS);
+    for (;;) {
+        printf("waiting for inputs...\n");
+        int size = serial.get_line(buf, 10);;
         if (size > 0) {
-            printf("\tsize -> %d\n\tdata -> ", size);
+            printf("\tsize -> %d\n\tdata ->\n\t", size);
             for (int i = 0; i < size; ++i) printf("%c", buf[i]);
             printf("\n");
         }
-
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     printf("Restarting now.\n");
     fflush(stdout);

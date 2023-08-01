@@ -27,37 +27,51 @@
 
 namespace edgelab {
 
-Serial::Serial() : _driver_config(USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT()) {}
+SerialEsp::SerialEsp() : _driver_config(USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT()) {}
 
-Serial::~Serial() {
-    deinit();
+SerialEsp::~SerialEsp() { deinit(); }
+
+EL_STA SerialEsp::init() {
+    _is_present = usb_serial_jtag_driver_install(&_driver_config) == ESP_OK;
+
+    return _is_present ? EL_OK : EL_EIO;
 }
 
-EL_STA Serial::init() {
-    [[maybe_unused]] auto ret{usb_serial_jtag_driver_install(&_driver_config)};
-    assert(ret == ESP_OK);
+EL_STA SerialEsp::deinit() {
+    _is_present = !(usb_serial_jtag_driver_uninstall() == ESP_OK);
+
+    return !_is_present ? EL_OK : EL_EIO;
 }
 
-EL_STA Serial::deinit() { usb_serial_jtag_driver_uninstall(); }
-
-size_t Serial::get_line(char* buffer, size_t size, const char terminator = '\n') {
-    size_t s{0};
+size_t SerialEsp::get_line(char* buffer, size_t size, const char terminator) {
+    size_t pos{0};
     char   c{'\0'};
-    while (++s < size && usb_serial_jtag_read_bytes(&c, 1, 10 / portTICK_PERIOD_MS)) {
-        if (c == '\n') [[unlikely]] {
-            buffer[s] = '\0';
-            break;
+    while (pos < size - 1) {
+        if (!usb_serial_jtag_read_bytes(&c, 1, 10 / portTICK_PERIOD_MS)) continue;
+
+        if (c == 0x0d || c == 0x00) [[unlikely]] {
+            buffer[pos++] = '\0';
+            return pos;
         }
-        buffer[s] = c;
+        buffer[pos++] = c;
     }
-    return s;
-
+    buffer[pos++] = '\0';
+    return pos;
 }
 
-size_t Serial::write_bytes(const char* buffer, size_t size) {
+size_t SerialEsp::write_bytes(const char* buffer, size_t size) {
+    size_t sent{0};
+    size_t pos_of_bytes{0};
 
+    while (size) {
+        size_t bytes_to_send{size < _driver_config.tx_buffer_size ? size : _driver_config.tx_buffer_size};
+
+        sent += usb_serial_jtag_write_bytes(buffer + pos_of_bytes, bytes_to_send, 10 / portTICK_PERIOD_MS);
+        pos_of_bytes += bytes_to_send;
+        size -= bytes_to_send;
+    }
+
+    return sent;
 }
-
-
 
 }  // namespace edgelab
