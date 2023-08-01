@@ -43,6 +43,19 @@ EL_STA SerialEsp::deinit() {
     return !_is_present ? EL_OK : EL_EIO;
 }
 
+char SerialEsp::echo() {
+    char c{get_char()};
+    write_bytes(&c, sizeof(c));
+    return c;
+}
+
+char SerialEsp::get_char() {
+    char c{'\0'};
+    while (!usb_serial_jtag_read_bytes(&c, 1, 10 / portTICK_PERIOD_MS))
+        ;
+    return c;
+}
+
 size_t SerialEsp::get_line(char* buffer, size_t size, const char delim) {
     size_t pos{0};
     char   c{'\0'};

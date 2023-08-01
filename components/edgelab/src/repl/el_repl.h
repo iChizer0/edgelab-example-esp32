@@ -97,9 +97,9 @@ class ReplServer {
     ReplServer() { _line_index = -1; };
     ~ReplServer(){};
 
-    static ReplServer& get_instance() {
+    static ReplServer* get_instance() {
         if (!_instance) _instance = new ReplServer();
-        return *_instance;
+        return _instance;
     }
 
     ReplServer(ReplServer const&)            = delete;
