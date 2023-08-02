@@ -34,8 +34,8 @@
 
 #include "el_flash.h"
 
-#define CONFIG_EL_MODEL_HEADER      0x4C485400  // bigendian
-#define CONFIG_EL_MODEL_HEADER_MASK 0xFFFFFF00  // bigendian
+#define CONFIG_EL_MODEL_HEADER      0x4C485400  // big-endian
+#define CONFIG_EL_MODEL_HEADER_MASK 0xFFFFFF00  // big-endian
 #define CONFIG_EL_FIXED_MODEL_SIZE  (1 * 1024 * 1024)
 
 namespace edgelab::data {
