@@ -39,7 +39,8 @@ extern "C" void app_main(void) {
 
     // init temporary variables
     el_img_t img;
-    auto*    engine = new InferenceEngine<EngineName::TFLite>();
+    auto*    engine{new InferenceEngine<EngineName::TFLite>()};
+    auto     model_loaded{false};
 
     // register repl commands
     instance->register_cmd("ID",
@@ -161,7 +162,9 @@ extern "C" void app_main(void) {
           static auto* tensor_arena{heap_caps_malloc(it->size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)};
           engine->init(tensor_arena, it->size);
 
-          return engine->load_model(it->addr_memory, it->size);
+          auto ret{engine->load_model(it->addr_memory, it->size)};
+          if (ret == EL_OK) model_loaded = true;
+          return ret;
       }));
     instance->register_cmd("SAMPLE",
                            "",
@@ -231,40 +234,50 @@ extern "C" void app_main(void) {
                                if (buffer) delete[] buffer;
                                return EL_OK;
                            }));
+    instance->register_cmd(
+      "INVOKE", "", "ALGORITHM_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+          auto algorithm_id{static_cast<uint8_t>(*argv[0] - '0')};
+          auto it{el_registered_algorithms.find(algorithm_id)};
+          if (it == el_registered_algorithms.end() || !model_loaded) return EL_EINVAL;
+          auto os{std::ostringstream(std::ios_base::ate)};
 
-    // instance->register_cmd(
-    //   "INVOKE", "", "ALGORITHM_ID MODEL_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) {
-    //       auto sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
-    //       auto it{registered_sensors.find(sensor_id)};
-    //       if (it == registered_sensors.end()) return EL_EINVAL;
+          // yolo
+          if (it->second.id == 0u) {
+              auto* algorithm{new YOLO(engine)};
 
-    //       auto os{std::ostringstream(std::ios_base::ate)};
+              auto ret{algorithm->run(&img)};
+              if (ret != EL_OK) {
+                  delete algorithm;
+                  return ret;
+              }
 
-    //       // camera
-    //       if (it->second.type == 0u) {
-    //           camera->start_stream();
-    //           camera->get_frame(&img);
-    //           camera->stop_stream();
+              auto preprocess_time{algorithm->get_preprocess_time()};
+              auto run_time{algorithm->get_run_time()};
+              auto postprocess_time{algorithm->get_postprocess_time()};
 
-    //           os << "{\"sensor_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
-    //              << ", \"status\": " << int(EL_OK) << ", \"sample_size\": " << unsigned(img.size) << "}\n";
-    //       }
+              os << "{\"algorithm_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
+                 << ", \"status\": " << int(ret) << ", \"preprocess_time\": " << unsigned(preprocess_time)
+                 << ", \"run_time\": " << unsigned(run_time) << ", \"postprocess_time\": " << unsigned(postprocess_time)
+                 << ", \"results\": [";
+              for (const auto& box : algorithm->get_results())
+                  os << "{\"cx\": " << unsigned(box.x) << ", \"cy\": " << unsigned(box.y)
+                     << ", \"w\": " << unsigned(box.w) << ", \"h\": " << unsigned(box.h)
+                     << ", \"target\": " << unsigned(box.target) << ", \"score\": " << unsigned(box.score) << "}";
+              os << "]}\n";
 
-    //       auto str{os.str()};
-    //       serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-    //       return EL_OK;
-    //   }));
+              delete algorithm;
+          }
+
+          auto str{os.str()};
+          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          return EL_OK;
+      }));
 
 // enter service pipeline
+// TODO: pipeline builder
 ServiceLoop:
 
     instance->loop(serial->get_char());
-
-    //     // el_img_t img;
-    // camera->start_stream();
-    //     // camera->get_frame(&img);
-    //     // display->show(&img);
-    //     // camera->stop_stream();
 
     goto ServiceLoop;
 }
