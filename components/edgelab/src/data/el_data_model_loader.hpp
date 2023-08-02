@@ -43,10 +43,10 @@ namespace edgelab::data {
 namespace types {
 
 struct el_model_t {
-    uint8_t        type;
     uint8_t        id;
-    uint32_t       size;
+    uint8_t        type;
     uint32_t       addr_flash;
+    uint32_t       size;
     const uint8_t* addr_memory;
 };
 
@@ -127,10 +127,10 @@ class ModelLoader {
             const uint8_t* mem_addr{__flash_2_memory_map + it};
             if (!verify_header<header>(reinterpret_cast<const header*>(mem_addr))) continue;
             __models_handler.emplace_back(
-              types::el_model_t{.type  = parse_header_type<header>(reinterpret_cast<const header*>(mem_addr)),
-                                .id = parse_header_id<header>(reinterpret_cast<const header*>(mem_addr)),
-                                .size  = fixed_model_size,  // current we're not going to determine the real model size
-                                .addr_flash  = __partition_start_addr + it,
+              types::el_model_t{.id         = parse_header_id<header>(reinterpret_cast<const header*>(mem_addr)),
+                                .type       = parse_header_type<header>(reinterpret_cast<const header*>(mem_addr)),
+                                .addr_flash = __partition_start_addr + it,
+                                .size = fixed_model_size,  // current we're not going to determine the real model size
                                 .addr_memory = mem_addr});
         }
     }

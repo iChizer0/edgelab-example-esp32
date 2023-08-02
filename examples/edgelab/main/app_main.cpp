@@ -24,13 +24,17 @@ extern "C" void app_main(void) {
     // display->init();
     serial->init();
 
+    // register sensor (camera only)
+    struct el_sensor_t {
+        uint8_t id;
+        uint8_t type;
+        uint8_t parameters[6];
+    };
+    std::unordered_map<uint8_t, el_sensor_t> registered_sensors;
+    registered_sensors.emplace(0u, el_sensor_t{.id = 0, .type = 0, .parameters = {240, 240, 0, 0, 0, 0}});
+
     // register algorithms
-    el_registered_algorithms.emplace_back(
-      el_algorithm_t{.type = 0, .categroy = 0, .parameters = {50, 45, 0, 0, 0, 0}});  // YOLO
-    el_registered_algorithms.emplace_back(
-      el_algorithm_t{.type = 1, .categroy = 1, .parameters = {80, 0, 0, 0, 0, 0}});   // PFLD
-    el_registered_algorithms.emplace_back(
-      el_algorithm_t{.type = 1, .categroy = 1, .parameters = {0, 0, 0, 0, 0, 0}});    // FOMO
+    register_algorithms();
 
     // init temporary variables
     el_img_t img;
@@ -82,17 +86,41 @@ extern "C" void app_main(void) {
                            }),
                            {},
                            {});
+    instance->register_cmd("SENSOR",
+                           "",
+                           "",
+                           el_repl_cmd_exec_cb_t([&]() {
+                               auto os{std::ostringstream(std::ios_base::ate)};
+                               os << "{\"count\": " << registered_sensors.size() << ", \"sensors\": [";
+                               for (const auto& kv : registered_sensors) {
+                                   auto v{std::get<1>(kv)};
+                                   os << "{ \"id\": " << unsigned(v.id) << ", \"type\": " << unsigned(v.type)
+                                      << ", \"parameters\" :[";
+                                   for (size_t i{0}; i < sizeof(v.parameters); ++i)
+                                       os << unsigned(v.parameters[i]) << ", ";
+                                   os << "]},";
+                               }
+
+                               os << "]}\n";
+                               auto str{os.str()};
+                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               return EL_OK;
+                           }),
+                           {},
+                           {});
     instance->register_cmd("VALGO",
                            "",
                            "",
                            el_repl_cmd_exec_cb_t([&]() {
                                auto os{std::ostringstream(std::ios_base::ate)};
-                               os << "{\"count\": " << el_registered_algorithms.size() << ", \"models\": [";
-                               for (const auto& a : el_registered_algorithms) {
-                                   os << "{\"type\": " << unsigned(a.type) << ", \"categroy\": " << unsigned(a.categroy)
-                                      << ", \"parameters\" :[";
-                                   for (size_t i{0}; i < sizeof(a.parameters); ++i)
-                                       os << unsigned(a.parameters[i]) << ", ";
+                               os << "{\"count\": " << el_registered_algorithms.size() << ", \"algorithms\": [";
+                               for (const auto& kv : el_registered_algorithms) {
+                                   auto v{std::get<1>(kv)};
+                                   os << "{ \"id\": " << unsigned(v.id) << ", \"type\": " << unsigned(v.type)
+                                      << ", \"categroy\": " << unsigned(v.categroy)
+                                      << ", \"input_type\": " << unsigned(v.input_type) << ", \"parameters\" :[";
+                                   for (size_t i{0}; i < sizeof(v.parameters); ++i)
+                                       os << unsigned(v.parameters[i]) << ", ";
                                    os << "]},";
                                }
 
@@ -110,9 +138,9 @@ extern "C" void app_main(void) {
                                auto os{std::ostringstream(std::ios_base::ate)};
                                os << "{\"count\": " << models.size() << ", \"models\": [";
                                for (const auto& m : models)
-                                   os << "{\"type\": " << unsigned(m.type) << ", \"id\": " << unsigned(m.id)
-                                      << ", \"size\": 0x" << std::hex << unsigned(m.size) << ", \"address\": 0x"
-                                      << unsigned(m.addr_flash) << "},";
+                                   os << "{\"id\": " << unsigned(m.id) << ", \"type\": " << unsigned(m.type)
+                                      << ", \"address\": 0x" << std::hex << unsigned(m.addr_flash) << ", \"size\": 0x"
+                                      << unsigned(m.size) << "},";
 
                                os << "]}\n";
                                auto str{os.str()};

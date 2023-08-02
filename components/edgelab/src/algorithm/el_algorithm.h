@@ -38,6 +38,18 @@ using FOMO = typename edgelab::algorithm::FOMO<edgelab::inference::base::Engine,
 using PFLD = typename edgelab::algorithm::PFLD<edgelab::inference::base::Engine, el_img_t, el_point_t>;
 using YOLO = typename edgelab::algorithm::YOLO<edgelab::inference::base::Engine, el_img_t, el_box_t>;
 
+static void register_algorithms() {
+    using namespace edgelab::algorithm::types;
+    using namespace edgelab::algorithm::data;
+
+    el_registered_algorithms.emplace(
+      0u, el_algorithm_t{.id = 0, .type = 0, .categroy = 0, .input_type = 0, .parameters = {50, 45, 0, 0}});  // YOLO
+    el_registered_algorithms.emplace(
+      2u, el_algorithm_t{.id = 2, .type = 2, .categroy = 0, .input_type = 0, .parameters = {80, 0, 0, 0}});   // PFLD
+    el_registered_algorithms.emplace(
+      1u, el_algorithm_t{.id = 1, .type = 1, .categroy = 0, .input_type = 0, .parameters = {0, 0, 0, 0}});    // FOMO
+}
+
 }  // namespace edgelab
 
 // TODO: avoid expose this name space globally
