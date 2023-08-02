@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <cstring>
 #include <sstream>
 #include <string>
@@ -38,6 +39,7 @@ extern "C" void app_main(void) {
 
     // init temporary variables
     el_img_t img;
+    auto*    engine = new InferenceEngine<EngineName::TFLite>();
 
     // register repl commands
     instance->register_cmd("ID",
@@ -150,37 +152,86 @@ extern "C" void app_main(void) {
                            nullptr,
                            nullptr);
     instance->register_cmd(
-      "SAMPLE", "", "SENSOR_ID,SEND_DATA", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) {
-          auto sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
-          auto it{registered_sensors.find(sensor_id)};
-          if (it == registered_sensors.end()) return EL_EINVAL;
+      "MODEL", "", "MODEL_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+          auto model_id{static_cast<uint8_t>(*argv[0] - '0')};
+          auto it{std::find_if(models.begin(), models.end(), [&](const auto& v) { return v.id == model_id; })};
+          if (it == models.end()) return EL_EINVAL;
 
-          auto  os{std::ostringstream(std::ios_base::ate)};
-          char* buffer{nullptr};
+          // TODO: call free when switching models, move heap_caps_malloc to port/el_memory or el_system
+          static auto* tensor_arena{heap_caps_malloc(it->size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)};
+          engine->init(tensor_arena, it->size);
 
-          // camera
-          if (it->second.type == 0u) {
-              camera->start_stream();
-              camera->get_frame(&img);
-              camera->stop_stream();
-
-              auto data_buffer_size{*argv[1] == '1' ? 4ul * (img.size / 3ul) : 0ul};
-
-              os << "{\"sensor_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
-                 << ", \"status\": " << int(EL_OK) << ", \"size\": " << unsigned(img.size) << ", \"data\": \"";
-              if (data_buffer_size) {
-                  buffer = new char[data_buffer_size]{};
-                  el_base64_encode(img.data, img.size, buffer);
-                  os << buffer;
-              }
-              os << "\"}\n";
-          }
-
-          auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-          if (buffer) delete[] buffer;
-          return EL_OK;
+          return engine->load_model(it->addr_memory, it->size);
       }));
+    instance->register_cmd("SAMPLE",
+                           "",
+                           "SENSOR_ID,SEND_DATA",
+                           nullptr,
+                           nullptr,
+                           el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+                               auto sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
+                               auto it{registered_sensors.find(sensor_id)};
+                               if (it == registered_sensors.end()) return EL_EINVAL;
+
+                               auto  os{std::ostringstream(std::ios_base::ate)};
+                               char* buffer{nullptr};
+
+                               // camera
+                               if (it->second.type == 0u) {
+                                   camera->start_stream();
+                                   camera->get_frame(&img);
+                                   camera->stop_stream();
+
+                                   auto size{img.width * img.height * 3};
+                                   auto rgb_img{el_img_t{.data   = new uint8_t[size]{},
+                                                         .size   = size,
+                                                         .width  = img.width,
+                                                         .height = img.height,
+                                                         .format = EL_PIXEL_FORMAT_RGB888,
+                                                         .rotate = img.rotate}};
+                                   auto ret{rgb_to_rgb(&img, &rgb_img)};
+                                   if (ret != EL_OK) {
+                                       delete[] rgb_img.data;
+                                       return ret;
+                                   }
+                                   auto jpeg_rgb_img{el_img_t{.data   = new uint8_t[size]{},
+                                                              .size   = size,
+                                                              .width  = rgb_img.width,
+                                                              .height = rgb_img.height,
+                                                              .format = EL_PIXEL_FORMAT_RGB888,
+                                                              .rotate = rgb_img.rotate}};
+
+                                   ret = rgb_to_jpeg(&rgb_img, &jpeg_rgb_img);
+                                   if (ret != EL_OK) {
+                                       delete[] rgb_img.data;
+                                       delete[] jpeg_rgb_img.data;
+                                       return ret;
+                                   }
+                                   delete[] rgb_img.data;
+
+                                   auto data_buffer_size{*argv[1] == '1' ? (4ul * jpeg_rgb_img.size + 2) / 3ul : 0ul};
+
+                                   os << "{\"sensor_id\": " << unsigned(it->first)
+                                      << ", \"type\": " << unsigned(it->second.type) << ", \"status\": " << int(EL_OK)
+                                      << ", \"size\": " << unsigned(img.size) << ", \"data\": \"";
+                                   if (data_buffer_size) {
+                                       buffer = new char[data_buffer_size]{};
+                                       el_base64_encode(jpeg_rgb_img.data, jpeg_rgb_img.size, buffer);
+                                       std::string ss(buffer);
+                                       ss.erase(std::find(ss.begin(), ss.end(), '\0'), ss.end());
+                                       os << ss.c_str();
+                                   }
+                                   os << "\"}\n";
+
+                                   delete[] jpeg_rgb_img.data;
+                               }
+
+                               auto str{os.str()};
+                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               if (buffer) delete[] buffer;
+                               return EL_OK;
+                           }));
+
     // instance->register_cmd(
     //   "INVOKE", "", "ALGORITHM_ID MODEL_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) {
     //       auto sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
@@ -202,7 +253,7 @@ extern "C" void app_main(void) {
     //       auto str{os.str()};
     //       serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
     //       return EL_OK;
-// }));
+    //   }));
 
 // enter service pipeline
 ServiceLoop:

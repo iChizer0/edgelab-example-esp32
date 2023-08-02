@@ -131,7 +131,7 @@ class ModelLoader {
                                 .type       = parse_header_type<header>(reinterpret_cast<const header*>(mem_addr)),
                                 .addr_flash = __partition_start_addr + it,
                                 .size = fixed_model_size,  // current we're not going to determine the real model size
-                                .addr_memory = mem_addr});
+                                .addr_memory = mem_addr + sizeof(header)});
         }
     }
 };

@@ -93,6 +93,8 @@ void el_draw_rect(
 
 EL_STA rgb_to_rgb(const el_img_t* src, el_img_t* dst);
 
+EL_STA rgb_to_jpeg(const el_img_t* src, el_img_t* dst);
+
 #ifdef __cplusplus
 }  // namespace edgelab
 }
