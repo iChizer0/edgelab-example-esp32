@@ -54,7 +54,7 @@ char SerialEsp::echo(bool only_visible) {
 
 char SerialEsp::get_char() {
     char c{'\0'};
-    while (!usb_serial_jtag_read_bytes(&c, 1, 10 / portTICK_PERIOD_MS))
+    while (!usb_serial_jtag_read_bytes(&c, 1, 15 / portTICK_PERIOD_MS))
         ;
     return c;
 }
@@ -63,7 +63,7 @@ size_t SerialEsp::get_line(char* buffer, size_t size, const char delim) {
     size_t pos{0};
     char   c{'\0'};
     while (pos < size - 1) {
-        if (!usb_serial_jtag_read_bytes(&c, 1, 10 / portTICK_PERIOD_MS)) continue;
+        if (!usb_serial_jtag_read_bytes(&c, 1, 15 / portTICK_PERIOD_MS)) continue;
 
         if (c == delim || c == 0x00) [[unlikely]] {
             buffer[pos++] = '\0';
@@ -82,7 +82,7 @@ size_t SerialEsp::write_bytes(const char* buffer, size_t size) {
     while (size) {
         size_t bytes_to_send{size < _driver_config.tx_buffer_size ? size : _driver_config.tx_buffer_size};
 
-        sent += usb_serial_jtag_write_bytes(buffer + pos_of_bytes, bytes_to_send, 10 / portTICK_PERIOD_MS);
+        sent += usb_serial_jtag_write_bytes(buffer + pos_of_bytes, bytes_to_send, 20 / portTICK_PERIOD_MS);
         pos_of_bytes += bytes_to_send;
         size -= bytes_to_send;
     }

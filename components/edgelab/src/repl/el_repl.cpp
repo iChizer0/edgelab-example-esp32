@@ -297,7 +297,7 @@ EL_STA ReplServer::_exec_cmd(std::string& cmd) {
     std::transform(cmd_name.begin(), cmd_name.end(), cmd_name.begin(), ::toupper);
 
     if (cmd_name.compare("AT") == 0) {
-        el_printf("{\"at\": 200}\n");
+        el_printf("{\"at\": %ld}\n", unsigned(EL_OK));
         return EL_OK;
     }
 

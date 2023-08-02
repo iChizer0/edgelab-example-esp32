@@ -10,7 +10,7 @@ extern "C" void app_main(void) {
     // obtain resource
     auto* instance = ReplServer::get_instance();
     auto* device   = Device::get_device();
-    // auto* camera  = device->get_camera();
+    auto* camera   = device->get_camera();
     // auto* display = device->get_display();
     auto* serial = device->get_serial();
 
@@ -20,7 +20,7 @@ extern "C" void app_main(void) {
 
     // init components
     instance->init();
-    // camera->init(240, 240);
+    camera->init(240, 240);
     // display->init();
     serial->init();
 
@@ -50,8 +50,8 @@ extern "C" void app_main(void) {
                                serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
                                return EL_OK;
                            }),
-                           {},
-                           {});
+                           nullptr,
+                           nullptr);
     instance->register_cmd("NAME",
                            "",
                            "",
@@ -62,8 +62,8 @@ extern "C" void app_main(void) {
                                serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
                                return EL_OK;
                            }),
-                           {},
-                           {});
+                           nullptr,
+                           nullptr);
     instance->register_cmd("VERSION",
                            "",
                            "",
@@ -75,8 +75,8 @@ extern "C" void app_main(void) {
                                serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
                                return EL_OK;
                            }),
-                           {},
-                           {});
+                           nullptr,
+                           nullptr);
     instance->register_cmd("RST",
                            "",
                            "",
@@ -84,8 +84,8 @@ extern "C" void app_main(void) {
                                device->restart();
                                return EL_OK;
                            }),
-                           {},
-                           {});
+                           nullptr,
+                           nullptr);
     instance->register_cmd("SENSOR",
                            "",
                            "",
@@ -106,8 +106,8 @@ extern "C" void app_main(void) {
                                serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
                                return EL_OK;
                            }),
-                           {},
-                           {});
+                           nullptr,
+                           nullptr);
     instance->register_cmd("VALGO",
                            "",
                            "",
@@ -129,8 +129,8 @@ extern "C" void app_main(void) {
                                serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
                                return EL_OK;
                            }),
-                           {},
-                           {});
+                           nullptr,
+                           nullptr);
     instance->register_cmd("VMODEL",
                            "",
                            "",
@@ -147,11 +147,66 @@ extern "C" void app_main(void) {
                                serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
                                return EL_OK;
                            }),
-                           {},
-                           {});
+                           nullptr,
+                           nullptr);
+    instance->register_cmd(
+      "SAMPLE", "", "SENSOR_ID,SEND_DATA", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) {
+          auto sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
+          auto it{registered_sensors.find(sensor_id)};
+          if (it == registered_sensors.end()) return EL_EINVAL;
 
-    // enter service pipeline
+          auto  os{std::ostringstream(std::ios_base::ate)};
+          char* buffer{nullptr};
+
+          // camera
+          if (it->second.type == 0u) {
+              camera->start_stream();
+              camera->get_frame(&img);
+              camera->stop_stream();
+
+              auto data_buffer_size{*argv[1] == '1' ? 4ul * (img.size / 3ul) : 0ul};
+
+              os << "{\"sensor_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
+                 << ", \"status\": " << int(EL_OK) << ", \"size\": " << unsigned(img.size) << ", \"data\": \"";
+              if (data_buffer_size) {
+                  buffer = new char[data_buffer_size]{};
+                  el_base64_encode(img.data, img.size, buffer);
+                  os << buffer;
+              }
+              os << "\"}\n";
+          }
+
+          auto str{os.str()};
+          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          if (buffer) delete[] buffer;
+          return EL_OK;
+      }));
+    // instance->register_cmd(
+    //   "INVOKE", "", "ALGORITHM_ID MODEL_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) {
+    //       auto sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
+    //       auto it{registered_sensors.find(sensor_id)};
+    //       if (it == registered_sensors.end()) return EL_EINVAL;
+
+    //       auto os{std::ostringstream(std::ios_base::ate)};
+
+    //       // camera
+    //       if (it->second.type == 0u) {
+    //           camera->start_stream();
+    //           camera->get_frame(&img);
+    //           camera->stop_stream();
+
+    //           os << "{\"sensor_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
+    //              << ", \"status\": " << int(EL_OK) << ", \"sample_size\": " << unsigned(img.size) << "}\n";
+    //       }
+
+    //       auto str{os.str()};
+    //       serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+    //       return EL_OK;
+// }));
+
+// enter service pipeline
 ServiceLoop:
+
     instance->loop(serial->get_char());
 
     //     // el_img_t img;

@@ -23,6 +23,8 @@
  *
  */
 
+#include "el_base64.h"
+
 namespace edgelab {
 
 static const char *base64_chars =
