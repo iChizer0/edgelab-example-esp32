@@ -297,7 +297,7 @@ EL_STA ReplServer::_exec_cmd(std::string& cmd) {
     std::transform(cmd_name.begin(), cmd_name.end(), cmd_name.begin(), ::toupper);
 
     if (cmd_name.compare("AT") == 0) {
-        el_printf("{\"at\": %ld}\n", unsigned(EL_OK));
+        el_printf("{\"at\": %ld, \"timestamp\": %lld}\n", unsigned(EL_OK), el_get_time_ms());
         return EL_OK;
     }
 
