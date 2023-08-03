@@ -138,7 +138,7 @@ extern "C" void app_main(void) {
                            }),
                            nullptr,
                            nullptr);
-    instance->register_cmd("ALGO?",
+    instance->register_cmd("VALGO",
                            "Get available algorithms",
                            "",
                            el_repl_cmd_exec_cb_t([&]() {
@@ -187,7 +187,7 @@ extern "C" void app_main(void) {
                            }));
     // TODO: algorithm config command
     instance->register_cmd(
-      "MODEL?",
+      "VMODEL",
       "Get available models",
       "",
       el_repl_cmd_exec_cb_t([&]() {
@@ -196,7 +196,7 @@ extern "C" void app_main(void) {
           os << "{\"count\": " << models.size() << ", \"models\": [";
           for (const auto& m : models)
               os << "{\"id\": " << unsigned(m.id) << ", \"type\": " << unsigned(m.type) << ", \"address\": 0x"
-                 << std::hex << unsigned(m.addr_flash) << ", \"size\": 0x" << unsigned(m.size) << "},";
+                 << std::hex << unsigned(m.addr_flash) << ", \"size\": 0x" << unsigned(m.size) << "}, ";
           os << std::resetiosflags(std::ios_base::basefield) << "], \"timestamp\": " << el_get_time_ms() << "}\n";
           auto str{os.str()};
           serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
@@ -239,13 +239,13 @@ extern "C" void app_main(void) {
           current_model = nullptr;
 
       ModelReply:
-          os << "{\"model_id\": " << model_id << ", \"status\": " << int(ret) << ", \"timestamp\": " << el_get_time_ms()
-             << "}\n";
+          os << "{\"model_id\": " << unsigned(model_id) << ", \"status\": " << int(ret)
+             << ", \"timestamp\": " << el_get_time_ms() << "}\n";
           auto str{os.str()};
           serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
           return EL_OK;
       }));
-    instance->register_cmd("SENSOR?",
+    instance->register_cmd("VSENSOR",
                            "Get available sensors",
                            "",
                            el_repl_cmd_exec_cb_t([&]() {
@@ -272,6 +272,7 @@ extern "C" void app_main(void) {
       nullptr,
       nullptr,
       el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+          if (argc < 2) return EL_EINVAL;
           auto   sensor_id{static_cast<uint8_t>(std::atoi(argv[0]))};
           auto   enable{std::atoi(argv[1]) != 0 ? true : false};
           auto   it{el_registered_sensors.find(sensor_id)};
@@ -308,17 +309,18 @@ extern "C" void app_main(void) {
                            nullptr,
                            nullptr,
                            el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+                               if (argc < 2) return EL_EINVAL;
                                auto   sensor_id{static_cast<uint8_t>(std::atoi(argv[0]))};
                                auto   send_data{std::atoi(argv[1]) != 0 ? true : false};
                                auto   it{el_registered_sensors.find(sensor_id)};
                                auto   os{std::ostringstream(std::ios_base::ate)};
                                auto   found{it != el_registered_sensors.end()};
                                EL_STA ret{found ? EL_OK : EL_EINVAL};
-                               // TODO: lookup from current sensor list
-                               if (ret != EL_OK || !current_sensor || current_sensor->id != sensor_id) [[unlikely]]
+                               // TODO: lookup from current sensor list (bit_set<256 - 1>)
+                               if (ret != EL_OK || !(current_sensor && current_sensor->id == sensor_id)) [[unlikely]]
                                    goto SampleReplyError;
 
-                               // camera (TODO: get sensor and allocate buffer from sensor list)
+                               // camera (TODO: get sensor and allocate buffer from sensor list (bit_set<256 - 1>))
                                if (it->second.type == 0u && camera && camera->is_present()) {
                                    ret = camera->start_stream();
                                    if (ret != EL_OK) goto SampleReplyError;
@@ -394,6 +396,7 @@ extern "C" void app_main(void) {
       nullptr,
       nullptr,
       el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+          if (argc < 2) return EL_EINVAL;
           // TODO: N times in a seperate RTOS thread
           auto   n_times{static_cast<int16_t>(std::atoi(argv[0]))};
           auto   os{std::ostringstream(std::ios_base::ate)};

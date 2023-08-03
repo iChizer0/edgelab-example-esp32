@@ -26,10 +26,8 @@
 #ifndef _EL_CAMERA_ESP_H
 #define _EL_CAMERA_ESP_H
 
-#include "el_common.h"
-
 #include "el_camera.h"
-
+#include "el_common.h"
 #include "esp_camera.h"
 #include "esp_log.h"
 
@@ -40,22 +38,22 @@ namespace edgelab {
 class CameraEsp : public Camera {
    private:
     camera_config_t config;
-    camera_fb_t *fb;
-    sensor_t *sensor;
+    camera_fb_t*    fb;
+    sensor_t*       sensor;
 
    public:
     EL_STA init(size_t width, size_t height) override;
     EL_STA deinit() override;
     EL_STA start_stream() override;
     EL_STA stop_stream() override;
-    EL_STA get_frame(el_img_t *img) override;
-    EL_STA get_jpeg(el_img_t *img) override;
-    EL_STA get_resolutions(el_res_t **res, size_t *res_count) override;
+    EL_STA get_frame(el_img_t* img) override;
+    EL_STA get_jpeg(el_img_t* img) override;
+    EL_STA get_resolutions(el_res_t** res, size_t* res_count) override;
 
    private:
     framesize_t fit_resolution(size_t width, size_t height);
 };
 
-} // namespace edgelab
+}  // namespace edgelab
 
-#endif // EDGELAB_CAMERA_ESP_H_
+#endif  // EDGELAB_CAMERA_ESP_H_
