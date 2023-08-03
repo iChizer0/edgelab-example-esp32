@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include "edgelab.h"
 #include "el_device_esp.h"
@@ -60,6 +61,7 @@ extern "C" void app_main(void) {
         *persistent_map >> boot_count_kv >> algorithm_config_kv >> sensor_config_kv >> model_id_kv;
         *persistent_map << el_make_map_kv("boot_count", static_cast<decltype(boot_count)>(boot_count_kv.value + 1u));
 
+        boot_count                                             = boot_count_kv.value;
         el_registered_algorithms[algorithm_config_kv.value.id] = algorithm_config_kv.value;
         el_registered_sensors[sensor_config_kv.value.id]       = sensor_config_kv.value;
         current_algorithm = &el_registered_algorithms[algorithm_config_kv.value.id];
@@ -100,6 +102,19 @@ extern "C" void app_main(void) {
                            }),
                            nullptr,
                            nullptr);
+    instance->register_cmd("STAT",
+                           "Get device status",
+                           "",
+                           el_repl_cmd_exec_cb_t([&]() {
+                               auto os{std::ostringstream(std::ios_base::ate)};
+                               os << "{\"boot_count\": " << unsigned(boot_count)
+                                  << ", \"timestamp\": " << el_get_time_ms() << "}\n";
+                               auto str{os.str()};
+                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               return EL_OK;
+                           }),
+                           nullptr,
+                           nullptr);
     instance->register_cmd("VERSION",
                            "Get version details",
                            "",
@@ -123,6 +138,113 @@ extern "C" void app_main(void) {
                            }),
                            nullptr,
                            nullptr);
+    instance->register_cmd("ALGO?",
+                           "Get available algorithms",
+                           "",
+                           el_repl_cmd_exec_cb_t([&]() {
+                               auto os{std::ostringstream(std::ios_base::ate)};
+                               os << "{\"count\": " << el_registered_algorithms.size() << ", \"algorithms\": [";
+                               for (const auto& kv : el_registered_algorithms) {
+                                   os << "{\"id\": " << unsigned(kv.second.id)
+                                      << ", \"type\": " << unsigned(kv.second.type)
+                                      << ", \"categroy\": " << unsigned(kv.second.categroy)
+                                      << ", \"input_type\": " << unsigned(kv.second.input_type)
+                                      << ", \"parameters\" :[";
+                                   for (size_t i{0}; i < sizeof(kv.second.parameters); ++i)
+                                       os << unsigned(kv.second.parameters[i]) << ", ";
+                                   os << "]}, ";
+                               }
+                               os << "], \"timestamp\": " << el_get_time_ms() << "}\n";
+                               auto str{os.str()};
+                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               return EL_OK;
+                           }),
+                           nullptr,
+                           nullptr);
+    instance->register_cmd("ALGO",
+                           "Set algorithm for inference by algorithm ID",
+                           "ALGO_ID",
+                           nullptr,
+                           nullptr,
+                           el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+                               auto algorithm_id{static_cast<uint8_t>(std::atoi(argv[0]))};
+                               auto os{std::ostringstream(std::ios_base::ate)};
+                               auto it{el_registered_algorithms.find(algorithm_id)};
+                               auto ret{it != el_registered_algorithms.end() ? EL_OK : EL_EINVAL};
+                               if (ret != EL_OK) [[unlikely]]
+                                   goto AlgorithmReply;
+
+                               current_algorithm = &el_registered_algorithms[it->first];
+                               *persistent_map
+                                 << el_make_map_kv("algorithm_config", el_registered_algorithms[it->first]);
+
+                           AlgorithmReply:
+                               os << "{\"algorithm_id\": " << unsigned(algorithm_id) << ", \"status\": " << int(ret)
+                                  << ", \"timestamp\": " << el_get_time_ms() << "}\n";
+                               auto str{os.str()};
+                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               return EL_OK;
+                           }));
+    // TODO: algorithm config command
+    instance->register_cmd(
+      "MODEL?",
+      "Get available models",
+      "",
+      el_repl_cmd_exec_cb_t([&]() {
+          auto  os{std::ostringstream(std::ios_base::ate)};
+          auto& models{model_loader->get_models()};
+          os << "{\"count\": " << models.size() << ", \"models\": [";
+          for (const auto& m : models)
+              os << "{\"id\": " << unsigned(m.id) << ", \"type\": " << unsigned(m.type) << ", \"address\": 0x"
+                 << std::hex << unsigned(m.addr_flash) << ", \"size\": 0x" << unsigned(m.size) << "},";
+          os << std::resetiosflags(std::ios_base::basefield) << "], \"timestamp\": " << el_get_time_ms() << "}\n";
+          auto str{os.str()};
+          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          return EL_OK;
+      }),
+      nullptr,
+      nullptr);
+    instance->register_cmd(
+      "MODEL",
+      "Load a model by model ID",
+      "MODEL_ID",
+      nullptr,
+      nullptr,
+      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+          auto   model_id{static_cast<uint8_t>(std::atoi(argv[0]))};
+          auto   os{std::ostringstream(std::ios_base::ate)};
+          auto&  models{model_loader->get_models()};
+          auto   it{std::find_if(models.begin(), models.end(), [&](const auto& v) { return v.id == model_id; })};
+          EL_STA ret{it != models.end() ? EL_OK : EL_EINVAL};
+          if (ret != EL_OK) [[unlikely]]
+              goto ModelReply;
+
+          // TODO: move heap_caps_malloc to port/el_memory or el_system
+          static auto* tensor_arena{heap_caps_malloc(it->size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)};
+          memset(tensor_arena, 0, it->size);
+          ret = engine->init(tensor_arena, it->size);
+          if (ret != EL_OK) [[unlikely]]
+              goto ModelInitError;
+
+          ret = engine->load_model(it->addr_memory, it->size);
+          if (ret != EL_OK) [[unlikely]]
+              goto ModelInitError;
+
+          current_model = &models[model_id];
+          *persistent_map << el_make_map_kv("model_id", model_id);
+
+          goto ModelReply;
+
+      ModelInitError:
+          current_model = nullptr;
+
+      ModelReply:
+          os << "{\"model_id\": " << model_id << ", \"status\": " << int(ret) << ", \"timestamp\": " << el_get_time_ms()
+             << "}\n";
+          auto str{os.str()};
+          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          return EL_OK;
+      }));
     instance->register_cmd("SENSOR?",
                            "Get available sensors",
                            "",
@@ -162,8 +284,13 @@ extern "C" void app_main(void) {
           // camera
           if (it->second.id == 0 && camera) {
               ret = enable ? camera->init(it->second.parameters[0], it->second.parameters[1]) : camera->deinit();
-              if (ret != EL_OK) goto SensorReply;
-              current_sensor = enable ? &el_registered_sensors[it->first] : nullptr;
+              if (ret != EL_OK) [[unlikely]]
+                  goto SensorReply;
+              if (enable) {
+                  current_sensor = &el_registered_sensors[it->first];
+                  *persistent_map << el_make_map_kv("sensor_config", el_registered_sensors[it->first]);
+              } else
+                  current_sensor = nullptr;
           } else
               ret = EL_ENOTSUP;
 
@@ -174,82 +301,7 @@ extern "C" void app_main(void) {
           serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
           return EL_OK;
       }));
-    instance->register_cmd("ALGO?",
-                           "Get available algorithms",
-                           "",
-                           el_repl_cmd_exec_cb_t([&]() {
-                               auto os{std::ostringstream(std::ios_base::ate)};
-                               os << "{\"count\": " << el_registered_algorithms.size() << ", \"algorithms\": [";
-                               for (const auto& kv : el_registered_algorithms) {
-                                   auto v{std::get<1>(kv)};
-                                   os << "{\"id\": " << unsigned(v.id) << ", \"type\": " << unsigned(v.type)
-                                      << ", \"categroy\": " << unsigned(v.categroy)
-                                      << ", \"input_type\": " << unsigned(v.input_type) << ", \"parameters\" :[";
-                                   for (size_t i{0}; i < sizeof(v.parameters); ++i)
-                                       os << unsigned(v.parameters[i]) << ", ";
-                                   os << "]}, ";
-                               }
-                               os << "], \"timestamp\": " << el_get_time_ms() << "}\n";
-                               auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-                               return EL_OK;
-                           }),
-                           nullptr,
-                           nullptr);
-    instance->register_cmd(
-      "MODEL?",
-      "Get available models",
-      "",
-      el_repl_cmd_exec_cb_t([&]() {
-          auto  os{std::ostringstream(std::ios_base::ate)};
-          auto& models{model_loader->get_models()};
-          os << "{\"count\": " << models.size() << ", \"models\": [";
-          for (const auto& m : models)
-              os << "{\"id\": " << unsigned(m.id) << ", \"type\": " << unsigned(m.type) << ", \"address\": 0x"
-                 << std::hex << unsigned(m.addr_flash) << ", \"size\": 0x" << unsigned(m.size) << "},";
-          os << std::resetiosflags(std::ios_base::basefield) << "], \"timestamp\": " << el_get_time_ms() << "}\n";
-          auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-          return EL_OK;
-      }),
-      nullptr,
-      nullptr);
-    instance->register_cmd(
-      "MODEL",
-      "Load a model by model ID",
-      "MODEL_ID",
-      nullptr,
-      nullptr,
-      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
-          auto   model_id{static_cast<uint8_t>(std::atoi(argv[0]))};
-          auto   os{std::ostringstream(std::ios_base::ate)};
-          auto&  models{model_loader->get_models()};
-          auto   it{std::find_if(models.begin(), models.end(), [&](const auto& v) { return v.id == model_id; })};
-          EL_STA ret{it != models.end() ? EL_OK : EL_EINVAL};
-          if (ret != EL_OK) goto ModelReply;
-
-          // TODO: move heap_caps_malloc to port/el_memory or el_system
-          static auto* tensor_arena{heap_caps_malloc(it->size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)};
-          memset(tensor_arena, 0, it->size);
-          ret = engine->init(tensor_arena, it->size);
-          if (ret != EL_OK) goto ModelInitError;
-
-          ret = engine->load_model(it->addr_memory, it->size);
-          if (ret != EL_OK) goto ModelInitError;
-
-          current_model = &models[model_id];
-          goto ModelReply;
-
-      ModelInitError:
-          current_model = nullptr;
-
-      ModelReply:
-          os << "{\"model_id\": " << model_id << ", \"status\": " << int(ret) << ", \"timestamp\": " << el_get_time_ms()
-             << "}\n";
-          auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-          return EL_OK;
-      }));
+    // TODO: sensor config command
     instance->register_cmd("SAMPLE",
                            "Sample data from a sensor by sensor ID",
                            "SENSOR_ID,SEND_DATA",
@@ -260,8 +312,8 @@ extern "C" void app_main(void) {
                                auto   send_data{std::atoi(argv[1]) != 0 ? true : false};
                                auto   it{el_registered_sensors.find(sensor_id)};
                                auto   os{std::ostringstream(std::ios_base::ate)};
-                               auto   finded{it != el_registered_sensors.end()};
-                               EL_STA ret{finded ? EL_OK : EL_EINVAL};
+                               auto   found{it != el_registered_sensors.end()};
+                               EL_STA ret{found ? EL_OK : EL_EINVAL};
                                // TODO: lookup from current sensor list
                                if (ret != EL_OK || !current_sensor || current_sensor->id != sensor_id) [[unlikely]]
                                    goto SampleReplyError;
@@ -327,7 +379,7 @@ extern "C" void app_main(void) {
 
                            SampleReplyError:
                                os << "{\"sensor_id\": " << unsigned(sensor_id)
-                                  << ", \"type\": " << unsigned(finded ? it->second.type : 0xff)
+                                  << ", \"type\": " << unsigned(found ? it->second.type : 0xff)
                                   << ", \"status\": " << int(ret)
                                   << ", \"size\": 0, \"data\": \"\", \"timestamp\": " << el_get_time_ms() << "}\n";
                            SampleReply:
@@ -335,46 +387,65 @@ extern "C" void app_main(void) {
                                serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
                                return EL_OK;
                            }));
-    // instance->register_cmd(
-    //   "INVOKE", "", "ALGORITHM_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
-    //       auto algorithm_id{static_cast<uint8_t>(*argv[0] - '0')};
-    //       auto it{el_registered_algorithms.find(algorithm_id)};
-    //       if (it == el_registered_algorithms.end() || !model_loaded) return EL_EINVAL;
-    //       auto os{std::ostringstream(std::ios_base::ate)};
+    instance->register_cmd(
+      "INVOKE",
+      "Invoke for N times (-1 for infinity loop)",
+      "N_TIMES,SEND_DATA",
+      nullptr,
+      nullptr,
+      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+          // TODO: N times in a seperate RTOS thread
+          auto n_times{static_cast<int16_t>(std::atoi(argv[0]))};
+          auto os{std::ostringstream(std::ios_base::ate)};
+          EL_STA ret{current_algorithm ? EL_OK : EL_EINVAL};
+          if (ret != EL_OK) [[unlikely]]
+              goto InvokeErrorReply;
 
-    //       // yolo
-    //       if (it->second.id == 0u) {
-    //           auto* algorithm{new YOLO(engine)};
+          // check if model is loaded
+          ret = current_model && current_model->type == current_algorithm->type ? EL_OK : EL_EINVAL;
+          if (ret != EL_OK) [[unlikely]]
+              goto InvokeErrorReply;
 
-    //           auto ret{algorithm->run(&img)};
-    //           if (ret != EL_OK) {
-    //               delete algorithm;
-    //               return ret;
-    //           }
+          // check if sensor is initialized (TODO: find initialized sensor from sensors list/map)
+          ret = current_sensor && current_sensor->type == current_algorithm->input_type ? EL_OK : EL_EINVAL;
+          if (ret != EL_OK) [[unlikely]]
+              goto InvokeErrorReply;
 
-    //           auto preprocess_time{algorithm->get_preprocess_time()};
-    //           auto run_time{algorithm->get_run_time()};
-    //           auto postprocess_time{algorithm->get_postprocess_time()};
+          // YOLO
+          if (current_algorithm->type == 0u) {
+              auto* algorithm{new YOLO(engine)};
 
-    //           os << "{\"algorithm_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
-    //              << ", \"status\": " << int(ret) << ", \"preprocess_time\": " << unsigned(preprocess_time)
-    //              << ", \"run_time\": " << unsigned(run_time) << ", \"postprocess_time\": " << unsigned(postprocess_time)
-    //              << ", \"results\": [";
+              ret = algorithm->run(current_img);
+              if (ret != EL_OK) [[unlikely]] {
+                  delete algorithm;
+                  goto InvokeErrorReply;
+              }
 
-    //           os << edgelab::algorithm::utility::el_results_2_string(algorithm->get_results());
-    //           //   for (const auto& box : algorithm->get_results())
-    //           //       os << "{\"cx\": " << unsigned(box.x) << ", \"cy\": " << unsigned(box.y)
-    //           //          << ", \"w\": " << unsigned(box.w) << ", \"h\": " << unsigned(box.h)
-    //           //          << ", \"target\": " << unsigned(box.target) << ", \"score\": " << unsigned(box.score) << "}, ";
-    //           os << "]}\n";
+              auto preprocess_time{algorithm->get_preprocess_time()};
+              auto run_time{algorithm->get_run_time()};
+              auto postprocess_time{algorithm->get_postprocess_time()};
 
-    //           delete algorithm;
-    //       }
+              os << "{\"algorithm_id\": " << unsigned(current_algorithm->id)
+                 << ", \"type\": " << unsigned(current_algorithm->type) << ", \"status\": " << int(ret)
+                 << ", \"preprocess_time\": " << unsigned(preprocess_time) << ", \"run_time\": " << unsigned(run_time)
+                 << ", \"postprocess_time\": " << unsigned(postprocess_time) << ", \"results\": [";
+              os << edgelab::algorithm::utility::el_results_2_string(algorithm->get_results());
+              os << "]}\n";
+              delete algorithm;
+          } else
+              ret = EL_ENOTSUP;
 
-    //       auto str{os.str()};
-    //       serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-    //       return EL_OK;
-    //   }));
+      InvokeErrorReply:
+          os << "{\"algorithm_id\": " << unsigned(current_algorithm ? current_algorithm->id : 0xff)
+             << ", \"type\": " << unsigned(current_algorithm ? current_algorithm->type : 0xff)
+             << ", \"status\": " << int(ret)
+             << ", \"preprocess_time\": 0, \"run_time\": 0, \"postprocess_time\": 0, \"results\": []}\n";
+
+          auto str{os.str()};
+          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          return EL_OK;
+      }));
+      
 
 // enter service pipeline (TODO: pipeline builder)
 ServiceLoop:
