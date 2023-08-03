@@ -395,8 +395,8 @@ extern "C" void app_main(void) {
       nullptr,
       el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
           // TODO: N times in a seperate RTOS thread
-          auto n_times{static_cast<int16_t>(std::atoi(argv[0]))};
-          auto os{std::ostringstream(std::ios_base::ate)};
+          auto   n_times{static_cast<int16_t>(std::atoi(argv[0]))};
+          auto   os{std::ostringstream(std::ios_base::ate)};
           EL_STA ret{current_algorithm ? EL_OK : EL_EINVAL};
           if (ret != EL_OK) [[unlikely]]
               goto InvokeErrorReply;
@@ -428,9 +428,8 @@ extern "C" void app_main(void) {
               os << "{\"algorithm_id\": " << unsigned(current_algorithm->id)
                  << ", \"type\": " << unsigned(current_algorithm->type) << ", \"status\": " << int(ret)
                  << ", \"preprocess_time\": " << unsigned(preprocess_time) << ", \"run_time\": " << unsigned(run_time)
-                 << ", \"postprocess_time\": " << unsigned(postprocess_time) << ", \"results\": [";
-              os << edgelab::algorithm::utility::el_results_2_string(algorithm->get_results());
-              os << "]}\n";
+                 << ", \"postprocess_time\": " << unsigned(postprocess_time) << ", \"results\": ["
+                 << el_results_2_string(algorithm->get_results()) << "]}\n";
               delete algorithm;
           } else
               ret = EL_ENOTSUP;
@@ -445,7 +444,6 @@ extern "C" void app_main(void) {
           serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
           return EL_OK;
       }));
-      
 
 // enter service pipeline (TODO: pipeline builder)
 ServiceLoop:
