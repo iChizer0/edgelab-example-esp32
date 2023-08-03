@@ -73,8 +73,8 @@ FOMO<InferenceEngine, ImageType, BoxType>::FOMO(InferenceEngine* engine, ScoreTy
     EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
     EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 
-    // edgelab::algorithm::data::el_registered_algorithms.emplace_back(edgelab::algorithm::types::el_algorithm_t{
-    //   .type = 1, .categroy = 1, .parameters = {score_threshold, 0, 0, 0, 0, 0}});
+    // el_registered_algorithms.emplace(
+    //   1u, el_algorithm_t{.id = 1, .type = 1, .categroy = 0, .input_type = 0, .parameters = {0, 0, 0, 0}});  // FOMO
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>

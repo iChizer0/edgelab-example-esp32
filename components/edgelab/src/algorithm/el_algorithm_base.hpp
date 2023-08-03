@@ -28,8 +28,10 @@
 
 #include <cstdint>
 #include <forward_list>
+#include <sstream>
+#include <string>
+#include <type_traits>
 #include <unordered_map>
-#include <utility>
 
 #include "el_debug.h"
 #include "el_types.h"
@@ -191,6 +193,34 @@ const std::forward_list<OutputType>& Algorithm<InferenceEngine, InputType, Outpu
 }
 
 }  // namespace base
+
+namespace utility {
+
+template <typename T, typename std::enable_if<std::is_same<T, el_box_t>::value>::type* = nullptr>
+std::string el_results_2_string(const std::forward_list<T>& results) {
+    auto os{std::ostringstream(std::ios_base::ate)};
+    os << "[";
+    for (const auto& box : results)
+        os << "{\"x\": " << unsigned(box.x) << ", \"y\": " << unsigned(box.y) << ", \"w\": " << unsigned(box.w)
+           << ", \"h\": " << unsigned(box.h) << ", \"target\": " << unsigned(box.target)
+           << ", \"score\": " << unsigned(box.score) << "}, ";
+    os << "]";
+    return os.str();
+}
+
+template <typename T, typename std::enable_if<std::is_same<T, el_point_t>::value>::type* = nullptr>
+std::string el_results_2_string(const std::forward_list<T>& results) {
+    auto os{std::ostringstream(std::ios_base::ate)};
+    os << "[";
+    for (const auto& box : results)
+        os << "{\"x\": " << unsigned(box.x) << ", \"y\": " << unsigned(box.y)
+           << ", \"target\": " << unsigned(box.target) << "}, ";
+    os << "]";
+    return os.str();
+}
+
+}  // namespace utility
+
 }  // namespace algorithm
 }  // namespace edgelab
 

@@ -137,6 +137,12 @@ typedef struct EL_ATTR_PACKED {
     uint32_t height;
 } el_res_t;
 
+typedef struct EL_ATTR_PACKED {
+    uint8_t id;
+    uint8_t type;
+    uint8_t parameters[6];
+} el_sensor_t;
+
 #ifdef __cplusplus
 }
 // }

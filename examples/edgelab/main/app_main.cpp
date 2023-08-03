@@ -8,41 +8,34 @@
 #include "el_device_esp.h"
 
 extern "C" void app_main(void) {
-    // obtain resource
-    auto* instance = ReplServer::get_instance();
-    auto* device   = Device::get_device();
-    auto* camera   = device->get_camera();
+    // fetch hardware resource
+    auto* device = Device::get_device();
+    auto* camera = device->get_camera();
     // auto* display = device->get_display();
-    auto* serial = device->get_serial();
+    auto* serial   = device->get_serial();
+    auto* instance = ReplServer::get_instance();
 
-    // fetch resource
-    auto  model_loader = ModelLoader();
-    auto& models       = model_loader.get_models();
+    // fetch software resource (TODO: safely delete)
+    auto* model_loader{new ModelLoader()};
+    auto* engine{new InferenceEngine<EngineName::TFLite>()};
 
-    // init components
-    instance->init();
+    // init components (TODO: safely deinit)
     camera->init(240, 240);
     // display->init();
     serial->init();
+    instance->init();
 
-    // register sensor (camera only)
-    struct el_sensor_t {
-        uint8_t id;
-        uint8_t type;
-        uint8_t parameters[6];
-    };
+    // register sensors
     std::unordered_map<uint8_t, el_sensor_t> registered_sensors;
-    registered_sensors.emplace(0u, el_sensor_t{.id = 0, .type = 0, .parameters = {240, 240, 0, 0, 0, 0}});
+    registered_sensors.emplace(0u, el_sensor_t{.id = 0, .type = 0, .parameters = {240, 240, 0, 0, 0, 0}});  // camera
 
     // register algorithms
     register_algorithms();
 
     // init temporary variables
-    el_img_t img;
-    auto*    engine{new InferenceEngine<EngineName::TFLite>()};
-    auto     model_loaded{false};
-    int8_t   current_model_type{-1};
-    int8_t   current_input_type{-1};
+    el_model_t*  current_model{nullptr};
+    el_sensor_t* current_sensor{nullptr};
+    el_img_t*    current_img{nullptr};
 
     // register repl commands
     instance->register_cmd("ID",
@@ -139,7 +132,8 @@ extern "C" void app_main(void) {
                            "",
                            "",
                            el_repl_cmd_exec_cb_t([&]() {
-                               auto os{std::ostringstream(std::ios_base::ate)};
+                               auto  os{std::ostringstream(std::ios_base::ate)};
+                               auto& models{model_loader->get_models()};
                                os << "{\"count\": " << models.size() << ", \"models\": [";
                                for (const auto& m : models)
                                    os << "{\"id\": " << unsigned(m.id) << ", \"type\": " << unsigned(m.type)
@@ -154,142 +148,145 @@ extern "C" void app_main(void) {
                            nullptr);
     instance->register_cmd(
       "MODEL", "", "MODEL_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
-          auto   os{std::ostringstream(std::ios_base::ate)};
           auto   model_id{static_cast<uint8_t>(*argv[0] - '0')};
+          auto   os{std::ostringstream(std::ios_base::ate)};
+          auto&  models{model_loader->get_models()};
           auto   it{std::find_if(models.begin(), models.end(), [&](const auto& v) { return v.id == model_id; })};
           EL_STA ret{it != models.end() ? EL_OK : EL_EINVAL};
           if (ret != EL_OK) goto ModelReply;
 
           // TODO: move heap_caps_malloc to port/el_memory or el_system
           static auto* tensor_arena{heap_caps_malloc(it->size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)};
-          if (model_loaded) memset(tensor_arena, 0, it->size);
+          if (current_model) memset(tensor_arena, 0, it->size);
           ret = engine->init(tensor_arena, it->size);
           if (ret != EL_OK) goto ModelReply;
 
           ret = engine->load_model(it->addr_memory, it->size);
           if (ret != EL_OK) goto ModelReply;
 
-          model_loaded       = true;
-          current_model_type = it->type;
+          if (current_model) delete current_model;
+          current_model = new el_model_t{*it};
 
       ModelReply:
-          os << "{\"model_id\": " << unsigned(model_id) << ", \"status\": " << int(ret) << "}\n";
+          os << "{\"model_id\": " << int(current_model ? current_model->id : -1) << ", \"status\": " << int(ret)
+             << "}\n";
           auto str{os.str()};
           serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
           return EL_OK;
       }));
-    instance->register_cmd("SAMPLE",
-                           "",
-                           "SENSOR_ID,SEND_DATA",
-                           nullptr,
-                           nullptr,
-                           el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
-                               auto   sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
-                               auto   it{registered_sensors.find(sensor_id)};
-                               auto   os{std::ostringstream(std::ios_base::ate)};
-                               EL_STA ret{it != registered_sensors.end() ? EL_OK : EL_EINVAL};
-                               if (ret != EL_OK || argc < 2) goto SampleReplyError;
+    // instance->register_cmd("SAMPLE",
+    //                        "",
+    //                        "SENSOR_ID,SEND_DATA",
+    //                        nullptr,
+    //                        nullptr,
+    //                        el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+    //                            auto   sensor_id{static_cast<uint8_t>(*argv[0] - '0')};
+    //                            auto   it{registered_sensors.find(sensor_id)};
+    //                            auto   os{std::ostringstream(std::ios_base::ate)};
+    //                            EL_STA ret{it != registered_sensors.end() ? EL_OK : EL_EINVAL};
+    //                            if (ret != EL_OK || argc < 2) goto SampleReplyError;
 
-                               // camera
-                               if (it->second.type == 0u) {
-                                   camera->start_stream();
-                                   camera->get_frame(&img);
-                                   camera->stop_stream();
+    //                            // camera
+    //                            if (it->second.type == 0u) {
+    //                                camera->start_stream();
+    //                                camera->get_frame(&img);
+    //                                camera->stop_stream();
 
-                                   auto size{img.width * img.height * 3};
-                                   auto img_rgb{el_img_t{.data   = new uint8_t[size]{},
-                                                         .size   = size,
-                                                         .width  = img.width,
-                                                         .height = img.height,
-                                                         .format = EL_PIXEL_FORMAT_RGB888,
-                                                         .rotate = img.rotate}};
-                                   ret = rgb_to_rgb(&img, &img_rgb);
-                                   if (ret != EL_OK) {
-                                       delete[] img_rgb.data;
-                                       goto SampleReplyError;
-                                   }
-                                   auto img_jpeg{el_img_t{.data   = new uint8_t[size]{},
-                                                          .size   = size,
-                                                          .width  = img_rgb.width,
-                                                          .height = img_rgb.height,
-                                                          .format = EL_PIXEL_FORMAT_RGB888,
-                                                          .rotate = img_rgb.rotate}};
-                                   ret = rgb_to_jpeg(&img_rgb, &img_jpeg);
-                                   delete[] img_rgb.data;
-                                   if (ret != EL_OK) {
-                                       delete[] img_jpeg.data;
-                                       goto SampleReplyError;
-                                   };
+    //                                auto size{img.width * img.height * 3};
+    //                                auto img_rgb{el_img_t{.data   = new uint8_t[size]{},
+    //                                                      .size   = size,
+    //                                                      .width  = img.width,
+    //                                                      .height = img.height,
+    //                                                      .format = EL_PIXEL_FORMAT_RGB888,
+    //                                                      .rotate = img.rotate}};
+    //                                ret = rgb_to_rgb(&img, &img_rgb);
+    //                                if (ret != EL_OK) {
+    //                                    delete[] img_rgb.data;
+    //                                    goto SampleReplyError;
+    //                                }
+    //                                auto img_jpeg{el_img_t{.data   = new uint8_t[size]{},
+    //                                                       .size   = size,
+    //                                                       .width  = img_rgb.width,
+    //                                                       .height = img_rgb.height,
+    //                                                       .format = EL_PIXEL_FORMAT_RGB888,
+    //                                                       .rotate = img_rgb.rotate}};
+    //                                ret = rgb_to_jpeg(&img_rgb, &img_jpeg);
+    //                                delete[] img_rgb.data;
+    //                                if (ret != EL_OK) {
+    //                                    delete[] img_jpeg.data;
+    //                                    goto SampleReplyError;
+    //                                };
 
-                                   auto data_buffer_size{*argv[1] == '1' ? (4ul * img_jpeg.size + 2) / 3ul : 0ul};
+    //                                auto data_buffer_size{*argv[1] == '1' ? (4ul * img_jpeg.size + 2) / 3ul : 0ul};
 
-                                   os << "{\"sensor_id\": " << unsigned(it->first)
-                                      << ", \"type\": " << unsigned(it->second.type) << ", \"status\": " << int(ret)
-                                      << ", \"size\": " << unsigned(img.size) << ", \"data\": \"";
-                                   if (data_buffer_size) {
-                                       auto buffer{new char[data_buffer_size]{}};
-                                       el_base64_encode(img_jpeg.data, img_jpeg.size, buffer);
-                                       std::string ss(buffer);
-                                       ss.erase(std::find(ss.begin(), ss.end(), '\0'), ss.end());
-                                       os << ss.c_str();
-                                       delete[] buffer;
-                                   }
-                                   os << "\"}\n";
+    //                                os << "{\"sensor_id\": " << unsigned(it->first)
+    //                                   << ", \"type\": " << unsigned(it->second.type) << ", \"status\": " << int(ret)
+    //                                   << ", \"size\": " << unsigned(img.size) << ", \"data\": \"";
+    //                                if (data_buffer_size) {
+    //                                    auto buffer{new char[data_buffer_size]{}};
+    //                                    el_base64_encode(img_jpeg.data, img_jpeg.size, buffer);
+    //                                    std::string ss(buffer);
+    //                                    ss.erase(std::find(ss.begin(), ss.end(), '\0'), ss.end());
+    //                                    os << ss.c_str();
+    //                                    delete[] buffer;
+    //                                }
+    //                                os << "\"}\n";
 
-                                   delete[] img_jpeg.data;
-                                   goto SampleReply;
-                               }
+    //                                delete[] img_jpeg.data;
+    //                                goto SampleReply;
+    //                            }
 
-                           SampleReplyError:
-                               os << "{\"sensor_id\": " << unsigned(it->first)
-                                  << ", \"type\": " << unsigned(it->second.type) << ", \"status\": " << int(ret)
-                                  << "}\n";
-                           SampleReply:
-                               auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-                               return EL_OK;
-                           }));
-    instance->register_cmd(
-      "INVOKE", "", "ALGORITHM_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
-          auto algorithm_id{static_cast<uint8_t>(*argv[0] - '0')};
-          auto it{el_registered_algorithms.find(algorithm_id)};
-          if (it == el_registered_algorithms.end() || !model_loaded) return EL_EINVAL;
-          auto os{std::ostringstream(std::ios_base::ate)};
+    //                        SampleReplyError:
+    //                            os << "{\"sensor_id\": " << unsigned(it->first)
+    //                               << ", \"type\": " << unsigned(it->second.type) << ", \"status\": " << int(ret)
+    //                               << "}\n";
+    //                        SampleReply:
+    //                            auto str{os.str()};
+    //                            serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+    //                            return EL_OK;
+    //                        }));
+    // instance->register_cmd(
+    //   "INVOKE", "", "ALGORITHM_ID", nullptr, nullptr, el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+    //       auto algorithm_id{static_cast<uint8_t>(*argv[0] - '0')};
+    //       auto it{el_registered_algorithms.find(algorithm_id)};
+    //       if (it == el_registered_algorithms.end() || !model_loaded) return EL_EINVAL;
+    //       auto os{std::ostringstream(std::ios_base::ate)};
 
-          // yolo
-          if (it->second.id == 0u) {
-              auto* algorithm{new YOLO(engine)};
+    //       // yolo
+    //       if (it->second.id == 0u) {
+    //           auto* algorithm{new YOLO(engine)};
 
-              auto ret{algorithm->run(&img)};
-              if (ret != EL_OK) {
-                  delete algorithm;
-                  return ret;
-              }
+    //           auto ret{algorithm->run(&img)};
+    //           if (ret != EL_OK) {
+    //               delete algorithm;
+    //               return ret;
+    //           }
 
-              auto preprocess_time{algorithm->get_preprocess_time()};
-              auto run_time{algorithm->get_run_time()};
-              auto postprocess_time{algorithm->get_postprocess_time()};
+    //           auto preprocess_time{algorithm->get_preprocess_time()};
+    //           auto run_time{algorithm->get_run_time()};
+    //           auto postprocess_time{algorithm->get_postprocess_time()};
 
-              os << "{\"algorithm_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
-                 << ", \"status\": " << int(ret) << ", \"preprocess_time\": " << unsigned(preprocess_time)
-                 << ", \"run_time\": " << unsigned(run_time) << ", \"postprocess_time\": " << unsigned(postprocess_time)
-                 << ", \"results\": [";
-              for (const auto& box : algorithm->get_results())
-                  os << "{\"cx\": " << unsigned(box.x) << ", \"cy\": " << unsigned(box.y)
-                     << ", \"w\": " << unsigned(box.w) << ", \"h\": " << unsigned(box.h)
-                     << ", \"target\": " << unsigned(box.target) << ", \"score\": " << unsigned(box.score) << "}, ";
-              os << "]}\n";
+    //           os << "{\"algorithm_id\": " << unsigned(it->first) << ", \"type\": " << unsigned(it->second.type)
+    //              << ", \"status\": " << int(ret) << ", \"preprocess_time\": " << unsigned(preprocess_time)
+    //              << ", \"run_time\": " << unsigned(run_time) << ", \"postprocess_time\": " << unsigned(postprocess_time)
+    //              << ", \"results\": [";
 
-              delete algorithm;
-          }
+    //           os << edgelab::algorithm::utility::el_results_2_string(algorithm->get_results());
+    //           //   for (const auto& box : algorithm->get_results())
+    //           //       os << "{\"cx\": " << unsigned(box.x) << ", \"cy\": " << unsigned(box.y)
+    //           //          << ", \"w\": " << unsigned(box.w) << ", \"h\": " << unsigned(box.h)
+    //           //          << ", \"target\": " << unsigned(box.target) << ", \"score\": " << unsigned(box.score) << "}, ";
+    //           os << "]}\n";
 
-          auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
-          return EL_OK;
-      }));
+    //           delete algorithm;
+    //       }
 
-// enter service pipeline
-// TODO: pipeline builder
+    //       auto str{os.str()};
+    //       serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+    //       return EL_OK;
+    //   }));
+
+// enter service pipeline (TODO: pipeline builder)
 ServiceLoop:
     instance->loop(serial->get_char());
 

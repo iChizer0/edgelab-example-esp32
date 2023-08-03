@@ -95,8 +95,8 @@ YOLO<InferenceEngine, ImageType, BoxType>::YOLO(InferenceEngine* engine,
     EL_ASSERT(_input_img.format != EL_PIXEL_FORMAT_UNKNOWN);
     EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 
-    // edgelab::algorithm::data::el_registered_algorithms.emplace_back(edgelab::algorithm::types::el_algorithm_t{
-    //   .type = 0, .categroy = 0, .parameters = {score_threshold, nms_threshold, 0, 0, 0, 0}});
+    // el_registered_algorithms.emplace(
+    //   0u, el_algorithm_t{.id = 0, .type = 0, .categroy = 0, .input_type = 0, .parameters = {50, 45, 0, 0}});  // YOLO
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>

@@ -38,7 +38,7 @@ using FOMO = typename edgelab::algorithm::FOMO<edgelab::inference::base::Engine,
 using PFLD = typename edgelab::algorithm::PFLD<edgelab::inference::base::Engine, el_img_t, el_point_t>;
 using YOLO = typename edgelab::algorithm::YOLO<edgelab::inference::base::Engine, el_img_t, el_box_t>;
 
-static void register_algorithms() {
+static void register_algorithms() noexcept {
     using namespace edgelab::algorithm::types;
     using namespace edgelab::algorithm::data;
 
@@ -55,5 +55,6 @@ static void register_algorithms() {
 // TODO: avoid expose this name space globally
 using namespace edgelab::algorithm::types;
 using namespace edgelab::algorithm::data;
+using namespace edgelab::algorithm::utility;
 
 #endif
