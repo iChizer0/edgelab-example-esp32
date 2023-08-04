@@ -4,7 +4,6 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <thread>
 
 #include "edgelab.h"
 #include "el_device_esp.h"
@@ -84,7 +83,7 @@ extern "C" void app_main(void) {
                                   << std::resetiosflags(std::ios_base::basefield)
                                   << "\", \"timestamp\": " << el_get_time_ms() << "}\n";
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }),
                            nullptr,
@@ -97,7 +96,7 @@ extern "C" void app_main(void) {
                                os << "{\"id\": \"" << device->get_device_name()
                                   << "\", \"timestamp\": " << el_get_time_ms() << "}\n";
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }),
                            nullptr,
@@ -110,7 +109,7 @@ extern "C" void app_main(void) {
                                os << "{\"boot_count\": " << unsigned(boot_count)
                                   << ", \"timestamp\": " << el_get_time_ms() << "}\n";
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }),
                            nullptr,
@@ -124,7 +123,7 @@ extern "C" void app_main(void) {
                                   << unsigned(device->get_chip_revision_id())
                                   << "\", \"timestamp\": " << el_get_time_ms() << "}\n";
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }),
                            nullptr,
@@ -156,7 +155,7 @@ extern "C" void app_main(void) {
                                }
                                os << "], \"timestamp\": " << el_get_time_ms() << "}\n";
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }),
                            nullptr,
@@ -182,7 +181,7 @@ extern "C" void app_main(void) {
                                os << "{\"algorithm_id\": " << unsigned(algorithm_id) << ", \"status\": " << int(ret)
                                   << ", \"timestamp\": " << el_get_time_ms() << "}\n";
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }));
     // TODO: algorithm config command
@@ -199,7 +198,7 @@ extern "C" void app_main(void) {
                  << std::hex << unsigned(m.addr_flash) << ", \"size\": 0x" << unsigned(m.size) << "}, ";
           os << std::resetiosflags(std::ios_base::basefield) << "], \"timestamp\": " << el_get_time_ms() << "}\n";
           auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          serial->write_bytes(str.c_str(), str.size());
           return EL_OK;
       }),
       nullptr,
@@ -242,7 +241,7 @@ extern "C" void app_main(void) {
           os << "{\"model_id\": " << unsigned(model_id) << ", \"status\": " << int(ret)
              << ", \"timestamp\": " << el_get_time_ms() << "}\n";
           auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          serial->write_bytes(str.c_str(), str.size());
           return EL_OK;
       }));
     instance->register_cmd("VSENSOR",
@@ -260,7 +259,7 @@ extern "C" void app_main(void) {
                                }
                                os << "], \"timestamp\": " << el_get_time_ms() << "}\n";
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }),
                            nullptr,
@@ -284,6 +283,7 @@ extern "C" void app_main(void) {
 
           // camera
           if (it->second.id == 0 && camera) {
+              // camera should be protected to avoid re-init when presented
               ret = enable ? camera->init(it->second.parameters[0], it->second.parameters[1]) : camera->deinit();
               if (ret != EL_OK) [[unlikely]]
                   goto SensorReply;
@@ -299,7 +299,7 @@ extern "C" void app_main(void) {
           os << "{\"sensor_id\": " << unsigned(sensor_id) << ", \"enabled\": " << unsigned(current_sensor ? 1 : 0)
              << ", \"status\": " << int(ret) << ", \"timestamp\": " << el_get_time_ms() << "}\n";
           auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          serial->write_bytes(str.c_str(), str.size());
           return EL_OK;
       }));
     // TODO: sensor config command
@@ -317,13 +317,14 @@ extern "C" void app_main(void) {
                                auto   found{it != el_registered_sensors.end()};
                                EL_STA ret{found ? EL_OK : EL_EINVAL};
                                // TODO: lookup from current sensor list (bit_set<256 - 1>)
-                               if (ret != EL_OK || !(current_sensor && current_sensor->id == sensor_id)) [[unlikely]]
+                               if (ret != EL_OK) [[unlikely]]
                                    goto SampleReplyError;
 
                                // camera (TODO: get sensor and allocate buffer from sensor list (bit_set<256 - 1>))
-                               if (it->second.type == 0u && camera && camera->is_present()) {
+                               if (it->second.type == 0u && camera && static_cast<bool>(*camera)) {
                                    ret = camera->start_stream();
-                                   if (ret != EL_OK) goto SampleReplyError;
+                                   if (ret != EL_OK) [[unlikely]]
+                                       goto SampleReplyError;
                                    if (!current_img) [[unlikely]]
                                        current_img = new el_img_t{.data   = nullptr,
                                                                   .size   = 0,
@@ -332,9 +333,11 @@ extern "C" void app_main(void) {
                                                                   .format = EL_PIXEL_FORMAT_UNKNOWN,
                                                                   .rotate = EL_PIXEL_ROTATE_UNKNOWN};
                                    ret = camera->get_frame(current_img);
-                                   if (ret != EL_OK) goto SampleReplyError;
+                                   if (ret != EL_OK) [[unlikely]]
+                                       goto SampleReplyError;
                                    ret = camera->stop_stream();
-                                   if (ret != EL_OK) goto SampleReplyError;
+                                   if (ret != EL_OK) [[unlikely]]
+                                       goto SampleReplyError;
 
                                    os << "{\"sensor_id\": " << unsigned(it->first)
                                       << ", \"type\": " << unsigned(it->second.type) << ", \"status\": " << int(ret)
@@ -365,11 +368,10 @@ extern "C" void app_main(void) {
                                            goto SampleReplyError;
                                        };
 
-                                       auto buffer{new char[(4ul * jpeg_img.size + 2) / 3ul]{}};
+                                       auto buffer{new char[((jpeg_img.size + 2) / 3) * 4]{}};
                                        el_base64_encode(jpeg_img.data, jpeg_img.size, buffer);
                                        delete[] jpeg_img.data;
                                        std::string ss(buffer);
-                                       ss.erase(std::find(ss.begin(), ss.end(), '\0'), ss.end());
                                        os << ss.c_str();
                                        delete[] buffer;
                                    }
@@ -386,7 +388,7 @@ extern "C" void app_main(void) {
                                   << ", \"size\": 0, \"data\": \"\", \"timestamp\": " << el_get_time_ms() << "}\n";
                            SampleReply:
                                auto str{os.str()};
-                               serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+                               serial->write_bytes(str.c_str(), str.size());
                                return EL_OK;
                            }));
     instance->register_cmd(
@@ -434,6 +436,7 @@ extern "C" void app_main(void) {
                  << ", \"postprocess_time\": " << unsigned(postprocess_time) << ", \"results\": ["
                  << el_results_2_string(algorithm->get_results()) << "]}\n";
               delete algorithm;
+              goto InvokeReply;
           } else
               ret = EL_ENOTSUP;
 
@@ -442,9 +445,9 @@ extern "C" void app_main(void) {
              << ", \"type\": " << unsigned(current_algorithm ? current_algorithm->type : 0xff)
              << ", \"status\": " << int(ret)
              << ", \"preprocess_time\": 0, \"run_time\": 0, \"postprocess_time\": 0, \"results\": []}\n";
-
+      InvokeReply:
           auto str{os.str()};
-          serial->write_bytes(str.c_str(), std::strlen(str.c_str()));
+          serial->write_bytes(str.c_str(), str.size());
           return EL_OK;
       }));
 
