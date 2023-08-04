@@ -191,7 +191,8 @@ class PersistentMap {
         }
 
         Iterator& operator++() {
-            if (!___persisitent_map) return *this;
+            if (!___persisitent_map) [[unlikely]]
+                return *this;
             ___persisitent_map->m_lock();
             if (___kvdb) [[likely]]
                 ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
@@ -310,7 +311,8 @@ class PersistentMap {
     // TODO: automatically determine whether to allocate new memory based on the type of CT
     template <typename KT, typename CT, typename HPT> PersistentMap& operator>>(types::el_map_kv_t<KT, CT, HPT>& rhs) {
         volatile const Guard guard(this);
-        if (!__kvdb) return *this;
+        if (!__kvdb) [[unlikely]]
+            return *this;
 
         using CTNoRef = typename std::remove_reference<CT>::type;
         using HT      = typename std::remove_pointer<HPT>::type;
@@ -319,7 +321,8 @@ class PersistentMap {
         HT  kv;
         HPT p_kv{fdb_kv_get_obj(__kvdb, rhs.key, &kv)};
 
-        if (!p_kv) return *this;
+        if (!p_kv) [[unlikely]]
+            return *this;
 
         rhs.handle               = new HT(*p_kv);
         rhs.__call_handel_delete = true;

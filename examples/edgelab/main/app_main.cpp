@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include "edgelab.h"
 #include "el_device_esp.h"
@@ -398,87 +399,91 @@ extern "C" void app_main(void) {
       nullptr,
       nullptr,
       el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
-          if (argc < 2) return EL_EINVAL;
-          // TODO: N times in a seperate RTOS thread
-          auto   n_times{static_cast<int16_t>(std::atoi(argv[0]))};
-          auto   os{std::ostringstream(std::ios_base::ate)};
-          EL_STA ret{current_algorithm ? EL_OK : EL_EINVAL};
-          if (ret != EL_OK) [[unlikely]]
-              goto InvokeErrorReply;
-
-          // check if model is loaded
-          ret = current_model && current_model->type == current_algorithm->type ? EL_OK : EL_EINVAL;
-          if (ret != EL_OK) [[unlikely]]
-              goto InvokeErrorReply;
-
-          // check if sensor is initialized (TODO: find initialized sensor from sensors list/map)
-          ret = current_sensor && current_sensor->type == current_algorithm->input_type ? EL_OK : EL_EINVAL;
-          if (ret != EL_OK) [[unlikely]]
-              goto InvokeErrorReply;
-
-          // YOLO
-          if (current_algorithm->type == 0u) {
-              auto* algorithm{new YOLO(engine)};
-
-              if (!current_img) [[unlikely]]
-                  current_img = new el_img_t{.data   = nullptr,
-                                             .size   = 0,
-                                             .width  = 0,
-                                             .height = 0,
-                                             .format = EL_PIXEL_FORMAT_UNKNOWN,
-                                             .rotate = EL_PIXEL_ROTATE_UNKNOWN};
-          InvokeLoop:
-
-              ret = camera->start_stream();
-              if (ret != EL_OK) [[unlikely]]
-                  goto InvokeErrorReply;
-              ret = camera->get_frame(current_img);
-              if (ret != EL_OK) [[unlikely]]
-                  goto InvokeErrorReply;
-              ret = camera->stop_stream();
+          auto thr{std::thread([&]() {
+              if (argc < 2) return EL_EINVAL;
+              // TODO: N times in a seperate RTOS thread
+              auto   n_times{static_cast<int16_t>(std::atoi(argv[0]))};
+              auto   os{std::ostringstream(std::ios_base::ate)};
+              EL_STA ret{current_algorithm ? EL_OK : EL_EINVAL};
               if (ret != EL_OK) [[unlikely]]
                   goto InvokeErrorReply;
 
-              ret = algorithm->run(current_img);
-              if (ret != EL_OK) [[unlikely]] {
+              // check if model is loaded
+              ret = current_model && current_model->type == current_algorithm->type ? EL_OK : EL_EINVAL;
+              if (ret != EL_OK) [[unlikely]]
+                  goto InvokeErrorReply;
+
+              // check if sensor is initialized (TODO: find initialized sensor from sensors list/map)
+              ret = current_sensor && current_sensor->type == current_algorithm->input_type ? EL_OK : EL_EINVAL;
+              if (ret != EL_OK) [[unlikely]]
+                  goto InvokeErrorReply;
+
+              // YOLO
+              if (current_algorithm->type == 0u) {
+                  auto* algorithm{new YOLO(engine)};
+
+                  if (!current_img) [[unlikely]]
+                      current_img = new el_img_t{.data   = nullptr,
+                                                 .size   = 0,
+                                                 .width  = 0,
+                                                 .height = 0,
+                                                 .format = EL_PIXEL_FORMAT_UNKNOWN,
+                                                 .rotate = EL_PIXEL_ROTATE_UNKNOWN};
+              InvokeLoop:
+                  ret = camera->start_stream();
+                  if (ret != EL_OK) [[unlikely]]
+                      goto InvokeErrorReply;
+                  ret = camera->get_frame(current_img);
+                  if (ret != EL_OK) [[unlikely]]
+                      goto InvokeErrorReply;
+                  ret = camera->stop_stream();
+                  if (ret != EL_OK) [[unlikely]]
+                      goto InvokeErrorReply;
+
+                  ret = algorithm->run(current_img);
+                  if (ret != EL_OK) [[unlikely]] {
+                      delete algorithm;
+                      goto InvokeErrorReply;
+                  }
+
+                  auto preprocess_time{algorithm->get_preprocess_time()};
+                  auto run_time{algorithm->get_run_time()};
+                  auto postprocess_time{algorithm->get_postprocess_time()};
+
+                  os << "{\"algorithm_id\": " << unsigned(current_algorithm->id)
+                     << ", \"type\": " << unsigned(current_algorithm->type) << ", \"status\": " << int(ret)
+                     << ", \"preprocess_time\": " << unsigned(preprocess_time)
+                     << ", \"run_time\": " << unsigned(run_time)
+                     << ", \"postprocess_time\": " << unsigned(postprocess_time) << ", \"results\": ["
+                     << el_results_2_string(algorithm->get_results()) << "]}\n";
+                  auto str{os.str()};
+                  serial->write_bytes(str.c_str(), str.size());
+                  if (n_times < 0 || --n_times != 0) {
+                      goto InvokeLoop;
+                  }
+
                   delete algorithm;
-                  goto InvokeErrorReply;
-              }
+                  return EL_OK;
+              } else
+                  ret = EL_ENOTSUP;
 
-              auto preprocess_time{algorithm->get_preprocess_time()};
-              auto run_time{algorithm->get_run_time()};
-              auto postprocess_time{algorithm->get_postprocess_time()};
-
-              os << "{\"algorithm_id\": " << unsigned(current_algorithm->id)
-                 << ", \"type\": " << unsigned(current_algorithm->type) << ", \"status\": " << int(ret)
-                 << ", \"preprocess_time\": " << unsigned(preprocess_time) << ", \"run_time\": " << unsigned(run_time)
-                 << ", \"postprocess_time\": " << unsigned(postprocess_time) << ", \"results\": ["
-                 << el_results_2_string(algorithm->get_results()) << "]}\n";
+          InvokeErrorReply:
+              os << "{\"algorithm_id\": " << unsigned(current_algorithm ? current_algorithm->id : 0xff)
+                 << ", \"type\": " << unsigned(current_algorithm ? current_algorithm->type : 0xff)
+                 << ", \"status\": " << int(ret)
+                 << ", \"preprocess_time\": 0, \"run_time\": 0, \"postprocess_time\": 0, \"results\": []}\n";
               auto str{os.str()};
               serial->write_bytes(str.c_str(), str.size());
-              if (n_times < 0 || --n_times != 0) {
-                  goto InvokeLoop;
-              }
-
-              delete algorithm;
               return EL_OK;
-          } else
-              ret = EL_ENOTSUP;
-
-      InvokeErrorReply:
-          os << "{\"algorithm_id\": " << unsigned(current_algorithm ? current_algorithm->id : 0xff)
-             << ", \"type\": " << unsigned(current_algorithm ? current_algorithm->type : 0xff)
-             << ", \"status\": " << int(ret)
-             << ", \"preprocess_time\": 0, \"run_time\": 0, \"postprocess_time\": 0, \"results\": []}\n";
-          auto str{os.str()};
-          serial->write_bytes(str.c_str(), str.size());
+          })};
+          thr.detach();
           return EL_OK;
       }));
 
     // setup components
+    instance->loop("AT+ALGO=0\n", 11);
     instance->loop("AT+MODEL=0\n", 12);
     instance->loop("AT+SENSOR=0,1\n", 15);
-    instance->loop("AT+ALGO=0\n", 11);
 
 // enter service pipeline (TODO: pipeline builder)
 ServiceLoop:
