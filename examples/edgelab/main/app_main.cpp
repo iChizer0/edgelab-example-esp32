@@ -46,10 +46,10 @@ extern "C" void app_main(void) {
       new PersistentMap(CONFIG_EL_DATA_PERSISTENT_MAP_NAME, CONFIG_EL_DATA_PERSISTENT_MAP_PATH, &default_kv)};
 
     // init temporary variables (TODO: current sensors should be a list)
-    const el_algorithm_t* current_algorithm{nullptr};
-    const el_model_t*     current_model{nullptr};
-    const el_sensor_t*    current_sensor{nullptr};
-    el_img_t*             current_img{nullptr};
+    const el_algorithm_t*     current_algorithm{nullptr};
+    const el_model_handler_t* current_model{nullptr};
+    const el_sensor_t*        current_sensor{nullptr};
+    el_img_t*                 current_img{nullptr};
 
     // fetch configs from persistent map (TODO: value check)
     {
@@ -65,7 +65,7 @@ extern "C" void app_main(void) {
         el_registered_algorithms[algorithm_config_kv.value.id] = algorithm_config_kv.value;
         el_registered_sensors[sensor_config_kv.value.id]       = sensor_config_kv.value;
         current_algorithm = &el_registered_algorithms[algorithm_config_kv.value.id];
-        current_model     = &model_loader->get_models()[model_id_kv.value];
+        // current_model     = &model_loader->get_models()[model_id_kv.value];
         current_sensor    = &el_registered_sensors[sensor_config_kv.value.id];
     }
 
@@ -191,12 +191,13 @@ extern "C" void app_main(void) {
       "Get available models",
       "",
       el_repl_cmd_exec_cb_t([&]() {
-          auto  os{std::ostringstream(std::ios_base::ate)};
-          auto& models{model_loader->get_models()};
+          auto        os{std::ostringstream(std::ios_base::ate)};
+          const auto& models{model_loader->get_model_handlers(true)};
           os << "{\"count\": " << models.size() << ", \"models\": [";
-          for (const auto& m : models)
-              os << "{\"id\": " << unsigned(m.id) << ", \"type\": " << unsigned(m.type) << ", \"address\": 0x"
-                 << std::hex << unsigned(m.addr_flash) << ", \"size\": 0x" << unsigned(m.size) << "}, ";
+          for (const auto& kv : models)
+              os << "{\"id\": " << unsigned(kv.second.id) << ", \"type\": " << unsigned(kv.second.type)
+                 << ", \"address\": 0x" << std::hex << unsigned(kv.second.addr_flash) << ", \"size\": 0x"
+                 << unsigned(kv.second.size) << "}, ";
           os << std::resetiosflags(std::ios_base::basefield) << "], \"timestamp\": " << el_get_time_ms() << "}\n";
           auto str{os.str()};
           serial->write_bytes(str.c_str(), str.size());
@@ -213,25 +214,24 @@ extern "C" void app_main(void) {
       el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
           auto   model_id{static_cast<uint8_t>(std::atoi(argv[0]))};
           auto   os{std::ostringstream(std::ios_base::ate)};
-          auto&  models{model_loader->get_models()};
-          auto   it{std::find_if(models.begin(), models.end(), [&](const auto& v) { return v.id == model_id; })};
-          EL_STA ret{it != models.end() ? EL_OK : EL_EINVAL};
+          auto   model{model_loader->get_model_handler(model_id)};
+          EL_STA ret{model.id ? EL_OK : EL_EINVAL};
           if (ret != EL_OK) [[unlikely]]
               goto ModelReply;
 
           // TODO: move heap_caps_malloc to port/el_memory or el_system
-          static auto* tensor_arena{heap_caps_malloc(it->size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)};
-          memset(tensor_arena, 0, it->size);
-          ret = engine->init(tensor_arena, it->size);
+          static auto* tensor_arena{heap_caps_malloc(model.size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)};
+          memset(tensor_arena, 0, model.size);
+          ret = engine->init(tensor_arena, model.size);
           if (ret != EL_OK) [[unlikely]]
               goto ModelInitError;
 
-          ret = engine->load_model(it->addr_memory, it->size);
+          ret = engine->load_model(model.addr_memory, model.size);
           if (ret != EL_OK) [[unlikely]]
               goto ModelInitError;
 
-          current_model = &models[model_id];
-          *persistent_map << el_make_map_kv("model_id", model_id);
+          //   current_model = &models[model_id];
+          //   *persistent_map << el_make_map_kv("model_id", model_id);
 
           goto ModelReply;
 

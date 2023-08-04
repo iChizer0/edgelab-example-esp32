@@ -30,25 +30,42 @@
 #include <climits>
 #include <cstdint>
 #include <type_traits>
-#include <vector>
+#include <unordered_map>
 
+#include "el_compiler.h"
 #include "el_flash.h"
 
-#define CONFIG_EL_MODEL_HEADER      0x4C485400  // big-endian
-#define CONFIG_EL_MODEL_HEADER_MASK 0xFFFFFF00  // big-endian
-#define CONFIG_EL_FIXED_MODEL_SIZE  (1 * 1024 * 1024)
+#define CONFIG_EL_MODEL_HEADER             0x4C485400  // big-endian
+#define CONFIG_EL_MODEL_HEADER_MASK        0xFFFFFF00  // big-endian
+#define CONFIG_EL_MODEL_HEADER_ID_MASK     0xF0
+#define CONFIG_EL_MODEL_HEADER_ID_RSHIFT   4
+#define CONFIG_EL_MODEL_HEADER_TYPE_MASK   0x0F
+#define CONFIG_EL_MODEL_HEADER_TYPE_RSHIFT 0
+#define CONFIG_EL_FIXED_MODEL_SIZE         (1 * 1024 * 1024)
 
 namespace edgelab::data {
 
 namespace types {
 
-struct el_model_t {
+// model header specification:
+//      [ 24 bits magic code | 4 bits ID | 4 bits type ], big-endian in file
+// valid ID range [1, 15]:
+//      0 -> undefined
+//      each model should have a unique ID
+// valid type range [1, 15]:
+//      0 -> undefined
+//      1 -> FOMO
+//      2 -> PFLD
+//      3 -> YOLO
+typedef uint32_t el_model_header_t;
+
+typedef struct EL_ATTR_PACKED {
     uint8_t        id;
     uint8_t        type;
     uint32_t       addr_flash;
     uint32_t       size;
-    const uint8_t* addr_memory;
-};
+    const uint8_t* addr_memory = nullptr;
+} el_model_handler_t;
 
 }  // namespace types
 
@@ -59,27 +76,27 @@ template <typename T,
           typename std::enable_if<std::is_integral<P>::value>::type* = nullptr>
 static inline constexpr P swap_endian(T&& bytes) {
     static_assert(CHAR_BIT == 8);
-
     union {
         P             bytes;
         unsigned char byte[sizeof(P)];
     } src, dst;
-
     src.bytes = bytes;
     for (size_t i{0}; i < sizeof(P); ++i) dst.byte[i] = src.byte[sizeof(P) - i - 1];
-
     return dst.bytes;
 }
 
 }  // namespace utility
 
+// TODO: thread safe model loading
 class ModelLoader {
+    using model_id_t = decltype(types::el_model_handler_t::id);
+
    private:
-    uint32_t                       __partition_start_addr;
-    uint32_t                       __partition_size;
-    const uint8_t*                 __flash_2_memory_map;
-    el_model_mmap_handler_t        __mmap_handler;
-    std::vector<types::el_model_t> __models_handler;
+    uint32_t                                                  __partition_start_addr;
+    uint32_t                                                  __partition_size;
+    const uint8_t*                                            __flash_2_memory_map;
+    el_model_mmap_handler_t                                   __mmap_handler;
+    std::unordered_map<model_id_t, types::el_model_handler_t> __model_handlers;
 
    public:
     explicit ModelLoader()
@@ -87,51 +104,82 @@ class ModelLoader {
           __partition_size(0),
           __flash_2_memory_map(nullptr),
           __mmap_handler(),
-          __models_handler() {
+          __model_handlers() {
         [[maybe_unused]] auto ret{el_model_partition_mmap_init(
           &__partition_start_addr, &__partition_size, &__flash_2_memory_map, &__mmap_handler)};
-
         assert(ret);
+        seek_models_from_flash(CONFIG_EL_FIXED_MODEL_SIZE);
     }
 
     ~ModelLoader() { el_model_partition_mmap_deinit(&__mmap_handler); }
 
-    const std::vector<types::el_model_t>& get_models(size_t fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
-        __models_handler.clear();
-        seek_models_from_flash(fixed_model_size);
-        return __models_handler;
+    std::unordered_map<model_id_t, types::el_model_handler_t> get_model_handlers(
+      bool seek_from_flash = false, size_t fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
+        if (seek_from_flash) {
+            __model_handlers.clear();
+            seek_models_from_flash(fixed_model_size);
+        }
+        return __model_handlers;
+    }
+
+    types::el_model_handler_t get_model_handler(model_id_t model_id,
+                                                bool       seek_from_flash  = false,
+                                                size_t     fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
+        if (seek_from_flash) {
+            __model_handlers.clear();
+            seek_models_from_flash(fixed_model_size);
+        }
+        auto it{__model_handlers.find(model_id)};
+        if (it != __model_handlers.end()) [[likely]]
+            return it->second;
+        return {};
     }
 
    protected:
-    template <typename T> bool verify_header(const T* bytes) {
-        return (utility::swap_endian(*bytes) & CONFIG_EL_MODEL_HEADER_MASK) == CONFIG_EL_MODEL_HEADER;
+    template <typename T> inline bool verify_header(const T* bytes) {
+        return (*bytes & CONFIG_EL_MODEL_HEADER_MASK) == CONFIG_EL_MODEL_HEADER;
     }
 
-    template <typename T> uint8_t parse_header_type(const T* bytes) {
-        return (utility::swap_endian(*bytes) & CONFIG_EL_MODEL_HEADER_MASK) & 0xFF;
+    template <typename T> inline uint8_t parse_header_id(const T* bytes) {
+        return ((*bytes & ~CONFIG_EL_MODEL_HEADER_MASK) & CONFIG_EL_MODEL_HEADER_ID_MASK) >>
+               CONFIG_EL_MODEL_HEADER_ID_RSHIFT;
     }
 
-    template <typename T> uint8_t parse_header_id(const T* bytes) {
-        return (utility::swap_endian(*bytes) & CONFIG_EL_MODEL_HEADER_MASK) & 0xFF;
+    template <typename T> inline uint8_t parse_header_type(const T* bytes) {
+        return ((*bytes & ~CONFIG_EL_MODEL_HEADER_MASK) & CONFIG_EL_MODEL_HEADER_TYPE_MASK) >>
+               CONFIG_EL_MODEL_HEADER_TYPE_RSHIFT;
     }
 
     void seek_models_from_flash(size_t fixed_model_size) {
-        using header = uint32_t;
-        if (!__flash_2_memory_map) return;
+        using header_t = typename types::el_model_header_t;
 
+        if (!__flash_2_memory_map) [[unlikely]]
+            return;
+        auto header_size{sizeof(header_t)};
+
+        assert(fixed_model_size < header_size);
         assert(fixed_model_size > __partition_size);
-        assert(fixed_model_size < sizeof(header));
 
-        auto iterate_step{fixed_model_size > sizeof(header) ? fixed_model_size : sizeof(header)};
-        for (uint32_t it{0}; it < __partition_size; it += iterate_step) {
+        auto header{header_t{}};
+        auto iterate_step{fixed_model_size > header_size ? fixed_model_size : header_size};
+        for (size_t it{0}; it < __partition_size; it += iterate_step) {
             const uint8_t* mem_addr{__flash_2_memory_map + it};
-            if (!verify_header<header>(reinterpret_cast<const header*>(mem_addr))) continue;
-            __models_handler.emplace_back(
-              types::el_model_t{.id         = parse_header_id<header>(reinterpret_cast<const header*>(mem_addr)),
-                                .type       = parse_header_type<header>(reinterpret_cast<const header*>(mem_addr)),
-                                .addr_flash = __partition_start_addr + it,
-                                .size = fixed_model_size,  // current we're not going to determine the real model size
-                                .addr_memory = mem_addr + sizeof(header)});
+
+            header = utility::swap_endian(*reinterpret_cast<const header_t*>(mem_addr));
+            if (!verify_header(&header)) [[likely]]
+                continue;
+
+            auto header_id{parse_header_id(&header)};
+            auto header_type{parse_header_type(&header)};
+            if (!header_id || !header_type) [[unlikely]]
+                continue;
+
+            __model_handlers.emplace(header_id,
+                                     types::el_model_handler_t{.id          = header_id,
+                                                               .type        = header_type,
+                                                               .addr_flash  = __partition_start_addr + it,
+                                                               .size        = fixed_model_size,
+                                                               .addr_memory = mem_addr + header_size});
         }
     }
 };
