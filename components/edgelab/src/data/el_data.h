@@ -26,16 +26,16 @@
 #ifndef _EL_DATA_H_
 #define _EL_DATA_H_
 
-#include "el_data_model_loader.hpp"
-#include "el_data_persistent_map.hpp"
+#include "el_data_models.hpp"
+#include "el_data_storage.hpp"
 
 #define CONFIG_EL_DATA_PERSISTENT_MAP_NAME "edgelab_db"
 #define CONFIG_EL_DATA_PERSISTENT_MAP_PATH "kvdb0"
 
 namespace edgelab {
 
-using ModelLoader   = data::ModelLoader;
-using PersistentMap = data::PersistentMap;
+using Models   = data::Models;
+using Storage = data::Storage;
 
 }  // namespace edgelab
 

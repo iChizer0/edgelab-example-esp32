@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef _EL_DATA_PERSISTENT_MAP_HPP_
-#define _EL_DATA_PERSISTENT_MAP_HPP_
+#ifndef _EL_DATA_STORAGE_HPP_
+#define _EL_DATA_STORAGE_HPP_
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -37,6 +37,7 @@
 #include <type_traits>
 #include <utility>
 
+#define CONFIG_EL_LIB_FLASHDB
 #ifdef CONFIG_EL_LIB_FLASHDB
 
     #include <flashdb.h>
@@ -62,31 +63,31 @@ template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[
 
 namespace types {
 
-using ELMapKeyType              = const char*;
-using ELMapKVHandlerPointerType = fdb_kv_t;
+using ELStorageKeyType              = const char*;
+using ELStorageKVHandlerPointerType = fdb_kv_t;
 
-// please be careful when using pointer type as ValueType, please always access value from el_map_kv_t when using value
-template <typename KeyType, typename ValueType, typename HandlerPointerType> struct el_map_kv_t {
-    explicit el_map_kv_t(KeyType            key_,
+// please be careful when using pointer type as ValueType, please always access value from el_storage_kv_t when using value
+template <typename KeyType, typename ValueType, typename HandlerPointerType> struct el_storage_kv_t {
+    explicit el_storage_kv_t(KeyType            key_,
                          ValueType          value_,
                          size_t             size_in_bytes_     = 0ul,
-                         HandlerPointerType handle_            = nullptr,
+                         HandlerPointerType handler_            = nullptr,
                          bool               call_value_delete  = false,
                          bool               call_handel_delete = false) noexcept
         : key(key_),
           value(value_),
           size_in_bytes(size_in_bytes_),
-          handle(handle_),
+          handler(handler_),
           __call_value_delete(call_value_delete),
           __call_handel_delete(call_handel_delete) {
         assert(size_in_bytes > 0)
     }
 
-    ~el_map_kv_t() {
+    ~el_storage_kv_t() {
         if constexpr (std::is_pointer<ValueType>::value)
-            if (__call_value_delete && value != nullptr) delete[] value;
+            if (__call_value_delete && value) delete[] value;
         if constexpr (std::is_pointer<HandlerPointerType>::value)
-            if (__call_handel_delete && handle != nullptr) delete handle;
+            if (__call_handel_delete && handler) delete handler;
     }
 
     using ValueTypeBase = typename std::decay<ValueType>::type;
@@ -94,8 +95,9 @@ template <typename KeyType, typename ValueType, typename HandlerPointerType> str
 
     KeyType            key;
     ValueType          value;
+    size_t             size;
     size_t             size_in_bytes;
-    HandlerPointerType handle;
+    HandlerPointerType handler;
 
     // TODO: this should be protected, use friend to enable access from other classes
     bool __call_value_delete;
@@ -110,13 +112,13 @@ namespace utility {
 template <
   typename KeyType,
   typename ValueType,
-  typename KeyTypeBase   = typename std::decay<KeyType>::type,
-  typename ValueTypeBase = typename std::decay<ValueType>::type,
-  typename std::enable_if<std::is_convertible<KeyType, edgelab::data::types::ELMapKeyType>::value ||
-                          std::is_same<KeyTypeBase, edgelab::data::types::ELMapKeyType>::value>::type* = nullptr>
+  typename KeyTypeBase   = typename std::remove_const<typename std::decay<KeyType>::type>::type,
+  typename ValueTypeBase = typename std::remove_const<typename std::decay<ValueType>::type>::type,
+  typename std::enable_if<std::is_convertible<KeyType, edgelab::data::types::ELStorageKeyType>::value ||
+                          std::is_same<KeyTypeBase, edgelab::data::types::ELStorageKeyType>::value>::type* = nullptr>
 inline constexpr edgelab::data::types::
-  el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType>
-  el_make_map_kv(KeyType&& key, ValueType&& value, size_t size_in_bytes = 0ul) noexcept {
+  el_storage_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELStorageKVHandlerPointerType>
+  el_make_storage_kv(KeyType&& key, ValueType&& value, size_t size_in_bytes = 0ul) noexcept {
     using ValueTypeNoRef = typename std::remove_reference<ValueType>::type;
     if (size_in_bytes == 0ul) [[likely]] {
         if constexpr (edgelab::data::traits::is_c_str<ValueTypeNoRef>::value)
@@ -129,15 +131,15 @@ inline constexpr edgelab::data::types::
             size_in_bytes = sizeof(*value);
     }
     return edgelab::data::types::
-      el_map_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELMapKVHandlerPointerType>(
+      el_storage_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELStorageKVHandlerPointerType>(
         std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size_in_bytes);
 }
 
 }  // namespace utility
 
-class PersistentMap {
-    using KeyType     = types::ELMapKeyType;
-    using HandlerType = typename std::remove_pointer<typename std::decay<types::ELMapKVHandlerPointerType>::type>::type;
+class Storage {
+    using KeyType     = types::ELStorageKeyType;
+    using HandlerType = typename std::remove_pointer<typename std::decay<types::ELStorageKVHandlerPointerType>::type>::type;
 
    private:
     mutable SemaphoreHandle_t __lock;
@@ -147,7 +149,7 @@ class PersistentMap {
     inline void m_unlock() const noexcept { xSemaphoreGive(__lock); }
 
     struct Guard {
-        Guard(const PersistentMap* const persistent_map) noexcept : ___persistent_map(persistent_map) {
+        Guard(const Storage* const persistent_map) noexcept : ___persistent_map(persistent_map) {
             ___persistent_map->m_lock();
         }
 
@@ -156,7 +158,7 @@ class PersistentMap {
         Guard(const Guard&)            = delete;
         Guard& operator=(const Guard&) = delete;
 
-        const PersistentMap* const ___persistent_map;
+        const Storage* const ___persistent_map;
     };
 
    protected:
@@ -224,8 +226,8 @@ class PersistentMap {
     };
 
    public:
-    // currently the consistent of PersistentMap is only ensured on a single instance if there're multiple instances that has same name and save path
-    explicit PersistentMap(const char* name, const char* path, struct fdb_default_kv* default_kv = nullptr) noexcept
+    // currently the consistent of Storage is only ensured on a single instance if there're multiple instances that has same name and save path
+    explicit Storage(const char* name, const char* path, struct fdb_default_kv* default_kv = nullptr) noexcept
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
         __kvdb = new struct fdb_kvdb();
@@ -233,14 +235,14 @@ class PersistentMap {
         assert(ret == FDB_NO_ERR);
     }
 
-    ~PersistentMap() {
+    ~Storage() {
         volatile const Guard guard(this);
         if (__kvdb && (fdb_kvdb_deinit(__kvdb) == FDB_NO_ERR)) [[likely]]
             delete __kvdb;
     };
 
-    PersistentMap(const PersistentMap&)            = delete;
-    PersistentMap& operator=(const PersistentMap&) = delete;
+    Storage(const Storage&)            = delete;
+    Storage& operator=(const Storage&) = delete;
 
     template <typename KT,
               typename std::enable_if<std::is_convertible<KT, KeyType>::value ||
@@ -296,7 +298,7 @@ class PersistentMap {
     }
 
     template <typename KT, typename CT, typename HPT>
-    PersistentMap& operator<<(const types::el_map_kv_t<KT, CT, HPT>& rhs) {
+    Storage& operator<<(const types::el_storage_kv_t<KT, CT, HPT>& rhs) {
         struct fdb_blob blob;
 
         if constexpr (std::is_pointer<CT>::value) [[unlikely]]
@@ -309,7 +311,7 @@ class PersistentMap {
 
     // currently we're always allocating new memory on the heap for CT types
     // TODO: automatically determine whether to allocate new memory based on the type of CT
-    template <typename KT, typename CT, typename HPT> PersistentMap& operator>>(types::el_map_kv_t<KT, CT, HPT>& rhs) {
+    template <typename KT, typename CT, typename HPT> Storage& operator>>(types::el_storage_kv_t<KT, CT, HPT>& rhs) {
         volatile const Guard guard(this);
         if (!__kvdb) [[unlikely]]
             return *this;
@@ -324,7 +326,7 @@ class PersistentMap {
         if (!p_kv) [[unlikely]]
             return *this;
 
-        rhs.handle               = new HT(*p_kv);
+        rhs.handler               = new HT(*p_kv);
         rhs.__call_handel_delete = true;
 
         struct fdb_blob blob;
@@ -353,10 +355,10 @@ class PersistentMap {
         return *this;
     }
 
-    Iterator<PersistentMap> begin() { return Iterator<PersistentMap>(this); }
-    Iterator<PersistentMap> end() { return Iterator<PersistentMap>(nullptr); }
-    Iterator<PersistentMap> cbegin() { return Iterator<PersistentMap>(this); }
-    Iterator<PersistentMap> cend() { return Iterator<PersistentMap>(nullptr); }
+    Iterator<Storage> begin() { return Iterator<Storage>(this); }
+    Iterator<Storage> end() { return Iterator<Storage>(nullptr); }
+    Iterator<Storage> cbegin() { return Iterator<Storage>(this); }
+    Iterator<Storage> cend() { return Iterator<Storage>(nullptr); }
 };
 
 }  // namespace edgelab::data

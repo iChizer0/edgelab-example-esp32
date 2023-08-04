@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef _EL_MODEL_LOADER_HPP_
-#define _EL_MODEL_LOADER_HPP_
+#ifndef _EL_MODELS_HPP_
+#define _EL_MODELS_HPP_
 
 #include <cassert>
 #include <climits>
@@ -65,7 +65,7 @@ typedef struct EL_ATTR_PACKED {
     uint32_t       addr_flash;
     uint32_t       size;
     const uint8_t* addr_memory = nullptr;
-} el_model_handler_t;
+} el_model_info_t;
 
 }  // namespace types
 
@@ -88,49 +88,49 @@ static inline constexpr P swap_endian(T&& bytes) {
 }  // namespace utility
 
 // TODO: thread safe model loading
-class ModelLoader {
-    using model_id_t = decltype(types::el_model_handler_t::id);
+class Models {
+    using model_id_t = decltype(types::el_model_info_t::id);
 
    private:
-    uint32_t                                                  __partition_start_addr;
-    uint32_t                                                  __partition_size;
-    const uint8_t*                                            __flash_2_memory_map;
-    el_model_mmap_handler_t                                   __mmap_handler;
-    std::unordered_map<model_id_t, types::el_model_handler_t> __model_handlers;
+    uint32_t                                               __partition_start_addr;
+    uint32_t                                               __partition_size;
+    const uint8_t*                                         __flash_2_memory_map;
+    el_model_mmap_handler_t                                __mmap_handler;
+    std::unordered_map<model_id_t, types::el_model_info_t> __model_info;
 
    public:
-    explicit ModelLoader()
+    explicit Models()
         : __partition_start_addr(0),
           __partition_size(0),
           __flash_2_memory_map(nullptr),
           __mmap_handler(),
-          __model_handlers() {
+          __model_info() {
         [[maybe_unused]] auto ret{el_model_partition_mmap_init(
           &__partition_start_addr, &__partition_size, &__flash_2_memory_map, &__mmap_handler)};
         assert(ret);
         seek_models_from_flash(CONFIG_EL_FIXED_MODEL_SIZE);
     }
 
-    ~ModelLoader() { el_model_partition_mmap_deinit(&__mmap_handler); }
+    ~Models() { el_model_partition_mmap_deinit(&__mmap_handler); }
 
-    std::unordered_map<model_id_t, types::el_model_handler_t> get_model_handlers(
+    std::unordered_map<model_id_t, types::el_model_info_t> get_all_model_info(
       bool seek_from_flash = false, size_t fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
         if (seek_from_flash) {
-            __model_handlers.clear();
+            __model_info.clear();
             seek_models_from_flash(fixed_model_size);
         }
-        return __model_handlers;
+        return __model_info;
     }
 
-    types::el_model_handler_t get_model_handler(model_id_t model_id,
-                                                bool       seek_from_flash  = false,
-                                                size_t     fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
+    types::el_model_info_t get_model_info(model_id_t model_id,
+                                          bool       seek_from_flash  = false,
+                                          size_t     fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
         if (seek_from_flash) {
-            __model_handlers.clear();
+            __model_info.clear();
             seek_models_from_flash(fixed_model_size);
         }
-        auto it{__model_handlers.find(model_id)};
-        if (it != __model_handlers.end()) [[likely]]
+        auto it{__model_info.find(model_id)};
+        if (it != __model_info.end()) [[likely]]
             return it->second;
         return {};
     }
@@ -174,12 +174,12 @@ class ModelLoader {
             if (!header_id || !header_type) [[unlikely]]
                 continue;
 
-            __model_handlers.emplace(header_id,
-                                     types::el_model_handler_t{.id          = header_id,
-                                                               .type        = header_type,
-                                                               .addr_flash  = __partition_start_addr + it,
-                                                               .size        = fixed_model_size,
-                                                               .addr_memory = mem_addr + header_size});
+            __model_info.emplace(header_id,
+                                 types::el_model_info_t{.id          = header_id,
+                                                        .type        = header_type,
+                                                        .addr_flash  = __partition_start_addr + it,
+                                                        .size        = fixed_model_size,
+                                                        .addr_memory = mem_addr + header_size});
         }
     }
 };
