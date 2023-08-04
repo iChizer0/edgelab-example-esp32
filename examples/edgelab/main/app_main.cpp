@@ -420,6 +420,25 @@ extern "C" void app_main(void) {
           if (current_algorithm->type == 0u) {
               auto* algorithm{new YOLO(engine)};
 
+              if (!current_img) [[unlikely]]
+                  current_img = new el_img_t{.data   = nullptr,
+                                             .size   = 0,
+                                             .width  = 0,
+                                             .height = 0,
+                                             .format = EL_PIXEL_FORMAT_UNKNOWN,
+                                             .rotate = EL_PIXEL_ROTATE_UNKNOWN};
+          InvokeLoop:
+
+              ret = camera->start_stream();
+              if (ret != EL_OK) [[unlikely]]
+                  goto InvokeErrorReply;
+              ret = camera->get_frame(current_img);
+              if (ret != EL_OK) [[unlikely]]
+                  goto InvokeErrorReply;
+              ret = camera->stop_stream();
+              if (ret != EL_OK) [[unlikely]]
+                  goto InvokeErrorReply;
+
               ret = algorithm->run(current_img);
               if (ret != EL_OK) [[unlikely]] {
                   delete algorithm;
@@ -435,8 +454,14 @@ extern "C" void app_main(void) {
                  << ", \"preprocess_time\": " << unsigned(preprocess_time) << ", \"run_time\": " << unsigned(run_time)
                  << ", \"postprocess_time\": " << unsigned(postprocess_time) << ", \"results\": ["
                  << el_results_2_string(algorithm->get_results()) << "]}\n";
+              auto str{os.str()};
+              serial->write_bytes(str.c_str(), str.size());
+              if (n_times < 0 || --n_times != 0) {
+                  goto InvokeLoop;
+              }
+
               delete algorithm;
-              goto InvokeReply;
+              return EL_OK;
           } else
               ret = EL_ENOTSUP;
 
@@ -445,11 +470,15 @@ extern "C" void app_main(void) {
              << ", \"type\": " << unsigned(current_algorithm ? current_algorithm->type : 0xff)
              << ", \"status\": " << int(ret)
              << ", \"preprocess_time\": 0, \"run_time\": 0, \"postprocess_time\": 0, \"results\": []}\n";
-      InvokeReply:
           auto str{os.str()};
           serial->write_bytes(str.c_str(), str.size());
           return EL_OK;
       }));
+
+    // setup components
+    instance->loop("AT+MODEL=0\n", 12);
+    instance->loop("AT+SENSOR=0,1\n", 15);
+    instance->loop("AT+ALGO=0\n", 11);
 
 // enter service pipeline (TODO: pipeline builder)
 ServiceLoop:
