@@ -37,6 +37,9 @@
 #include <type_traits>
 #include <utility>
 
+#define CONFIG_EL_DATA_STORAGE_NAME "edgelab_db"
+#define CONFIG_EL_DATA_STORAGE_PATH "kvdb0"
+
 #define CONFIG_EL_LIB_FLASHDB
 #ifdef CONFIG_EL_LIB_FLASHDB
 
@@ -57,7 +60,9 @@ struct is_c_str
         bool,
         std::is_same<char*, typename remove_const_from_pointer<typename std::decay<T>::type>::type>::value> {};
 
-template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[Size]) { return Size * sizeof(T); }
+template <typename T, size_t Size> inline constexpr size_t bytesof_c_array(T (&)[Size]) { return Size * sizeof(T); }
+
+template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[Size]) { return Size; }
 
 }  // namespace traits
 
@@ -69,18 +74,22 @@ using ELStorageKVHandlerPointerType = fdb_kv_t;
 // please be careful when using pointer type as ValueType, please always access value from el_storage_kv_t when using value
 template <typename KeyType, typename ValueType, typename HandlerPointerType> struct el_storage_kv_t {
     explicit el_storage_kv_t(KeyType            key_,
-                         ValueType          value_,
-                         size_t             size_in_bytes_     = 0ul,
-                         HandlerPointerType handler_            = nullptr,
-                         bool               call_value_delete  = false,
-                         bool               call_handel_delete = false) noexcept
+                             ValueType          value_,
+                             size_t             size_              = 0ul,
+                             size_t             size_in_bytes_     = 0ul,
+                             HandlerPointerType handler_           = nullptr,
+                             bool               call_value_delete  = false,
+                             bool               call_handel_delete = false) noexcept
         : key(key_),
           value(value_),
+          size(size_),
           size_in_bytes(size_in_bytes_),
           handler(handler_),
           __call_value_delete(call_value_delete),
           __call_handel_delete(call_handel_delete) {
-        assert(size_in_bytes > 0)
+        assert(size > 0);
+        assert(size_in_bytes > 0);
+        assert(size_in_bytes > size);
     }
 
     ~el_storage_kv_t() {
@@ -118,18 +127,24 @@ template <
                           std::is_same<KeyTypeBase, edgelab::data::types::ELStorageKeyType>::value>::type* = nullptr>
 inline constexpr edgelab::data::types::
   el_storage_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELStorageKVHandlerPointerType>
-  el_make_storage_kv(KeyType&& key, ValueType&& value, size_t size_in_bytes = 0ul) noexcept {
+  el_make_storage_kv(KeyType&& key, ValueType&& value) noexcept {
     using ValueTypeNoRef = typename std::remove_reference<ValueType>::type;
-    if (size_in_bytes == 0ul) [[likely]] {
-        if constexpr (edgelab::data::traits::is_c_str<ValueTypeNoRef>::value)
-            size_in_bytes = std::strlen(value) + 1ul;  // add 1 for '\0' terminator
-        else if constexpr (std::is_array<ValueTypeNoRef>::value)
-            size_in_bytes = edgelab::data::traits::sizeof_c_array(std::forward<ValueType>(value));
-        else if constexpr (!std::is_pointer<ValueTypeNoRef>::value)
-            size_in_bytes = sizeof(value);
-        else if constexpr (std::is_trivially_constructible<ValueTypeNoRef>::value)
-            size_in_bytes = sizeof(*value);
+    size_t size{0ul};
+    size_t size_in_bytes{0ul};
+
+    if constexpr (edgelab::data::traits::is_c_str<ValueTypeNoRef>::value) {
+        size = size_in_bytes = std::strlen(value) + 1ul;  // add 1 for '\0' terminator
+    } else if constexpr (std::is_array<ValueTypeNoRef>::value) {
+        size          = edgelab::data::traits::sizeof_c_array(std::forward<ValueType>(value));
+        size_in_bytes = edgelab::data::traits::bytesof_c_array(std::forward<ValueType>(value));
+    } else if constexpr (!std::is_pointer<ValueTypeNoRef>::value) {
+        size          = 1ul;
+        size_in_bytes = sizeof(value);
+    } else if constexpr (std::is_trivially_constructible<ValueTypeNoRef>::value) {
+        size          = 1ul;
+        size_in_bytes = sizeof(*value);
     }
+
     return edgelab::data::types::
       el_storage_kv_t<KeyTypeBase, ValueTypeBase, edgelab::data::types::ELStorageKVHandlerPointerType>(
         std::forward<KeyTypeBase>(key), std::forward<ValueTypeBase>(value), size_in_bytes);
@@ -138,96 +153,15 @@ inline constexpr edgelab::data::types::
 }  // namespace utility
 
 class Storage {
-    using KeyType     = types::ELStorageKeyType;
-    using HandlerType = typename std::remove_pointer<typename std::decay<types::ELStorageKVHandlerPointerType>::type>::type;
-
-   private:
-    mutable SemaphoreHandle_t __lock;
-    fdb_kvdb_t                __kvdb;
-
-    inline void m_lock() const noexcept { xSemaphoreTake(__lock, portMAX_DELAY); }
-    inline void m_unlock() const noexcept { xSemaphoreGive(__lock); }
-
-    struct Guard {
-        Guard(const Storage* const persistent_map) noexcept : ___persistent_map(persistent_map) {
-            ___persistent_map->m_lock();
-        }
-
-        ~Guard() noexcept { ___persistent_map->m_unlock(); }
-
-        Guard(const Guard&)            = delete;
-        Guard& operator=(const Guard&) = delete;
-
-        const Storage* const ___persistent_map;
-    };
-
-   protected:
-    template <typename T> struct Iterator {
-        using IterateType       = typename std::add_pointer<T>::type;
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type   = std::ptrdiff_t;
-        using value_type        = HandlerType;
-        using pointer           = value_type*;
-        using reference         = value_type&;
-
-        explicit Iterator(IterateType persisitent_map)
-            : ___persisitent_map(persisitent_map), ___iterator(), ___value(), ___reach_end(true) {
-            if (!___persisitent_map) return;
-            ___persisitent_map->m_lock();
-            ___kvdb = persisitent_map->__kvdb;
-            if (___kvdb) [[likely]] {
-                fdb_kv_iterator_init(___kvdb, &___iterator);
-                ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
-            }
-            ___persisitent_map->m_unlock();
-        }
-
-        reference operator*() const {
-            ___value = ___iterator.curr_kv;
-            return ___value;
-        }
-
-        pointer operator->() const {
-            ___value = ___iterator.curr_kv;
-            return &___value;
-        }
-
-        Iterator& operator++() {
-            if (!___persisitent_map) [[unlikely]]
-                return *this;
-            ___persisitent_map->m_lock();
-            if (___kvdb) [[likely]]
-                ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
-            ___persisitent_map->m_unlock();
-            return *this;
-        }
-
-        Iterator& operator++(int) {
-            Iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-        friend bool operator==(const Iterator& lfs, const Iterator& rhs) {
-            return lfs.___reach_end == rhs.___reach_end;
-        };
-
-        friend bool operator!=(const Iterator& lfs, const Iterator& rhs) {
-            return lfs.___reach_end != rhs.___reach_end;
-        }
-
-       protected:
-        IterateType ___persisitent_map;
-
-        fdb_kvdb_t             ___kvdb;
-        struct fdb_kv_iterator ___iterator;
-        mutable value_type     ___value;
-        volatile bool          ___reach_end;
-    };
-
    public:
+    using KeyType = types::ELStorageKeyType;
+    using HandlerType =
+      typename std::remove_pointer<typename std::decay<types::ELStorageKVHandlerPointerType>::type>::type;
+
     // currently the consistent of Storage is only ensured on a single instance if there're multiple instances that has same name and save path
-    explicit Storage(const char* name, const char* path, struct fdb_default_kv* default_kv = nullptr) noexcept
+    explicit Storage(struct fdb_default_kv* default_kv = nullptr,
+                     const char*            name       = CONFIG_EL_DATA_STORAGE_NAME,
+                     const char*            path       = CONFIG_EL_DATA_STORAGE_PATH) noexcept
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
         __kvdb = new struct fdb_kvdb();
@@ -326,7 +260,7 @@ class Storage {
         if (!p_kv) [[unlikely]]
             return *this;
 
-        rhs.handler               = new HT(*p_kv);
+        rhs.handler              = new HT(*p_kv);
         rhs.__call_handel_delete = true;
 
         struct fdb_blob blob;
@@ -351,14 +285,100 @@ class Storage {
 
             rhs.value = value;
         }
+        rhs.size = rhs.size_in_bytes / sizeof(CTNoRef);
 
         return *this;
     }
 
+   protected:
+    inline void m_lock() const noexcept { xSemaphoreTake(__lock, portMAX_DELAY); }
+    inline void m_unlock() const noexcept { xSemaphoreGive(__lock); }
+
+    template <typename T> struct Iterator {
+        using IterateType       = typename std::add_pointer<T>::type;
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = HandlerType;
+        using pointer           = value_type*;
+        using reference         = value_type&;
+
+        explicit Iterator(IterateType persisitent_map)
+            : ___persisitent_map(persisitent_map), ___iterator(), ___value(), ___reach_end(true) {
+            if (!___persisitent_map) return;
+            ___persisitent_map->m_lock();
+            ___kvdb = persisitent_map->__kvdb;
+            if (___kvdb) [[likely]] {
+                fdb_kv_iterator_init(___kvdb, &___iterator);
+                ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
+            }
+            ___persisitent_map->m_unlock();
+        }
+
+        reference operator*() const {
+            ___value = ___iterator.curr_kv;
+            return ___value;
+        }
+
+        pointer operator->() const {
+            ___value = ___iterator.curr_kv;
+            return &___value;
+        }
+
+        Iterator& operator++() {
+            if (!___persisitent_map) [[unlikely]]
+                return *this;
+            ___persisitent_map->m_lock();
+            if (___kvdb) [[likely]]
+                ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
+            ___persisitent_map->m_unlock();
+            return *this;
+        }
+
+        Iterator& operator++(int) {
+            Iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        friend bool operator==(const Iterator& lfs, const Iterator& rhs) {
+            return lfs.___reach_end == rhs.___reach_end;
+        };
+
+        friend bool operator!=(const Iterator& lfs, const Iterator& rhs) {
+            return lfs.___reach_end != rhs.___reach_end;
+        }
+
+       protected:
+        IterateType ___persisitent_map;
+
+        fdb_kvdb_t             ___kvdb;
+        struct fdb_kv_iterator ___iterator;
+        mutable value_type     ___value;
+        volatile bool          ___reach_end;
+    };
+
+   public:
     Iterator<Storage> begin() { return Iterator<Storage>(this); }
     Iterator<Storage> end() { return Iterator<Storage>(nullptr); }
     Iterator<Storage> cbegin() { return Iterator<Storage>(this); }
     Iterator<Storage> cend() { return Iterator<Storage>(nullptr); }
+
+   private:
+    struct Guard {
+        Guard(const Storage* const persistent_map) noexcept : ___persistent_map(persistent_map) {
+            ___persistent_map->m_lock();
+        }
+
+        ~Guard() noexcept { ___persistent_map->m_unlock(); }
+
+        Guard(const Guard&)            = delete;
+        Guard& operator=(const Guard&) = delete;
+
+        const Storage* const ___persistent_map;
+    };
+
+    mutable SemaphoreHandle_t __lock;
+    fdb_kvdb_t                __kvdb;
 };
 
 }  // namespace edgelab::data

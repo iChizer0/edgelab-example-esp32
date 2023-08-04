@@ -29,13 +29,40 @@
 #include "el_data_models.hpp"
 #include "el_data_storage.hpp"
 
-#define CONFIG_EL_DATA_PERSISTENT_MAP_NAME "edgelab_db"
-#define CONFIG_EL_DATA_PERSISTENT_MAP_PATH "kvdb0"
-
 namespace edgelab {
 
-using Models   = data::Models;
+namespace data {
+
+class DataDelegate {
+   public:
+    ~DataDelegate() = default;
+
+    static DataDelegate* init() {
+        static DataDelegate data_delegate = DataDelegate();
+        return &data_delegate;
+    }
+
+    Models*  get_models_handler() { return _models_handler; }
+    Storage* get_storage_handler() { return _storage_handler; }
+
+   private:
+    DataDelegate() {
+        static Models  models  = Models();
+        static Storage storage = Storage();
+
+        _models_handler  = &models;
+        _storage_handler = &storage;
+    };
+
+    Models*  _models_handler;
+    Storage* _storage_handler;
+};
+
+}  // namespace data
+
+using Models  = data::Models;
 using Storage = data::Storage;
+using Data    = data::DataDelegate;
 
 }  // namespace edgelab
 

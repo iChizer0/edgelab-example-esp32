@@ -89,17 +89,10 @@ static inline constexpr P swap_endian(T&& bytes) {
 
 // TODO: thread safe model loading
 class Models {
+   public:
     using model_id_t = decltype(types::el_model_info_t::id);
 
-   private:
-    uint32_t                                               __partition_start_addr;
-    uint32_t                                               __partition_size;
-    const uint8_t*                                         __flash_2_memory_map;
-    el_model_mmap_handler_t                                __mmap_handler;
-    std::unordered_map<model_id_t, types::el_model_info_t> __model_info;
-
-   public:
-    explicit Models()
+    Models()
         : __partition_start_addr(0),
           __partition_size(0),
           __flash_2_memory_map(nullptr),
@@ -112,6 +105,9 @@ class Models {
     }
 
     ~Models() { el_model_partition_mmap_deinit(&__mmap_handler); }
+
+    Models(const Models&)            = delete;
+    Models& operator=(const Models&) = delete;
 
     std::unordered_map<model_id_t, types::el_model_info_t> get_all_model_info(
       bool seek_from_flash = false, size_t fixed_model_size = CONFIG_EL_FIXED_MODEL_SIZE) {
@@ -182,6 +178,13 @@ class Models {
                                                         .addr_memory = mem_addr + header_size});
         }
     }
+
+   private:
+    uint32_t                                               __partition_start_addr;
+    uint32_t                                               __partition_size;
+    const uint8_t*                                         __flash_2_memory_map;
+    el_model_mmap_handler_t                                __mmap_handler;
+    std::unordered_map<model_id_t, types::el_model_info_t> __model_info;
 };
 
 }  // namespace edgelab::data
