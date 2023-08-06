@@ -44,8 +44,8 @@
 #endif
 
 /* model related config */
-#define CONFIG_EL_MODEL_HEADER_MAGIC   0x4C4854
-#define CONFIG_EL_MODEL_PARTITION_NAME "models"
+#define CONFIG_EL_MODEL_HEADER_MAGIC      0x4C4854
+#define CONFIG_EL_MODEL_PARTITION_NAME    "models"
 
 /* storage related config */
 #define CONFIG_EL_STORAGE_NAME                  "edgelab_db"

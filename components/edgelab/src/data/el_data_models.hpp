@@ -114,18 +114,18 @@ size_t Models::seek_models_from_flash() {
     if (!__flash_2_memory_map) [[unlikely]]
         return 0ul;
 
-    auto              header_size{sizeof(el_model_header_t)};
-    auto              remain_size{__partition_size - header_size};
-    const uint8_t*    mem_addr{nullptr};
-    el_model_header_t header{};
+    auto                     header_size{sizeof(el_model_header_t)};
+    auto                     remain_size{__partition_size - header_size};
+    const uint8_t*           mem_addr{nullptr};
+    const el_model_header_t* header{nullptr};
     for (size_t it{0}; it < __partition_size; it += header_size, remain_size -= header_size) {
         mem_addr = __flash_2_memory_map + it;
-        header   = utility::swap_endian(*reinterpret_cast<const el_model_header_t*>(mem_addr));
-        if (!verify_header_magic(&header)) continue;
+        header   = reinterpret_cast<const el_model_header_t*>(mem_addr);
+        if (!verify_header_magic(header)) continue;
 
-        auto model_id{parse_model_id(&header)};
-        auto model_type{parse_model_type(&header)};
-        auto model_size{parse_model_size(&header)};
+        auto model_id{parse_model_id(header)};
+        auto model_type{parse_model_type(header)};
+        auto model_size{parse_model_size(header)};
 
         printf("%d -- %d  %ld\n", model_id, model_type, model_size);
 
@@ -172,14 +172,16 @@ const el_model_info_t& Models::get_model_info(el_model_id_t model_id) {
 const std::unordered_map<el_model_id_t, el_model_info_t>& Models::get_all_model_info() { return __model_info; }
 
 inline bool Models::verify_header_magic(const el_model_header_t* header) {
-    return (*header >> 40) == CONFIG_EL_MODEL_HEADER_MAGIC;
+    return ((el_ntohl(header->b4[0]) & 0xFFFFFF00) >> 8) == CONFIG_EL_MODEL_HEADER_MAGIC;
 }
 
-inline uint8_t Models::parse_model_id(const el_model_header_t* header) { return ((*header >> 32) & 0x000000F0) >> 4; }
+inline uint8_t Models::parse_model_id(const el_model_header_t* header) { return header->b1[3] >> 4; }
 
-inline uint8_t Models::parse_model_type(const el_model_header_t* header) { return (*header >> 32) & 0x0000000F; }
+inline uint8_t Models::parse_model_type(const el_model_header_t* header) { return header->b1[3] & 0x0F; }
 
-inline uint32_t Models::parse_model_size(const el_model_header_t* header) { return (*header & 0xFFFFFF00) >> 8; }
+inline uint32_t Models::parse_model_size(const el_model_header_t* header) {
+    return ((el_ntohl(header->b4[1]) & 0xFFFFFF00) >> 8);
+}
 
 }  // namespace edgelab::data
 

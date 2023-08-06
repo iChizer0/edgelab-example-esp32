@@ -148,7 +148,10 @@ typedef struct EL_ATTR_PACKED {
  *      [ 24 bits magic code | 4 bits id | 4 bits type | 24 bits size (unsigned) | 8 bits unused padding ]
  *      big-endian in file
  */
-typedef uint64_t el_model_header_t;
+typedef union EL_ATTR_PACKED {
+    unsigned char b1[8];
+    uint32_t      b4[2];
+} el_model_header_t;
 
 /**
  * @brief mdoel info specification
