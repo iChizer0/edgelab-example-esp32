@@ -6,8 +6,10 @@
 #include <string>
 #include <thread>
 
+#include "el_data.h"
 #include "edgelab.h"
 #include "el_device_esp.h"
+
 
 extern "C" void app_main(void) {
     // fetch hardware resource
@@ -18,7 +20,9 @@ extern "C" void app_main(void) {
     auto* instance = ReplServer::get_instance();
 
     // fetch resource (TODO: safely delete)
-    auto* model_loader{new ModelLoader()};
+    DataDelegate* datas = DataDelegate::get();
+    auto* model_loader{datas->get_models_handler()};
+    model_loader->init();
     auto* engine{new InferenceEngine<EngineName::TFLite>()};
 
     // register algorithms
@@ -43,23 +47,23 @@ extern "C" void app_main(void) {
     fdb_default_kv default_kv{.kvs = el_default_persistent_map,
                               .num = sizeof(el_default_persistent_map) / sizeof(el_default_persistent_map[0])};
     auto*          persistent_map{
-      new PersistentMap(CONFIG_EL_DATA_PERSISTENT_MAP_NAME, CONFIG_EL_DATA_PERSISTENT_MAP_PATH, &default_kv)};
+      new Storage()};
 
     // init temporary variables (TODO: current sensors should be a list)
     const el_algorithm_t*     current_algorithm{nullptr};
-    const el_model_handler_t* current_model{nullptr};
+    const el_model_info_t* current_model{nullptr};
     const el_sensor_t*        current_sensor{nullptr};
     el_img_t*                 current_img{nullptr};
 
     // fetch configs from persistent map (TODO: value check)
     {
-        auto boot_count_kv{el_make_map_kv("boot_count", boot_count)};
-        auto algorithm_config_kv{el_make_map_kv("algorithm_config", default_algorithm)};
-        auto sensor_config_kv{el_make_map_kv("sensor_config", default_sensor)};
-        auto model_id_kv{el_make_map_kv("model_id", default_model_id)};
+        auto boot_count_kv{el_make_storage_kv("boot_count", boot_count)};
+        auto algorithm_config_kv{el_make_storage_kv("algorithm_config", default_algorithm)};
+        auto sensor_config_kv{el_make_storage_kv("sensor_config", default_sensor)};
+        auto model_id_kv{el_make_storage_kv("model_id", default_model_id)};
 
         *persistent_map >> boot_count_kv >> algorithm_config_kv >> sensor_config_kv >> model_id_kv;
-        *persistent_map << el_make_map_kv("boot_count", static_cast<decltype(boot_count)>(boot_count_kv.value + 1u));
+        *persistent_map << el_make_storage_kv("boot_count", static_cast<decltype(boot_count)>(boot_count_kv.value + 1u));
 
         boot_count                                             = boot_count_kv.value;
         el_registered_algorithms[algorithm_config_kv.value.id] = algorithm_config_kv.value;
@@ -166,7 +170,7 @@ extern "C" void app_main(void) {
                            "ALGO_ID",
                            nullptr,
                            nullptr,
-                           el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+                           el_repl_cmd_write_cb_t([&](int argc, char** argv) -> el_err_code_t {
                                auto algorithm_id{static_cast<uint8_t>(std::atoi(argv[0]))};
                                auto os{std::ostringstream(std::ios_base::ate)};
                                auto it{el_registered_algorithms.find(algorithm_id)};
@@ -176,7 +180,7 @@ extern "C" void app_main(void) {
 
                                current_algorithm = &el_registered_algorithms[it->first];
                                *persistent_map
-                                 << el_make_map_kv("algorithm_config", el_registered_algorithms[it->first]);
+                                 << el_make_storage_kv("algorithm_config", el_registered_algorithms[it->first]);
 
                            AlgorithmReply:
                                os << "{\"algorithm_id\": " << unsigned(algorithm_id) << ", \"status\": " << int(ret)
@@ -192,7 +196,7 @@ extern "C" void app_main(void) {
       "",
       el_repl_cmd_exec_cb_t([&]() {
           auto        os{std::ostringstream(std::ios_base::ate)};
-          const auto& models{model_loader->get_model_handlers(true)};
+          const auto& models{model_loader->get_all_model_info(true)};
           os << "{\"count\": " << models.size() << ", \"models\": [";
           for (const auto& kv : models)
               os << "{\"id\": " << unsigned(kv.second.id) << ", \"type\": " << unsigned(kv.second.type)
@@ -211,11 +215,11 @@ extern "C" void app_main(void) {
       "MODEL_ID",
       nullptr,
       nullptr,
-      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> el_err_code_t {
           auto   model_id{static_cast<uint8_t>(std::atoi(argv[0]))};
           auto   os{std::ostringstream(std::ios_base::ate)};
-          auto   model{model_loader->get_model_handler(model_id)};
-          EL_STA ret{model.id ? EL_OK : EL_EINVAL};
+          auto   model{model_loader->get_model_info(model_id)};
+          el_err_code_t ret{model.id ? EL_OK : EL_EINVAL};
           if (ret != EL_OK) [[unlikely]]
               goto ModelReply;
 
@@ -231,7 +235,7 @@ extern "C" void app_main(void) {
               goto ModelInitError;
 
           //   current_model = &models[model_id];
-          //   *persistent_map << el_make_map_kv("model_id", model_id);
+          //   *persistent_map << el_make_storage_kv("model_id", model_id);
 
           goto ModelReply;
 
@@ -271,14 +275,14 @@ extern "C" void app_main(void) {
       "SENSOR_ID,ENABLE_SENSOR",
       nullptr,
       nullptr,
-      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> el_err_code_t {
           if (argc < 2) return EL_EINVAL;
           auto   sensor_id{static_cast<uint8_t>(std::atoi(argv[0]))};
           auto   enable{std::atoi(argv[1]) != 0 ? true : false};
           auto   it{el_registered_sensors.find(sensor_id)};
           auto   os{std::ostringstream(std::ios_base::ate)};
           auto   found{it != el_registered_sensors.end()};
-          EL_STA ret{found ? EL_OK : EL_EINVAL};
+          el_err_code_t ret{found ? EL_OK : EL_EINVAL};
           if (ret != EL_OK) [[unlikely]]
               goto SensorReply;
 
@@ -290,7 +294,7 @@ extern "C" void app_main(void) {
                   goto SensorReply;
               if (enable) {
                   current_sensor = &el_registered_sensors[it->first];
-                  *persistent_map << el_make_map_kv("sensor_config", el_registered_sensors[it->first]);
+                  *persistent_map << el_make_storage_kv("sensor_config", el_registered_sensors[it->first]);
               } else
                   current_sensor = nullptr;
           } else
@@ -309,14 +313,14 @@ extern "C" void app_main(void) {
                            "SENSOR_ID,SEND_DATA",
                            nullptr,
                            nullptr,
-                           el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+                           el_repl_cmd_write_cb_t([&](int argc, char** argv) -> el_err_code_t {
                                if (argc < 2) return EL_EINVAL;
                                auto   sensor_id{static_cast<uint8_t>(std::atoi(argv[0]))};
                                auto   send_data{std::atoi(argv[1]) != 0 ? true : false};
                                auto   it{el_registered_sensors.find(sensor_id)};
                                auto   os{std::ostringstream(std::ios_base::ate)};
                                auto   found{it != el_registered_sensors.end()};
-                               EL_STA ret{found ? EL_OK : EL_EINVAL};
+                               el_err_code_t ret{found ? EL_OK : EL_EINVAL};
                                // TODO: lookup from current sensor list (bit_set<256 - 1>)
                                if (ret != EL_OK) [[unlikely]]
                                    goto SampleReplyError;
@@ -398,13 +402,13 @@ extern "C" void app_main(void) {
       "N_TIMES,SEND_DATA",
       nullptr,
       nullptr,
-      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> EL_STA {
+      el_repl_cmd_write_cb_t([&](int argc, char** argv) -> el_err_code_t {
           auto thr{std::thread([&]() {
               if (argc < 2) return EL_EINVAL;
               // TODO: N times in a seperate RTOS thread
               auto   n_times{static_cast<int16_t>(std::atoi(argv[0]))};
               auto   os{std::ostringstream(std::ios_base::ate)};
-              EL_STA ret{current_algorithm ? EL_OK : EL_EINVAL};
+              el_err_code_t ret{current_algorithm ? EL_OK : EL_EINVAL};
               if (ret != EL_OK) [[unlikely]]
                   goto InvokeErrorReply;
 

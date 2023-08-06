@@ -42,8 +42,8 @@ class SerialEsp : public Serial {
    public:
     SerialEsp(usb_serial_jtag_driver_config_t driver_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT());
     ~SerialEsp() override;
-    EL_STA init() override;
-    EL_STA deinit() override;
+    el_err_code_t init() override;
+    el_err_code_t deinit() override;
     char   echo(bool only_visible = true) override;
     char   get_char() override;
     size_t get_line(char* buffer, size_t size, const char delim = 0x0d) override;

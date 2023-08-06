@@ -32,18 +32,19 @@
 #include <freertos/semphr.h>
 #include <spi_flash_mmap.h>
 
+#include "el_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CONFIG_EL_MODELS_PARTITION_NAME "models"
-
 typedef spi_flash_mmap_handle_t el_model_mmap_handler_t;
 
-bool el_model_partition_mmap_init(uint32_t*                partition_start_addr,
-                                  uint32_t*                partition_size,
-                                  const uint8_t**          flash_2_memory_map,
-                                  spi_flash_mmap_handle_t* mmap_handler);
+el_err_code_t el_model_partition_mmap_init(const char*              partition_name,
+                                    uint32_t*                partition_start_addr,
+                                    uint32_t*                partition_size,
+                                    const uint8_t**          flash_2_memory_map,
+                                    spi_flash_mmap_handle_t* mmap_handler);
 
 void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler);
 

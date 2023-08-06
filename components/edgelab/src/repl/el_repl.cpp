@@ -31,7 +31,7 @@ namespace edgelab {
 
 ReplServer* ReplServer::_instance = nullptr;
 
-EL_STA ReplHistory::add(std::string& line) {
+el_err_code_t ReplHistory::add(std::string& line) {
     if (line.empty()) {
         return EL_OK;
     }
@@ -57,7 +57,7 @@ EL_STA ReplHistory::add(std::string& line) {
     return EL_OK;
 }
 
-EL_STA ReplHistory::get(std::string& line, int index) {
+el_err_code_t ReplHistory::get(std::string& line, int index) {
     if (index < 0 || index >= _history.size()) {
         return EL_ELOG;
     }
@@ -66,7 +66,7 @@ EL_STA ReplHistory::get(std::string& line, int index) {
     return EL_OK;
 }
 
-EL_STA ReplHistory::next(std::string& line) {
+el_err_code_t ReplHistory::next(std::string& line) {
     if (_history.empty()) {
         return EL_ELOG;
     }
@@ -84,7 +84,7 @@ EL_STA ReplHistory::next(std::string& line) {
     return EL_OK;
 }
 
-EL_STA ReplHistory::prev(std::string& line) {
+el_err_code_t ReplHistory::prev(std::string& line) {
     if (_history.empty()) {
         return EL_ELOG;
     }
@@ -98,7 +98,7 @@ EL_STA ReplHistory::prev(std::string& line) {
     return EL_OK;
 }
 
-EL_STA ReplHistory::clear() {
+el_err_code_t ReplHistory::clear() {
     _history.clear();
     _history_index = -1;
     return EL_OK;
@@ -108,7 +108,7 @@ void ReplHistory::print() {
     for (auto& line : _history) el_printf("%s\n", line.c_str());
 }
 
-EL_STA ReplServer::register_cmd(el_repl_cmd_t& cmd) {
+el_err_code_t ReplServer::register_cmd(el_repl_cmd_t& cmd) {
     if (cmd.cmd.empty()) return EL_ELOG;
 
     std::transform(cmd.cmd.begin(), cmd.cmd.end(), cmd.cmd.begin(), ::toupper);
@@ -117,7 +117,7 @@ EL_STA ReplServer::register_cmd(el_repl_cmd_t& cmd) {
     return EL_OK;
 }
 
-EL_STA ReplServer::register_cmd(const char*            cmd,
+el_err_code_t ReplServer::register_cmd(const char*            cmd,
                                 const char*            desc,
                                 const char*            arg,
                                 el_repl_cmd_exec_cb_t  exec_cb,
@@ -134,7 +134,7 @@ EL_STA ReplServer::register_cmd(const char*            cmd,
     return register_cmd(cmd_t);
 }
 
-EL_STA ReplServer::register_cmds(std::vector<el_repl_cmd_t>& cmd_list) {
+el_err_code_t ReplServer::register_cmds(std::vector<el_repl_cmd_t>& cmd_list) {
     for (auto& cmd : cmd_list) {
         register_cmd(cmd);
     }
@@ -142,7 +142,7 @@ EL_STA ReplServer::register_cmds(std::vector<el_repl_cmd_t>& cmd_list) {
     return EL_OK;
 }
 
-EL_STA ReplServer::register_cmds(el_repl_cmd_t* cmd_list, int size) {
+el_err_code_t ReplServer::register_cmds(el_repl_cmd_t* cmd_list, int size) {
     for (int i = 0; i < size; i++) {
         register_cmd(cmd_list[i]);
     }
@@ -150,7 +150,7 @@ EL_STA ReplServer::register_cmds(el_repl_cmd_t* cmd_list, int size) {
     return EL_OK;
 }
 
-EL_STA ReplServer::unregister_cmd(std::string& cmd) {
+el_err_code_t ReplServer::unregister_cmd(std::string& cmd) {
     for (auto it = _cmd_list.begin(); it != _cmd_list.end(); it++) {
         if (it->cmd == cmd) {
             _cmd_list.erase(it);
@@ -161,7 +161,7 @@ EL_STA ReplServer::unregister_cmd(std::string& cmd) {
     return EL_ELOG;
 }
 
-EL_STA ReplServer::print_help() {
+el_err_code_t ReplServer::print_help() {
     el_printf("Command list:\n");
     for (auto& cmd : _cmd_list) {
         if (cmd.exec_cb) {
@@ -271,8 +271,8 @@ void ReplServer::loop(char c) {
     }
 }
 
-EL_STA ReplServer::_exec_cmd(std::string& cmd) {
-    EL_STA             ret      = EL_ELOG;
+el_err_code_t ReplServer::_exec_cmd(std::string& cmd) {
+    el_err_code_t             ret      = EL_ELOG;
     el_repl_cmd_type_t cmd_type = EL_REPL_CMD_NONE;
     std::string        cmd_name;
     std::string        cmd_arg;

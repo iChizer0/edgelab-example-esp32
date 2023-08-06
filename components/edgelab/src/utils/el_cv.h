@@ -40,9 +40,9 @@ namespace edgelab {
  *
  * @param src
  * @param dst
- * @return EL_STA
+ * @return el_err_code_t
  */
-EL_STA el_img_convert(const el_img_t* src, el_img_t* dst);
+el_err_code_t el_img_convert(const el_img_t* src, el_img_t* dst);
 
 /**
  * @brief Crop image
@@ -91,9 +91,9 @@ void el_draw_box(el_img_t* img, const el_box_t* box, bool show_text = false);
 void el_draw_rect(
   el_img_t* img, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint32_t color, uint16_t thickness = 1);
 
-EL_STA rgb_to_rgb(const el_img_t* src, el_img_t* dst);
+el_err_code_t rgb_to_rgb(const el_img_t* src, el_img_t* dst);
 
-EL_STA rgb_to_jpeg(const el_img_t* src, el_img_t* dst);
+el_err_code_t rgb_to_jpeg(const el_img_t* src, el_img_t* dst);
 
 #ifdef __cplusplus
 }  // namespace edgelab

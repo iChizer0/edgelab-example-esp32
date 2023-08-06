@@ -43,7 +43,7 @@ const uint8_t RGB565_TO_RGB888_LOOKUP_TABLE_6[] = {
   0xC2, 0xC6, 0xCA, 0xCE, 0xD2, 0xD7, 0xDB, 0xDF, 0xE3, 0xE7, 0xEB, 0xEF, 0xF3, 0xF7, 0xFB, 0xFF,
 };
 
-EL_ATTR_WEAK EL_STA yuv422p_to_rgb(const el_img_t* src, el_img_t* dst) {
+EL_ATTR_WEAK el_err_code_t yuv422p_to_rgb(const el_img_t* src, el_img_t* dst) {
     int32_t  y;
     int32_t  cr;
     int32_t  cb;
@@ -101,7 +101,7 @@ EL_ATTR_WEAK EL_STA yuv422p_to_rgb(const el_img_t* src, el_img_t* dst) {
     return EL_OK;
 }
 
-EL_ATTR_WEAK EL_STA rgb_to_rgb(const el_img_t* src, el_img_t* dst) {
+EL_ATTR_WEAK el_err_code_t rgb_to_rgb(const el_img_t* src, el_img_t* dst) {
     uint8_t  r = 0, g = 0, b = 0;
     uint32_t init_index, index;
     float    beta_h = (float)src->height / dst->height, beta_w = (float)src->width / dst->width;
@@ -162,10 +162,10 @@ EL_ATTR_WEAK EL_STA rgb_to_rgb(const el_img_t* src, el_img_t* dst) {
 }
 
 #ifdef CONFIG_EL_LIB_JPEGENC
-EL_ATTR_WEAK EL_STA rgb_to_jpeg(const el_img_t* src, el_img_t* dst) {
+EL_ATTR_WEAK el_err_code_t rgb_to_jpeg(const el_img_t* src, el_img_t* dst) {
     JPEGENCODE jpe;
     int        rc            = 0;
-    EL_STA     err           = EL_OK;
+    el_err_code_t     err           = EL_OK;
     int        iMCUCount     = 0;
     int        pitch         = 0;
     int        bytesPerPixel = 0;
@@ -209,7 +209,7 @@ exit:
 
 #endif
 
-EL_ATTR_WEAK EL_STA el_img_convert(const el_img_t* src, el_img_t* dst) {
+EL_ATTR_WEAK el_err_code_t el_img_convert(const el_img_t* src, el_img_t* dst) {
     if (src == nullptr || dst == nullptr) {
         return EL_EINVAL;
     }
@@ -320,7 +320,7 @@ EL_ATTR_WEAK void el_draw_rect(
     }
 }
 
-// EL_STA
+// el_err_code_t
 //     el_draw_line(el_img_t* img, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint32_t
 //     color)
 // {

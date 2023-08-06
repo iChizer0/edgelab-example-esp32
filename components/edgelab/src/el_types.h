@@ -35,7 +35,6 @@
 
 #ifdef __cplusplus
 extern "C" {
-// namespace edgelab {
 #endif
 
 /*------------------------------------------------------------------*/
@@ -54,7 +53,7 @@ enum {
     EL_EPERM   = 9,  // operation not permitted
 };
 
-typedef uint8_t EL_STA;
+typedef uint8_t el_err_code_t;
 
 /*------------------------------------------------------------------*/
 /* STRUCTURES
@@ -143,9 +142,36 @@ typedef struct EL_ATTR_PACKED {
     uint8_t parameters[6];
 } el_sensor_t;
 
+/**
+ * @brief model header specification
+ * @details
+ *      [ 24 bits magic code | 4 bits id | 4 bits type ]
+ *      big-endian in file
+ */
+typedef uint32_t el_model_header_t;
+
+/**
+ * @brief mdoel info specification
+ * @details 
+ *      valid id range [1, 15]:
+ *          0 -> undefined
+ *          each model should have a unique id
+ *      valid type range [1, 15]:
+ *          0 -> undefined
+ *          1 -> FOMO
+ *          2 -> PFLD
+ *          3 -> YOLO
+ */
+typedef struct EL_ATTR_PACKED {
+    uint8_t        id;
+    uint8_t        type;
+    uint32_t       addr_flash;
+    uint32_t       size;
+    const uint8_t* addr_memory ;
+} el_model_info_t;
+
 #ifdef __cplusplus
 }
-// }
 #endif
 
-#endif /* _EL_TYPES_H_ */
+#endif

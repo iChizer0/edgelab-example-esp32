@@ -360,17 +360,17 @@ class TFLiteEngine : public edgelab::inference::base::Engine {
     TFLiteEngine();
     ~TFLiteEngine();
 
-    EL_STA init() override;
-    EL_STA init(size_t size) override;
-    EL_STA init(void* pool, size_t size) override;
+    el_err_code_t init() override;
+    el_err_code_t init(size_t size) override;
+    el_err_code_t init(void* pool, size_t size) override;
 
-    EL_STA run() override;
+    el_err_code_t run() override;
 
 #ifdef CONFIG_EL_FILESYSTEM
-    EL_STA load_model(const char* model_path) override;
+    el_err_code_t load_model(const char* model_path) override;
 #endif
-    EL_STA           load_model(const void* model_data, size_t model_size) override;
-    EL_STA           set_input(size_t index, const void* input_data, size_t input_size) override;
+    el_err_code_t           load_model(const void* model_data, size_t model_size) override;
+    el_err_code_t           set_input(size_t index, const void* input_data, size_t input_size) override;
     void*            get_input(size_t index) override;
     void*            get_output(size_t index) override;
     el_shape_t       get_input_shape(size_t index) override;
@@ -380,7 +380,7 @@ class TFLiteEngine : public edgelab::inference::base::Engine {
 #ifdef CONFIG_EL_INFERENCER_TENSOR_NAME
     size_t           get_input_index(const char* input_name) override;
     size_t           get_output_index(const char* output_name) override;
-    EL_STA           set_input(const char* input_name, const void* input_data, size_t input_size) override;
+    el_err_code_t           set_input(const char* input_name, const void* input_data, size_t input_size) override;
     void*            get_input(const char* input_name) override;
     void*            get_output(const char* output_name) override;
     el_shape_t       get_input_shape(const char* input_name) override;

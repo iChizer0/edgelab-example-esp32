@@ -47,18 +47,18 @@ class Engine {
     Engine()          = default;
     virtual ~Engine() = default;
 
-    virtual EL_STA init()                        = 0;
-    virtual EL_STA init(size_t size)             = 0;
-    virtual EL_STA init(void* pool, size_t size) = 0;
+    virtual el_err_code_t init()                        = 0;
+    virtual el_err_code_t init(size_t size)             = 0;
+    virtual el_err_code_t init(void* pool, size_t size) = 0;
 
-    virtual EL_STA run() = 0;
+    virtual el_err_code_t run() = 0;
 
 #ifdef CONFIG_EL_FILESYSTEM
-    virtual EL_STA load_model(const char* model_path) = 0;
+    virtual el_err_code_t load_model(const char* model_path) = 0;
 #endif
-    virtual EL_STA load_model(const void* model_data, size_t model_size) = 0;
+    virtual el_err_code_t load_model(const void* model_data, size_t model_size) = 0;
 
-    virtual EL_STA set_input(size_t index, const void* input_data, size_t input_size) = 0;
+    virtual el_err_code_t set_input(size_t index, const void* input_data, size_t input_size) = 0;
     virtual void*  get_input(size_t index)                                            = 0;
 
     virtual void*            get_output(size_t index)             = 0;
@@ -70,7 +70,7 @@ class Engine {
     virtual size_t           get_input_index(const char* input_name)                                      = 0;
     virtual size_t           get_output_index(const char* output_name)                                    = 0;
     virtual void*            get_input(const char* input_name)                                            = 0;
-    virtual EL_STA           set_input(const char* input_name, const void* input_data, size_t input_size) = 0;
+    virtual el_err_code_t           set_input(const char* input_name, const void* input_data, size_t input_size) = 0;
     virtual void*            get_output(const char* output_name)                                          = 0;
     virtual el_shape_t       get_input_shape(const char* input_name)                                      = 0;
     virtual el_shape_t       get_output_shape(const char* output_name)                                    = 0;

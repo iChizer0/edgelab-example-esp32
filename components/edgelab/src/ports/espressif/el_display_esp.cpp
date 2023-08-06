@@ -36,7 +36,7 @@ DisplayEsp::~DisplayEsp()
 {
 }
 
-EL_STA DisplayEsp::init()
+el_err_code_t DisplayEsp::init()
 {
     spi_config_t bus_conf = {
         .miso_io_num = static_cast<gpio_num_t>(BOARD_LCD_MISO),
@@ -94,7 +94,7 @@ EL_STA DisplayEsp::init()
     return EL_OK;
 }
 
-EL_STA DisplayEsp::show(const el_img_t *img)
+el_err_code_t DisplayEsp::show(const el_img_t *img)
 {
     esp_err_t ret = _lcd.draw_bitmap(0, 0, img->width, img->height, (uint16_t *)(img->data));
     if (ESP_OK != ret) {
@@ -104,7 +104,7 @@ EL_STA DisplayEsp::show(const el_img_t *img)
     return EL_OK;
 }
 
-EL_STA DisplayEsp::deinit()
+el_err_code_t DisplayEsp::deinit()
 {
     esp_err_t ret = _lcd.deinit();
     if (ESP_OK != ret) {

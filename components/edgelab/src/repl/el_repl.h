@@ -39,9 +39,9 @@
 
 namespace edgelab {
 
-typedef std::function<EL_STA(void)>        el_repl_cmd_exec_cb_t;
-typedef std::function<EL_STA(void)>        el_repl_cmd_read_cb_t;
-typedef std::function<EL_STA(int, char**)> el_repl_cmd_write_cb_t;
+typedef std::function<el_err_code_t(void)>        el_repl_cmd_exec_cb_t;
+typedef std::function<el_err_code_t(void)>        el_repl_cmd_read_cb_t;
+typedef std::function<el_err_code_t(int, char**)> el_repl_cmd_write_cb_t;
 
 typedef enum {
     EL_REPL_CMD_NONE  = 0x00,
@@ -69,16 +69,16 @@ class ReplHistory {
     ReplHistory(int max_size = 10) : _max_size(max_size) { _history_index = -1; };
     ~ReplHistory(){};
 
-    EL_STA add(std::string& line);
-    EL_STA add(const char* line) {
+    el_err_code_t add(std::string& line);
+    el_err_code_t add(const char* line) {
         std::string str(line);
         return add(str);
     }
 
-    EL_STA get(std::string& line, int index);
-    EL_STA next(std::string& line);
-    EL_STA prev(std::string& line);
-    EL_STA clear();
+    el_err_code_t get(std::string& line, int index);
+    el_err_code_t next(std::string& line);
+    el_err_code_t prev(std::string& line);
+    el_err_code_t clear();
     int    size() { return _history.size(); };
     void   print();
 };
@@ -110,20 +110,20 @@ class ReplServer {
     void loop(const char* line, size_t len);
     void loop(char c);
 
-    EL_STA register_cmd(el_repl_cmd_t& cmd);
-    EL_STA register_cmd(const char*            cmd,
+    el_err_code_t register_cmd(el_repl_cmd_t& cmd);
+    el_err_code_t register_cmd(const char*            cmd,
                         const char*            desc,
                         const char*            arg,
                         el_repl_cmd_exec_cb_t  exec_cb,
                         el_repl_cmd_read_cb_t  read_cb,
                         el_repl_cmd_write_cb_t write_cb);
-    EL_STA register_cmds(std::vector<el_repl_cmd_t>& cmd_list);
-    EL_STA register_cmds(el_repl_cmd_t* cmd_list, int size);
-    EL_STA unregister_cmd(std::string& cmd);
-    EL_STA print_help();
+    el_err_code_t register_cmds(std::vector<el_repl_cmd_t>& cmd_list);
+    el_err_code_t register_cmds(el_repl_cmd_t* cmd_list, int size);
+    el_err_code_t unregister_cmd(std::string& cmd);
+    el_err_code_t print_help();
 
    private:
-    EL_STA _exec_cmd(std::string& line);
+    el_err_code_t _exec_cmd(std::string& line);
 };
 
 }  // namespace edgelab

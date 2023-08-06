@@ -32,22 +32,26 @@ extern "C" {
 static SemaphoreHandle_t      el_flash_db_lock      = NULL;
 const static esp_partition_t* el_flash_db_partition = NULL;
 
-bool el_model_partition_mmap_init(uint32_t*                partition_start_addr,
-                                  uint32_t*                partition_size,
-                                  const uint8_t**          flash_2_memory_map,
-                                  spi_flash_mmap_handle_t* mmap_handler) {
-    const esp_partition_t* partition{esp_partition_find_first(
-      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, CONFIG_EL_MODELS_PARTITION_NAME)};
-    assert(partition != NULL);
+el_err_code_t el_model_partition_mmap_init(const char*              partition_name,
+                                    uint32_t*                partition_start_addr,
+                                    uint32_t*                partition_size,
+                                    const uint8_t**          flash_2_memory_map,
+                                    spi_flash_mmap_handle_t* mmap_handler) {
+    const esp_partition_t* partition{
+      esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, partition_name)};
+    if (!partition) return EL_EINVAL;
 
     *partition_start_addr = partition->address;
     *partition_size       = partition->size;
 
-    return spi_flash_mmap(*partition_start_addr,
-                          *partition_size,
-                          SPI_FLASH_MMAP_DATA,
-                          reinterpret_cast<const void**>(flash_2_memory_map),
-                          mmap_handler) == ESP_OK;
+    esp_err_t ret{spi_flash_mmap(*partition_start_addr,
+                                 *partition_size,
+                                 SPI_FLASH_MMAP_DATA,
+                                 reinterpret_cast<const void**>(flash_2_memory_map),
+                                 mmap_handler)};
+    if (ret != ESP_OK) return EL_EINVAL;
+
+    return EL_OK;
 }
 
 void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler) { spi_flash_munmap(*mmap_handler); }

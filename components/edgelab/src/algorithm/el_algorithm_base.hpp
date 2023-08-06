@@ -79,20 +79,20 @@ template <typename InferenceEngine, typename InputType, typename OutputType> cla
     ScoreType                     __score_threshold;
     std::forward_list<OutputType> __results;
 
-    virtual EL_STA preprocess()  = 0;
-    virtual EL_STA postprocess() = 0;
+    virtual el_err_code_t preprocess()  = 0;
+    virtual el_err_code_t postprocess() = 0;
 
    public:
     Algorithm(InferenceEngine* engine, ScoreType score_threshold = 40);
     virtual ~Algorithm();
 
-    EL_STA run(InputType* input);
+    el_err_code_t run(InputType* input);
 
     uint32_t get_preprocess_time() const;
     uint32_t get_run_time() const;
     uint32_t get_postprocess_time() const;
 
-    EL_STA    set_score_threshold(ScoreType threshold);
+    el_err_code_t    set_score_threshold(ScoreType threshold);
     ScoreType get_score_threshold() const;
 
     const std::forward_list<OutputType>& get_results() const;
@@ -122,8 +122,8 @@ Algorithm<InferenceEngine, InputType, OutputType>::~Algorithm() {
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Algorithm<InferenceEngine, InputType, OutputType>::run(InputType* input) {
-    EL_STA   ret{EL_OK};
+el_err_code_t Algorithm<InferenceEngine, InputType, OutputType>::run(InputType* input) {
+    el_err_code_t   ret{EL_OK};
     uint32_t start_time{0};
     uint32_t end_time{0};
 
@@ -176,7 +176,7 @@ uint32_t Algorithm<InferenceEngine, InputType, OutputType>::get_postprocess_time
 }
 
 template <typename InferenceEngine, typename InputType, typename OutputType>
-EL_STA Algorithm<InferenceEngine, InputType, OutputType>::set_score_threshold(ScoreType threshold) {
+el_err_code_t Algorithm<InferenceEngine, InputType, OutputType>::set_score_threshold(ScoreType threshold) {
     __score_threshold = threshold;
     return EL_OK;
 }

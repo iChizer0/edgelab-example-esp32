@@ -41,8 +41,8 @@ class PFLD : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageTy
     ImageType _input_img;
 
    protected:
-    EL_STA preprocess() override;
-    EL_STA postprocess() override;
+    el_err_code_t preprocess() override;
+    el_err_code_t postprocess() override;
 
    public:
     PFLD(InferenceEngine* engine);
@@ -79,8 +79,8 @@ PFLD<InferenceEngine, ImageType, PointType>::~PFLD() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename PointType>
-EL_STA PFLD<InferenceEngine, ImageType, PointType>::preprocess() {
-    EL_STA ret{EL_OK};
+el_err_code_t PFLD<InferenceEngine, ImageType, PointType>::preprocess() {
+    el_err_code_t ret{EL_OK};
     auto*  i_img{this->__p_input};
 
     // convert image
@@ -99,7 +99,7 @@ EL_STA PFLD<InferenceEngine, ImageType, PointType>::preprocess() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename PointType>
-EL_STA PFLD<InferenceEngine, ImageType, PointType>::postprocess() {
+el_err_code_t PFLD<InferenceEngine, ImageType, PointType>::postprocess() {
     this->__results.clear();
 
     // get output

@@ -31,13 +31,15 @@
 
 namespace edgelab {
 
-namespace data {
+
+using Models  = data::Models;
+using Storage = data::Storage;
 
 class DataDelegate {
    public:
     ~DataDelegate() = default;
 
-    static DataDelegate* init() {
+    static DataDelegate* get() {
         static DataDelegate data_delegate = DataDelegate();
         return &data_delegate;
     }
@@ -47,8 +49,8 @@ class DataDelegate {
 
    private:
     DataDelegate() {
-        static Models  models  = Models();
-        static Storage storage = Storage();
+        static Models  models  = Models{};
+        static Storage storage = Storage{};
 
         _models_handler  = &models;
         _storage_handler = &storage;
@@ -58,11 +60,6 @@ class DataDelegate {
     Storage* _storage_handler;
 };
 
-}  // namespace data
-
-using Models  = data::Models;
-using Storage = data::Storage;
-using Data    = data::DataDelegate;
 
 }  // namespace edgelab
 

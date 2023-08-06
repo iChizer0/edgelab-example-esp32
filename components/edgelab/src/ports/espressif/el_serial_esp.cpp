@@ -33,13 +33,13 @@ SerialEsp::SerialEsp(usb_serial_jtag_driver_config_t driver_config) : _driver_co
 
 SerialEsp::~SerialEsp() { deinit(); }
 
-EL_STA SerialEsp::init() {
+el_err_code_t SerialEsp::init() {
     _is_present = usb_serial_jtag_driver_install(&_driver_config) == ESP_OK;
 
     return _is_present ? EL_OK : EL_EIO;
 }
 
-EL_STA SerialEsp::deinit() {
+el_err_code_t SerialEsp::deinit() {
     _is_present = !(usb_serial_jtag_driver_uninstall() == ESP_OK);
 
     return !_is_present ? EL_OK : EL_EIO;

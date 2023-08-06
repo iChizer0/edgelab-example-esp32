@@ -45,8 +45,8 @@ class FOMO : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageTy
     ImageType _input_img;
 
    protected:
-    EL_STA preprocess() override;
-    EL_STA postprocess() override;
+    el_err_code_t preprocess() override;
+    el_err_code_t postprocess() override;
 
    public:
     FOMO(InferenceEngine* engine, ScoreType score_threshold = 80);
@@ -83,8 +83,8 @@ FOMO<InferenceEngine, ImageType, BoxType>::~FOMO() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA FOMO<InferenceEngine, ImageType, BoxType>::preprocess() {
-    EL_STA ret{EL_OK};
+el_err_code_t FOMO<InferenceEngine, ImageType, BoxType>::preprocess() {
+    el_err_code_t ret{EL_OK};
     auto*  i_img{this->__p_input};
 
     // convert image
@@ -103,7 +103,7 @@ EL_STA FOMO<InferenceEngine, ImageType, BoxType>::preprocess() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA FOMO<InferenceEngine, ImageType, BoxType>::postprocess() {
+el_err_code_t FOMO<InferenceEngine, ImageType, BoxType>::postprocess() {
     this->__results.clear();
 
     // get output

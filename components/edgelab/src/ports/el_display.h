@@ -38,9 +38,9 @@ class Display {
    public:
     Display(/* args */){};
     virtual ~Display(){};
-    virtual EL_STA init()                    = 0;
-    virtual EL_STA deinit()                  = 0;
-    virtual EL_STA show(const el_img_t* img) = 0;
+    virtual el_err_code_t init()                    = 0;
+    virtual el_err_code_t deinit()                  = 0;
+    virtual el_err_code_t show(const el_img_t* img) = 0;
 
     operator bool() { return _is_present; }
 };

@@ -27,7 +27,7 @@
 
 namespace edgelab {
 
-EL_STA CameraEsp::init(size_t width, size_t height) {
+el_err_code_t CameraEsp::init(size_t width, size_t height) {
     config.ledc_channel = LEDC_CHANNEL_0;
     config.ledc_timer   = LEDC_TIMER_0;
     config.pin_d0       = CAMERA_PIN_D0;
@@ -75,12 +75,12 @@ EL_STA CameraEsp::init(size_t width, size_t height) {
     return EL_OK;
 }
 
-EL_STA CameraEsp::deinit() {
+el_err_code_t CameraEsp::deinit() {
     this->_is_present = false;
     return EL_OK;
 }
 
-EL_STA CameraEsp::start_stream() {
+el_err_code_t CameraEsp::start_stream() {
     fb = esp_camera_fb_get();
     if (!fb) {
         EL_ELOG("Camera capture failed");
@@ -90,12 +90,12 @@ EL_STA CameraEsp::start_stream() {
     return EL_OK;
 }
 
-EL_STA CameraEsp::stop_stream() {
+el_err_code_t CameraEsp::stop_stream() {
     esp_camera_fb_return(fb);
     this->_is_streaming = false;
     return EL_OK;
 }
-EL_STA CameraEsp::get_frame(el_img_t* img) {
+el_err_code_t CameraEsp::get_frame(el_img_t* img) {
     if (!this->_is_streaming) {
         return EL_EIO;
     }
@@ -110,8 +110,8 @@ EL_STA CameraEsp::get_frame(el_img_t* img) {
     img->format = EL_PIXEL_FORMAT_RGB565;
     return EL_OK;
 }
-EL_STA CameraEsp::get_jpeg(el_img_t* img) { return EL_OK; }
-EL_STA CameraEsp::get_resolutions(el_res_t** res, size_t* res_count) { return EL_OK; }
+el_err_code_t CameraEsp::get_jpeg(el_img_t* img) { return EL_OK; }
+el_err_code_t CameraEsp::get_resolutions(el_res_t** res, size_t* res_count) { return EL_OK; }
 
 framesize_t CameraEsp::fit_resolution(size_t width, size_t height) {
     framesize_t res = FRAMESIZE_INVALID;

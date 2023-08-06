@@ -354,9 +354,9 @@ TFLiteEngine::~TFLiteEngine() {
 #endif
 }
 
-EL_STA TFLiteEngine::init() { return EL_OK; }
+el_err_code_t TFLiteEngine::init() { return EL_OK; }
 
-EL_STA TFLiteEngine::init(size_t size) {
+el_err_code_t TFLiteEngine::init(size_t size) {
     void* pool = new uint8_t[size];
     if (pool == nullptr) {
         return EL_ENOMEM;
@@ -365,13 +365,13 @@ EL_STA TFLiteEngine::init(size_t size) {
     memory_pool.size = size;
     return init();
 }
-EL_STA TFLiteEngine::init(void* pool, size_t size) {
+el_err_code_t TFLiteEngine::init(void* pool, size_t size) {
     memory_pool.pool = pool;
     memory_pool.size = size;
     return init();
 }
 
-EL_STA TFLiteEngine::run() {
+el_err_code_t TFLiteEngine::run() {
     EL_ASSERT(interpreter != nullptr);
 
     if (kTfLiteOk != interpreter->Invoke()) {
@@ -380,7 +380,7 @@ EL_STA TFLiteEngine::run() {
     return EL_OK;
 }
 
-EL_STA TFLiteEngine::load_model(const void* model_data, size_t model_size) {
+el_err_code_t TFLiteEngine::load_model(const void* model_data, size_t model_size) {
     model = tflite::GetModel(model_data);
     if (model == nullptr) {
         return EL_EINVAL;
@@ -398,7 +398,7 @@ EL_STA TFLiteEngine::load_model(const void* model_data, size_t model_size) {
     }
     return EL_OK;
 }
-EL_STA TFLiteEngine::set_input(size_t index, const void* input_data, size_t input_size) {
+el_err_code_t TFLiteEngine::set_input(size_t index, const void* input_data, size_t input_size) {
     EL_ASSERT(interpreter != nullptr);
 
     if (index >= interpreter->inputs().size()) {
@@ -510,8 +510,8 @@ el_quant_param_t TFLiteEngine::get_output_quant_param(size_t index) {
 }
 
 #ifdef CONFIG_EL_FILESYSTEM
-EL_STA TFLiteEngine::load_model(const char* model_path) {
-    EL_STA        ret  = EL_OK;
+el_err_code_t TFLiteEngine::load_model(const char* model_path) {
+    el_err_code_t        ret  = EL_OK;
     size_t        size = 0;
     std::ifstream file(model_path, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {

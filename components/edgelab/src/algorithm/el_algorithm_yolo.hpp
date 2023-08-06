@@ -59,14 +59,14 @@ class YOLO : public edgelab::algorithm::base::Algorithm<InferenceEngine, ImageTy
     };
 
    protected:
-    EL_STA preprocess() override;
-    EL_STA postprocess() override;
+    el_err_code_t preprocess() override;
+    el_err_code_t postprocess() override;
 
    public:
     YOLO(InferenceEngine* engine, ScoreType score_threshold = 50, NMSThresholdType nms_threshold = 45);
     ~YOLO();
 
-    EL_STA           set_nms_threshold(ScoreType threshold);
+    el_err_code_t           set_nms_threshold(ScoreType threshold);
     NMSThresholdType get_nms_threshold() const;
 };
 
@@ -105,8 +105,8 @@ YOLO<InferenceEngine, ImageType, BoxType>::~YOLO() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA YOLO<InferenceEngine, ImageType, BoxType>::preprocess() {
-    EL_STA ret{EL_OK};
+el_err_code_t YOLO<InferenceEngine, ImageType, BoxType>::preprocess() {
+    el_err_code_t ret{EL_OK};
     auto*  i_img{this->__p_input};
 
     // convert image
@@ -127,7 +127,7 @@ EL_STA YOLO<InferenceEngine, ImageType, BoxType>::preprocess() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA YOLO<InferenceEngine, ImageType, BoxType>::postprocess() {
+el_err_code_t YOLO<InferenceEngine, ImageType, BoxType>::postprocess() {
     this->__results.clear();
 
     // get output
@@ -187,7 +187,7 @@ EL_STA YOLO<InferenceEngine, ImageType, BoxType>::postprocess() {
 }
 
 template <typename InferenceEngine, typename ImageType, typename BoxType>
-EL_STA YOLO<InferenceEngine, ImageType, BoxType>::set_nms_threshold(NMSThresholdType threshold) {
+el_err_code_t YOLO<InferenceEngine, ImageType, BoxType>::set_nms_threshold(NMSThresholdType threshold) {
     _nms_threshold = threshold;
     return EL_OK;
 }

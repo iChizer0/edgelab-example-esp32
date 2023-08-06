@@ -43,13 +43,13 @@ class Camera {
    public:
     Camera(/* args */){};
     virtual ~Camera(){};
-    virtual EL_STA init(size_t width, size_t height)                  = 0;
-    virtual EL_STA deinit()                                           = 0;
-    virtual EL_STA start_stream()                                     = 0;
-    virtual EL_STA stop_stream()                                      = 0;
-    virtual EL_STA get_frame(el_img_t* img)                           = 0;
-    virtual EL_STA get_jpeg(el_img_t* img)                            = 0;
-    virtual EL_STA get_resolutions(el_res_t** res, size_t* res_count) = 0;
+    virtual el_err_code_t init(size_t width, size_t height)                  = 0;
+    virtual el_err_code_t deinit()                                           = 0;
+    virtual el_err_code_t start_stream()                                     = 0;
+    virtual el_err_code_t stop_stream()                                      = 0;
+    virtual el_err_code_t get_frame(el_img_t* img)                           = 0;
+    virtual el_err_code_t get_jpeg(el_img_t* img)                            = 0;
+    virtual el_err_code_t get_resolutions(el_res_t** res, size_t* res_count) = 0;
 
     bool is_present() { return _is_streaming; }
     operator bool() { return _is_present; }
