@@ -63,7 +63,7 @@ static int el_flash_db_init(void) {
     }
 
     el_flash_db_partition = esp_partition_find_first(
-      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, EL_FLASH_DB_PARTITION_NAME);
+      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, CONFIG_EL_STORAGE_PARTITION_NAME);
 
     assert(el_flash_db_partition != NULL);
 

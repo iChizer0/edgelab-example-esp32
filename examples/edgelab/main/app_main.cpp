@@ -196,7 +196,7 @@ extern "C" void app_main(void) {
       "",
       el_repl_cmd_exec_cb_t([&]() {
           auto        os{std::ostringstream(std::ios_base::ate)};
-          const auto& models{model_loader->get_all_model_info(true)};
+          const auto& models{model_loader->get_all_model_info()};
           os << "{\"count\": " << models.size() << ", \"models\": [";
           for (const auto& kv : models)
               os << "{\"id\": " << unsigned(kv.second.id) << ", \"type\": " << unsigned(kv.second.type)

@@ -145,10 +145,10 @@ typedef struct EL_ATTR_PACKED {
 /**
  * @brief model header specification
  * @details
- *      [ 24 bits magic code | 4 bits id | 4 bits type ]
+ *      [ 24 bits magic code | 4 bits id | 4 bits type | 24 bits size (unsigned) | 8 bits unused padding ]
  *      big-endian in file
  */
-typedef uint32_t el_model_header_t;
+typedef uint64_t el_model_header_t;
 
 /**
  * @brief mdoel info specification

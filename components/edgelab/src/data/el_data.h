@@ -29,8 +29,11 @@
 #include "el_data_models.hpp"
 #include "el_data_storage.hpp"
 
-namespace edgelab {
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+namespace edgelab {
 
 using Models  = data::Models;
 using Storage = data::Storage;
@@ -65,7 +68,10 @@ class DataDelegate {
 
 // TODO: avoid expose the namespace to global
 using namespace edgelab::data::traits;
-using namespace edgelab::data::types;
 using namespace edgelab::data::utility;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

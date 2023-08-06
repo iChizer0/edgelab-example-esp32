@@ -32,6 +32,7 @@
 #include <freertos/semphr.h>
 #include <spi_flash_mmap.h>
 
+#include "el_config_internal.h"
 #include "el_types.h"
 
 #ifdef __cplusplus
@@ -41,35 +42,30 @@ extern "C" {
 typedef spi_flash_mmap_handle_t el_model_mmap_handler_t;
 
 el_err_code_t el_model_partition_mmap_init(const char*              partition_name,
-                                    uint32_t*                partition_start_addr,
-                                    uint32_t*                partition_size,
-                                    const uint8_t**          flash_2_memory_map,
-                                    spi_flash_mmap_handle_t* mmap_handler);
+                                           uint32_t*                partition_start_addr,
+                                           uint32_t*                partition_size,
+                                           const uint8_t**          flash_2_memory_map,
+                                           spi_flash_mmap_handle_t* mmap_handler);
 
 void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler);
-
-#define EL_FLASH_DB_PARTITION_NAME        "db"
-#define EL_FLASH_DB_PARTITION_MOUNT_POINT "nor_flash0"
-#define EL_FLASH_DB_PARTITION_FS_NAME_0   "kvdb0"
-#define EL_FLASH_DB_PARTITION_FS_SIZE_0   (64 * 1024)
 
 #ifdef CONFIG_EL_LIB_FLASHDB
     #include <fal_def.h>
 
-    #define NOR_FLASH_DEV_NAME EL_FLASH_DB_PARTITION_MOUNT_POINT
+    #define NOR_FLASH_DEV_NAME CONFIG_EL_STORAGE_PARTITION_MOUNT_POINT
     #define FAL_FLASH_DEV_TABLE \
         { &el_flash_db_nor_flash0, }
 
     #define FAL_PART_HAS_TABLE_CFG
     #ifdef FAL_PART_HAS_TABLE_CFG
-        #define FAL_PART_TABLE                    \
-            {                                     \
-                {FAL_PART_MAGIC_WORD,             \
-                 EL_FLASH_DB_PARTITION_FS_NAME_0, \
-                 NOR_FLASH_DEV_NAME,              \
-                 0,                               \
-                 EL_FLASH_DB_PARTITION_FS_SIZE_0, \
-                 0},                              \
+        #define FAL_PART_TABLE                          \
+            {                                           \
+                {FAL_PART_MAGIC_WORD,                   \
+                 CONFIG_EL_STORAGE_PARTITION_FS_NAME_0, \
+                 NOR_FLASH_DEV_NAME,                    \
+                 0,                                     \
+                 CONFIG_EL_STORAGE_PARTITION_FS_SIZE_0, \
+                 0},                                    \
             }
     #endif
 
@@ -78,10 +74,12 @@ void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler);
         #define FDB_KV_AUTO_UPDATE
     #endif
     #define FDB_USING_FAL_MODE
-    #define FDB_WRITE_GRAN 1
-    #define FDB_DEBUG_ENABLE
-
+    #define FDB_WRITE_GRAN       (1)
     #define FLASH_ERASE_MIN_SIZE (4 * 1024)
+
+    #ifdef CONFIG_EL_DEBUG
+        #define FDB_DEBUG_ENABLE
+    #endif
 
 extern const struct fal_flash_dev el_flash_db_nor_flash0;
 

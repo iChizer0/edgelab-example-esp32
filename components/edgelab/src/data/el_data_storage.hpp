@@ -37,8 +37,7 @@
 #include <type_traits>
 #include <utility>
 
-#define CONFIG_EL_DATA_STORAGE_NAME "edgelab_db"
-#define CONFIG_EL_DATA_STORAGE_PATH "kvdb0"
+#include "el_config_internal.h"
 
 #define CONFIG_EL_LIB_FLASHDB
 #ifdef CONFIG_EL_LIB_FLASHDB
@@ -160,8 +159,8 @@ class Storage {
 
     // currently the consistent of Storage is only ensured on a single instance if there're multiple instances that has same name and save path
     explicit Storage(struct fdb_default_kv* default_kv = nullptr,
-                     const char*            name       = CONFIG_EL_DATA_STORAGE_NAME,
-                     const char*            path       = CONFIG_EL_DATA_STORAGE_PATH) noexcept
+                     const char*            name       = CONFIG_EL_STORAGE_NAME,
+                     const char*            path       = CONFIG_EL_STORAGE_PATH) noexcept
         : __lock(xSemaphoreCreateCounting(1, 1)) {
         volatile const Guard guard(this);
         __kvdb = new struct fdb_kvdb();
