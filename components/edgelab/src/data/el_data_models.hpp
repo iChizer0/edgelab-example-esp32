@@ -96,12 +96,12 @@ void Models::deinit() {
 
 size_t Models::seek_models_from_flash() {
     if (!__flash_2_memory_map) [[unlikely]]
-        return 0ul;
+        return 0u;
 
     size_t                   header_size = sizeof(el_model_header_t);
     const uint8_t*           mem_addr    = nullptr;
     const el_model_header_t* header      = nullptr;
-    for (size_t it = 0; it < __partition_size; it += header_size) {
+    for (size_t it = 0u; it < __partition_size; it += header_size) {
         mem_addr = __flash_2_memory_map + it;
         header   = reinterpret_cast<const el_model_header_t*>(mem_addr);
         if (!verify_header_magic(header)) continue;
