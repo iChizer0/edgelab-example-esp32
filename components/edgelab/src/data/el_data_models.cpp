@@ -23,7 +23,7 @@
  *
  */
 
-#include "el_data_models.h"
+#include "el_data_models.hpp"
 
 namespace edgelab::data {
 

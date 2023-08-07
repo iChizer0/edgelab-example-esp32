@@ -26,12 +26,11 @@
 #ifndef _EL_DATA_H_
 #define _EL_DATA_H_
 
-#include "el_data_models.h"
-#include "el_data_storage.hpp"
-
+// TODO: add C wrapper that allows API call from C
 #ifdef __cplusplus
-extern "C" {
-#endif
+
+    #include "el_data_models.hpp"
+    #include "el_data_storage.hpp"
 
 namespace edgelab {
 
@@ -63,15 +62,12 @@ class DataDelegate {
     Storage* _storage_handler;
 };
 
-
 }  // namespace edgelab
 
 // TODO: avoid expose the namespace to global
 using namespace edgelab::data::traits;
 using namespace edgelab::data::utility;
 
-#ifdef __cplusplus
-}
 #endif
 
 #endif

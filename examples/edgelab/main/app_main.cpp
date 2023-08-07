@@ -38,16 +38,16 @@ extern "C" void app_main(void) {
     el_sensor_t    default_sensor{el_registered_sensors[0]};        // camera
     uint8_t        default_model_id{0};                             // yolo model
 
-    struct fdb_default_kv_node el_default_persistent_map[]{
-      {new char[]{"boot_count"}, &boot_count, sizeof(boot_count)},
-      {new char[]{"algorithm_config"}, &default_algorithm, sizeof(default_algorithm)},
-      {new char[]{"sensor_config"}, &default_sensor, sizeof(default_sensor)},
-      {new char[]{"model_id"}, &default_model_id, sizeof(default_model_id)},
-    };
-    fdb_default_kv default_kv{.kvs = el_default_persistent_map,
-                              .num = sizeof(el_default_persistent_map) / sizeof(el_default_persistent_map[0])};
-    auto*          persistent_map{
-      new Storage()};
+    // struct fdb_default_kv_node el_default_persistent_map[]{
+    //   {new char[]{"boot_count"}, &boot_count, sizeof(boot_count)},
+    //   {new char[]{"algorithm_config"}, &default_algorithm, sizeof(default_algorithm)},
+    //   {new char[]{"sensor_config"}, &default_sensor, sizeof(default_sensor)},
+    //   {new char[]{"model_id"}, &default_model_id, sizeof(default_model_id)},
+    // };
+    // fdb_default_kv default_kv{.kvs = el_default_persistent_map,
+    //                           .num = sizeof(el_default_persistent_map) / sizeof(el_default_persistent_map[0])};
+    // auto*          persistent_map{
+    //   new Storage()};
 
     // init temporary variables (TODO: current sensors should be a list)
     const el_algorithm_t*     current_algorithm{nullptr};
@@ -56,22 +56,22 @@ extern "C" void app_main(void) {
     el_img_t*                 current_img{nullptr};
 
     // fetch configs from persistent map (TODO: value check)
-    {
-        auto boot_count_kv{el_make_storage_kv("boot_count", boot_count)};
-        auto algorithm_config_kv{el_make_storage_kv("algorithm_config", default_algorithm)};
-        auto sensor_config_kv{el_make_storage_kv("sensor_config", default_sensor)};
-        auto model_id_kv{el_make_storage_kv("model_id", default_model_id)};
+    // {
+    //     auto boot_count_kv{el_make_storage_kv("boot_count", boot_count)};
+    //     auto algorithm_config_kv{el_make_storage_kv("algorithm_config", default_algorithm)};
+    //     auto sensor_config_kv{el_make_storage_kv("sensor_config", default_sensor)};
+    //     auto model_id_kv{el_make_storage_kv("model_id", default_model_id)};
 
-        *persistent_map >> boot_count_kv >> algorithm_config_kv >> sensor_config_kv >> model_id_kv;
-        *persistent_map << el_make_storage_kv("boot_count", static_cast<decltype(boot_count)>(boot_count_kv.value + 1u));
+    //     *persistent_map >> boot_count_kv >> algorithm_config_kv >> sensor_config_kv >> model_id_kv;
+    //     *persistent_map << el_make_storage_kv("boot_count", static_cast<decltype(boot_count)>(boot_count_kv.value + 1u));
 
-        boot_count                                             = boot_count_kv.value;
-        el_registered_algorithms[algorithm_config_kv.value.id] = algorithm_config_kv.value;
-        el_registered_sensors[sensor_config_kv.value.id]       = sensor_config_kv.value;
-        current_algorithm = &el_registered_algorithms[algorithm_config_kv.value.id];
-        // current_model     = &model_loader->get_models()[model_id_kv.value];
-        current_sensor    = &el_registered_sensors[sensor_config_kv.value.id];
-    }
+    //     boot_count                                             = boot_count_kv.value;
+    //     el_registered_algorithms[algorithm_config_kv.value.id] = algorithm_config_kv.value;
+    //     el_registered_sensors[sensor_config_kv.value.id]       = sensor_config_kv.value;
+    //     current_algorithm = &el_registered_algorithms[algorithm_config_kv.value.id];
+    //     // current_model     = &model_loader->get_models()[model_id_kv.value];
+    //     current_sensor    = &el_registered_sensors[sensor_config_kv.value.id];
+    // }
 
     // init components (TODO: safely deinit)
     // display->init();
@@ -179,8 +179,8 @@ extern "C" void app_main(void) {
                                    goto AlgorithmReply;
 
                                current_algorithm = &el_registered_algorithms[it->first];
-                               *persistent_map
-                                 << el_make_storage_kv("algorithm_config", el_registered_algorithms[it->first]);
+                            //    *persistent_map
+                            //      << el_make_storage_kv("algorithm_config", el_registered_algorithms[it->first]);
 
                            AlgorithmReply:
                                os << "{\"algorithm_id\": " << unsigned(algorithm_id) << ", \"status\": " << int(ret)
@@ -294,7 +294,7 @@ extern "C" void app_main(void) {
                   goto SensorReply;
               if (enable) {
                   current_sensor = &el_registered_sensors[it->first];
-                  *persistent_map << el_make_storage_kv("sensor_config", el_registered_sensors[it->first]);
+                //   *persistent_map << el_make_storage_kv("sensor_config", el_registered_sensors[it->first]);
               } else
                   current_sensor = nullptr;
           } else
