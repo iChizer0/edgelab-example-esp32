@@ -23,12 +23,10 @@
  *
  */
 
-#ifndef _EL_MODELS_HPP_
-#define _EL_MODELS_HPP_
+#ifndef _EL_DATA_MODELS_HPP_
+#define _EL_DATA_MODELS_HPP_
 
-#include <climits>
 #include <cstdint>
-#include <type_traits>
 #include <unordered_map>
 
 #include "el_compiler.h"
@@ -37,25 +35,11 @@
 #include "el_flash.h"
 #include "el_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 namespace edgelab::data {
-
-namespace utility {
-
-template <typename T,
-          typename P = typename std::remove_cv<typename std::remove_reference<T>::type>::type,
-          typename std::enable_if<std::is_integral<P>::value>::type* = nullptr>
-static inline constexpr P swap_endian(T&& bytes) {
-    static_assert(CHAR_BIT == 8);
-    union {
-        P             bytes;
-        unsigned char byte[sizeof(P)];
-    } src, dst;
-    src.bytes = bytes;
-    for (size_t i{0}; i < sizeof(P); ++i) dst.byte[i] = src.byte[sizeof(P) - i - 1];
-    return dst.bytes;
-}
-
-}  // namespace utility
 
 using el_model_id_t = decltype(el_model_info_t::id);
 
@@ -114,22 +98,18 @@ size_t Models::seek_models_from_flash() {
     if (!__flash_2_memory_map) [[unlikely]]
         return 0ul;
 
-    auto                     header_size{sizeof(el_model_header_t)};
-    auto                     remain_size{__partition_size - header_size};
-    const uint8_t*           mem_addr{nullptr};
-    const el_model_header_t* header{nullptr};
-    for (size_t it{0}; it < __partition_size; it += header_size, remain_size -= header_size) {
+    size_t                   header_size = sizeof(el_model_header_t);
+    const uint8_t*           mem_addr    = nullptr;
+    const el_model_header_t* header      = nullptr;
+    for (size_t it = 0; it < __partition_size; it += header_size) {
         mem_addr = __flash_2_memory_map + it;
         header   = reinterpret_cast<const el_model_header_t*>(mem_addr);
         if (!verify_header_magic(header)) continue;
 
-        auto model_id{parse_model_id(header)};
-        auto model_type{parse_model_type(header)};
-        auto model_size{parse_model_size(header)};
-
-        printf("%d -- %d  %ld\n", model_id, model_type, model_size);
-
-        if (!model_id || !model_type || !model_size || (model_size > remain_size)) [[unlikely]]
+        uint8_t  model_id   = parse_model_id(header);
+        uint8_t  model_type = parse_model_type(header);
+        uint32_t model_size = parse_model_size(header);
+        if (!model_id || !model_type || !model_size || model_size > (__partition_size - it)) [[unlikely]]
             continue;
 
         __model_info.emplace(model_id,
@@ -139,7 +119,6 @@ size_t Models::seek_models_from_flash() {
                                              .size        = model_size,
                                              .addr_memory = mem_addr + header_size});
         it += model_size;
-        remain_size -= model_size;
     }
 
     return __model_info.size();
@@ -172,7 +151,7 @@ const el_model_info_t& Models::get_model_info(el_model_id_t model_id) {
 const std::unordered_map<el_model_id_t, el_model_info_t>& Models::get_all_model_info() { return __model_info; }
 
 inline bool Models::verify_header_magic(const el_model_header_t* header) {
-    return ((el_ntohl(header->b4[0]) & 0xFFFFFF00) >> 8) == CONFIG_EL_MODEL_HEADER_MAGIC;
+    return (el_ntohl(header->b4[0]) & 0xFFFFFF00) == (CONFIG_EL_MODEL_HEADER_MAGIC << 8);
 }
 
 inline uint8_t Models::parse_model_id(const el_model_header_t* header) { return header->b1[3] >> 4; }
@@ -184,5 +163,9 @@ inline uint32_t Models::parse_model_size(const el_model_header_t* header) {
 }
 
 }  // namespace edgelab::data
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

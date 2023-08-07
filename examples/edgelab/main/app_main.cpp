@@ -488,6 +488,7 @@ extern "C" void app_main(void) {
     instance->loop("AT+ALGO=0\n", 11);
     instance->loop("AT+MODEL=0\n", 12);
     instance->loop("AT+SENSOR=0,1\n", 15);
+    instance->loop("AT+VMODEL\n", 11);
 
 // enter service pipeline (TODO: pipeline builder)
 ServiceLoop:
