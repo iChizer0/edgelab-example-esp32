@@ -66,18 +66,21 @@ namespace edgelab::data {
 // }  // namespace traits
 
 namespace types {
-    
-template <typename T, typename std::enable_if<std::is_trivial<T>::value || std::is_standard_layout<T>::value>::type>
+
+template <
+  typename ValueType,
+  typename _ValueType = typename std::decay<ValueType>::type,
+  typename std::enable_if<std::is_trivial<_ValueType>::value || std::is_standard_layout<_ValueType>::value>::type>
 struct el_storage_kv_t {
-    explicit el_storage_kv_t(const char* key_, T* value_, size_t size_) noexcept
-        : key(key_), value(value_), size(size_), {
+    explicit el_storage_kv_t(const char* key_, ValueType&& value_) noexcept
+        : key(key_), value(value_), size(sizeof(_ValueType)), {
         EL_ASSERT(size > 0);
     }
 
     ~el_storage_kv_t() = default;
 
     const char* key;
-    T*          value;
+    _ValueType  value;
     size_t      size;
 };
 
@@ -85,7 +88,7 @@ struct el_storage_kv_t {
 
 namespace utility {
 
-//                                                                          
+//
 
 }  // namespace utility
 
@@ -147,6 +150,29 @@ class Storage {
         fdb_blob       blob{};
         fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
                       fdb_kv_to_blob(p_handler, fdb_blob_make(&blob, buffer, p_handler->value_len)));
+        std::memcpy(kv->value, buffer, std::min(kv->size, p_handler->value_len));
+        delete[] buffer;
+
+        return kv;
+    }
+
+    template <typename T, typename std::enable_if<std::is_trivial<T>::value || std::is_standard_layout<T>::value>::type>
+    T get_value(const char* key) const {
+        volatile const Guard guard(this);
+        if (!kv->size || !__kvdb) [[unlikely]]
+            return nullptr;
+
+        fdb_kv   handler{};
+        fdb_kv_t p_handler = fdb_kv_get_obj(__kvdb, kv->key, &handler);
+
+        if (!p_handler || !p_handler->value_len) [[unlikely]]
+            return nullptr;
+
+        unsigned char* buffer = new unsigned char[p_handler->value_len];
+        fdb_blob       blob{};
+        fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
+                      fdb_kv_to_blob(p_handler, fdb_blob_make(&blob, buffer, p_handler->value_len)));
+        T value;
         std::memcpy(kv->value, buffer, std::min(kv->size, p_handler->value_len));
         delete[] buffer;
 
@@ -259,39 +285,39 @@ class Storage {
     struct Iterator {
         using iterator_category = std::forward_iterator_tag;
         using difference_type   = std::ptrdiff_t;
-        using value_type        = char*;
-        using pointer           = value_type*;
-        using reference         = value_type&;
+        using value_type        = cconst har*;
+        using pointer           = const char**;
+        using reference         = const char* const&;
 
-        explicit Iterator(const Storage* const persisitent_map)
-            : ___persisitent_map(persisitent_map), ___iterator(), ___value(), ___reach_end(true) {
-            if (!___persisitent_map) return;
-            ___persisitent_map->m_lock();
-            ___kvdb = persisitent_map->__kvdb;
+        explicit Iterator(const Storage* const storage)
+            : ___storage(storage), ___kvdb(storage->__kvdb), ___iterator(), ___value(), ___reach_end(true) {
+            if (!___storage) return;
+            volatile const Guard guard(___storage);
+            ___kvdb = storage->__kvdb;
             if (___kvdb) [[likely]] {
                 fdb_kv_iterator_init(___kvdb, &___iterator);
                 ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
             }
-            ___persisitent_map->m_unlock();
         }
 
         reference operator*() const {
-            ___value = ___iterator.curr_kv;
+            ___value = ___iterator.curr_kv.name;
             return ___value;
         }
 
         pointer operator->() const {
-            ___value = ___iterator.curr_kv;
+            ___value = ___iterator.curr_kv.name;
             return &___value;
         }
 
         Iterator& operator++() {
-            if (!___persisitent_map) [[unlikely]]
+            if (!___storage) [[unlikely]]
                 return *this;
-            ___persisitent_map->m_lock();
+            volatile const Guard guard(___storage);
+
             if (___kvdb) [[likely]]
                 ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
-            ___persisitent_map->m_unlock();
+
             return *this;
         }
 
@@ -310,12 +336,11 @@ class Storage {
         }
 
        protected:
-        IterateType ___persisitent_map;
-
-        fdb_kvdb_t      ___kvdb;
-        fdb_kv_iterator ___iterator;
-        value_type      ___value;
-        volatile bool   ___reach_end;
+        const Storage* const ___storage;
+        fdb_kvdb_t           ___kvdb;
+        fdb_kv_iterator      ___iterator;
+        value_type           ___value;
+        volatile bool        ___reach_end;
     };
 
    public:
