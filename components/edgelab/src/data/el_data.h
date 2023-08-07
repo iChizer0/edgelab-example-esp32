@@ -26,7 +26,7 @@
 #ifndef _EL_DATA_H_
 #define _EL_DATA_H_
 
-#include "el_data_models.hpp"
+#include "el_data_models.h"
 #include "el_data_storage.hpp"
 
 #ifdef __cplusplus

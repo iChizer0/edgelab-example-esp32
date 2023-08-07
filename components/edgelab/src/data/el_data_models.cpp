@@ -23,56 +23,9 @@
  *
  */
 
-#ifndef _EL_DATA_MODELS_HPP_
-#define _EL_DATA_MODELS_HPP_
-
-#include <cstdint>
-#include <unordered_map>
-
-#include "el_compiler.h"
-#include "el_config_internal.h"
-#include "el_debug.h"
-#include "el_flash.h"
-#include "el_types.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "el_data_models.h"
 
 namespace edgelab::data {
-
-using el_model_id_t = decltype(el_model_info_t::id);
-
-class Models {
-   public:
-    Models();
-    ~Models();
-
-    Models(const Models&)            = delete;
-    Models& operator=(const Models&) = delete;
-
-    el_err_code_t init(const char* partition_name = CONFIG_EL_MODEL_PARTITION_NAME);
-    void          deinit();
-
-    size_t                                                    seek_models_from_flash();
-    bool                                                      has_model(el_model_id_t model_id);
-    el_err_code_t                                             get(el_model_id_t model_id, el_model_info_t* model_info);
-    const el_model_info_t&                                    get_model_info(el_model_id_t model_id);
-    const std::unordered_map<el_model_id_t, el_model_info_t>& get_all_model_info();
-
-   protected:
-    bool     verify_header_magic(const el_model_header_t* header);
-    uint8_t  parse_model_id(const el_model_header_t* header);
-    uint8_t  parse_model_type(const el_model_header_t* header);
-    uint32_t parse_model_size(const el_model_header_t* header);
-
-   private:
-    uint32_t                                           __partition_start_addr;
-    uint32_t                                           __partition_size;
-    const uint8_t*                                     __flash_2_memory_map;
-    el_model_mmap_handler_t                            __mmap_handler;
-    std::unordered_map<el_model_id_t, el_model_info_t> __model_info;
-};
 
 Models::Models()
     : __partition_start_addr(0), __partition_size(0), __flash_2_memory_map(nullptr), __mmap_handler(), __model_info() {}
@@ -80,8 +33,8 @@ Models::Models()
 Models::~Models() { deinit(); }
 
 el_err_code_t Models::init(const char* partition_name) {
-    el_err_code_t ret{el_model_partition_mmap_init(
-      partition_name, &__partition_start_addr, &__partition_size, &__flash_2_memory_map, &__mmap_handler)};
+    el_err_code_t ret = el_model_partition_mmap_init(
+      partition_name, &__partition_start_addr, &__partition_size, &__flash_2_memory_map, &__mmap_handler);
     if (ret != EL_OK) return ret;
     seek_models_from_flash();
     return ret;
@@ -125,13 +78,13 @@ size_t Models::seek_models_from_flash() {
 }
 
 bool Models::has_model(el_model_id_t model_id) {
-    auto it{__model_info.find(model_id)};
+    auto it = __model_info.find(model_id);
     return it != __model_info.end();
 }
 
 el_err_code_t Models::get(el_model_id_t model_id, el_model_info_t* model_info) {
     if (!model_info) return EL_EINVAL;
-    auto it{__model_info.find(model_id)};
+    auto it = __model_info.find(model_id);
     if (it != __model_info.end()) [[likely]] {
         *model_info = it->second;
         return EL_OK;
@@ -139,16 +92,15 @@ el_err_code_t Models::get(el_model_id_t model_id, el_model_info_t* model_info) {
     return EL_EINVAL;
 }
 
-const el_model_info_t& Models::get_model_info(el_model_id_t model_id) {
-    auto it{__model_info.find(model_id)};
+el_model_info_t Models::get_model_info(el_model_id_t model_id) {
+    auto it = __model_info.find(model_id);
     if (it != __model_info.end()) [[likely]] {
         return it->second;
     }
-    static el_model_info_t undefined_model_info{};
-    return undefined_model_info;
+    return el_model_info_t{};
 }
 
-const std::unordered_map<el_model_id_t, el_model_info_t>& Models::get_all_model_info() { return __model_info; }
+std::unordered_map<el_model_id_t, el_model_info_t> Models::get_all_model_info() { return __model_info; }
 
 inline bool Models::verify_header_magic(const el_model_header_t* header) {
     return (el_ntohl(header->b4[0]) & 0xFFFFFF00) == (CONFIG_EL_MODEL_HEADER_MAGIC << 8);
@@ -163,9 +115,3 @@ inline uint32_t Models::parse_model_size(const el_model_header_t* header) {
 }
 
 }  // namespace edgelab::data
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif

@@ -170,8 +170,10 @@ typedef struct EL_ATTR_PACKED {
     uint8_t        type;
     uint32_t       addr_flash;
     uint32_t       size;
-    const uint8_t* addr_memory ;
+    const uint8_t* addr_memory;
 } el_model_info_t;
+
+typedef uint8_t el_model_id_t;
 
 #ifdef __cplusplus
 }
