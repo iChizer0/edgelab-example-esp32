@@ -29,9 +29,11 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <forward_list>
 #include <iterator>
 #include <type_traits>
 #include <utility>
@@ -83,20 +85,40 @@ static inline constexpr unsigned long djb2_hash(const unsigned char* bytes) {
 
 template <typename T> static inline constexpr const char* get_type_name() { return __PRETTY_FUNCTION__; }
 
-// please remember to delete
-template <typename VariableType, typename ValueTypeNoCV = typename std::remove_cv<VariableType>::type>
+// currently we're not going to manage the life time of the key chars, and std::type_info is unavailable (due to -fno-rtti)
+//      1. you can free the buffer using delete[] if you don't need to use the same key anymore (if not, program will crash)
+//      2. personally I don't think it a good idea to let el_storage_kv_t to manage the lifetime of the key:
+//          a. too compilcate to use const difference to determine whether to delete the key (need to set to nullptr while copy/assign, etc.)
+//          b. not wise to use a bool flag to dertermine whether to delete the key (because copy/assign would be a continuation of the key)
+template <typename VarType, typename ValueTypeNoCV = typename std::remove_cv<VarType>::type>
 static inline constexpr edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv_from_type(
-  VariableType&& data) {
-    using VariableTypeNoCVRef = typename std::remove_cv<typename std::remove_reference<VariableType>::type>::type;
-    const char* type_name     = get_type_name<VariableTypeNoCVRef>();
+  VarType&& data) {
+    using VarTypeNoCVRef               = typename std::remove_cv<typename std::remove_reference<VarType>::type>::type;
+    const char*          type_name     = get_type_name<VarTypeNoCVRef>();
+    unsigned long        hash          = djb2_hash(reinterpret_cast<const unsigned char*>(type_name));
+    char*                static_buffer = nullptr;
+    static const char*   format_str    = "edgelab#type_name#%.8X";
+    static const uint8_t buffer_size   = [&]() -> uint8_t {
+        // 1 for terminator, -4 for formatter, 8 for hash hex (unsigned long), -1 for bit hacks (remove last 1 in binary)
+        uint8_t len = static_cast<uint8_t>(std::strlen(format_str) + 1u - 4u + 8u - 1u);
+        len |= len >> 1;
+        len |= len >> 2;
+        len |= len >> 4;
+        return ++len;  // the nearest power of 2 value to key length
+    }();
+    static std::forward_list<std::pair<unsigned long, char*>> hash_list{};
+    auto it {std::find(hash_list.begin(), hash_list.end(), [](const auto& pair) {
+        return pair.first == hash;
+    }};
+    if (it != hash_list.end())
+        static_buffer = it->second;
+    else {
+        static_buffer = new char[buffer_size]{};  // we're not going to delete it
+        std::sprintf(static_buffer, format_str, hash);
+        hash_list.emplace_after(std::make_pair(hash, static_buffer));
+    }
 
-    static char* buffer  = new char[1024]{};
-    char*        buf_pos = buffer;
-    buffer += FDB_KV_NAME_MAX;
-    std::memset(buf_pos, '\0', FDB_KV_NAME_MAX);
-    std::sprintf(buf_pos, "edgelab#type_name#%ld", djb2_hash(reinterpret_cast<const unsigned char*>(type_name)));
-
-    return el_make_storage_kv(buf_pos, std::forward<VariableType>(data));
+    return el_make_storage_kv(static_buffer, std::forward<VarType>(data));
 }
 
 }  // namespace utility
