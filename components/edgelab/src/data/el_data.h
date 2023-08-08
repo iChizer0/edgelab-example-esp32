@@ -66,6 +66,7 @@ class DataDelegate {
 
 // TODO: avoid expose the namespace to global
 using namespace edgelab::data::utility;
+using namespace edgelab::data::types;
 
 #endif
 

@@ -4,6 +4,10 @@
 
 #include "edgelab.h"
 
+struct some_config_t {
+    int val;
+};
+
 extern "C" void app_main() {
     printf("Data Example:\n");
 
@@ -15,6 +19,15 @@ extern "C" void app_main() {
 
     printf("Init storage...\n");
     storage->init();
+
+    printf("Quering storage keys ->\n");
+    for (const auto& k : *storage) printf("\t%s\n", k);
+
+    printf("Clearing storage...\n");
+    storage->clear();
+
+    printf("Quering storage keys ->\n");
+    for (const auto& k : *storage) printf("\t%s\n", k);
 
     {
         printf("Emplace KV to storage ->\n");
@@ -29,7 +42,16 @@ extern "C" void app_main() {
 
         kv = el_make_storage_kv("key_3", 3);
         *storage << kv << el_make_storage_kv("key_4", 4);
-        printf("\tstore KV (key_3, 3), (key_4, 4), unknown\n");
+        printf("\tstore KV (key_3, 3), (key_4, 4)\n");
+
+        char str[] = "Hello EdgeLab!";
+        *storage << el_make_storage_kv("key_5", str);
+        printf("\tstore KV (key_5, %s)\n", str);
+
+        some_config_t some_config = some_config_t{.val = 42};
+        auto          kv_1        = el_make_storage_kv_from_type(some_config);
+        *storage << kv_1;
+        printf("\tstore type KV (%s, some_config_t{ int val = %d; })\n", kv_1.key, kv_1.value.val);
     }
 
     {
@@ -48,10 +70,13 @@ extern "C" void app_main() {
         *storage >> el_make_storage_kv("key_4", value);
         printf("\tget KV (key_4, %d), %s\n", value, is_ok ? "ok" : "fail");
 
-        // kv = el_make_storage_kv("key_3", 3);
-        // *storage << kv << el_make_storage_kv("key_4", 4);
-        // printf("\tstore KV (key_3, 3), (key_4, 4), unknown\n");
+        char str[32] = "";
+        *storage >> el_make_storage_kv("key_5", str);
+        printf("\tget KV (key_5, %s)\n", str);
     }
+
+    printf("Quering storage keys ->\n");
+    for (const auto& k : *storage) printf("\t%s\n", k);
 
     // printf("quering init ->\n");
     // for (const auto& a : *storage) printf("\t%s\n", a);

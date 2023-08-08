@@ -33,7 +33,6 @@
 #include <cstddef>
 #include <cstring>
 #include <iterator>
-#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -70,13 +69,35 @@ template <typename ValueType,
           typename ValueTypeNoCV  = typename std::remove_cv<ValueType>::type,
           typename std::enable_if<std::is_trivial<ValueTypeNoRef>::value ||
                                   std::is_standard_layout<ValueTypeNoRef>::value>::type* = nullptr>
-edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv(const char* key, ValueType&& value) {
+static inline constexpr edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv(const char* key,
+                                                                                                ValueType&& value) {
     return edgelab::data::types::el_storage_kv_t<ValueTypeNoCV>(key, std::forward<ValueTypeNoCV>(value));
 }
 
-// template <typename DataType> edgelab::data::types::el_storage_kv_t<ValueType> el_storage_kv(DataType&& data) {
+static inline constexpr unsigned long djb2_hash(const unsigned char* bytes) {
+    unsigned long hash = 0x1505;
+    unsigned char byte;
+    while ((byte = *bytes++)) hash = ((hash << 5) + hash) + byte;
+    return hash;
+}
 
-// }
+template <typename T> static inline constexpr const char* get_type_name() { return __PRETTY_FUNCTION__; }
+
+// please remember to delete
+template <typename VariableType, typename ValueTypeNoCV = typename std::remove_cv<VariableType>::type>
+static inline constexpr edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv_from_type(
+  VariableType&& data) {
+    using VariableTypeNoCVRef = typename std::remove_cv<typename std::remove_reference<VariableType>::type>::type;
+    const char* type_name     = get_type_name<VariableTypeNoCVRef>();
+
+    static char* buffer  = new char[1024]{};
+    char*        buf_pos = buffer;
+    buffer += FDB_KV_NAME_MAX;
+    std::memset(buf_pos, '\0', FDB_KV_NAME_MAX);
+    std::sprintf(buf_pos, "edgelab#type_name#%ld", djb2_hash(reinterpret_cast<const unsigned char*>(type_name)));
+
+    return el_make_storage_kv(buf_pos, std::forward<VariableType>(data));
+}
 
 }  // namespace utility
 
@@ -117,7 +138,6 @@ class Storage {
 
         fdb_kv   handler{};
         fdb_kv_t p_handler = fdb_kv_get_obj(__kvdb, kv.key, &handler);
-
         if (!p_handler || !p_handler->value_len) [[unlikely]]
             return false;
 
@@ -138,6 +158,18 @@ class Storage {
         return get(static_cast<types::el_storage_kv_t<ValueType>&>(kv));
     }
 
+    size_t get_value_size(const char* key) const {
+        volatile const Guard guard(this);
+        if (!key || !__kvdb) [[unlikely]]
+            return 0u;
+        fdb_kv   handler{};
+        fdb_kv_t p_handler = fdb_kv_get_obj(__kvdb, key, &handler);
+        if (!p_handler || !p_handler->value_len) [[unlikely]]
+            return 0u;
+
+        return p_handler->value_len;
+    }
+
     template <
       typename ValueType,
       typename ValueTypeNoCVRef = typename std::remove_cv<typename std::remove_reference<ValueType>::type>::type,
@@ -145,15 +177,19 @@ class Storage {
                               std::is_standard_layout<ValueTypeNoCVRef>::value>::type* = nullptr>
     ValueTypeNoCVRef get_value(const char* key) const {
         ValueTypeNoCVRef value{};
-        auto             kv                            = utility::el_make_storage_kv(key, value);
-        bool             is_ok __attribute__((unused)) = get(kv);
+        if (!key) [[unlikely]]
+            return value;
+        auto kv                            = utility::el_make_storage_kv(key, value);
+        bool is_ok __attribute__((unused)) = get(kv);
         EL_ASSERT(is_ok);
+
         return value;
     }
 
     template <typename KVType> Storage& operator>>(KVType&& kv) {
         bool is_ok __attribute__((unused)) = get(std::forward<KVType>(kv));
         EL_ASSERT(is_ok);
+
         return *this;
     }
 
@@ -168,6 +204,7 @@ class Storage {
     template <typename KVType> Storage& operator<<(KVType&& kv) {
         bool is_ok __attribute__((unused)) = emplace(std::forward<KVType>(kv));
         EL_ASSERT(is_ok);
+
         return *this;
     }
 
@@ -175,6 +212,7 @@ class Storage {
         volatile const Guard guard(this);
         if (!__kvdb) [[unlikely]]
             return false;
+
         return fdb_kv_del(__kvdb, key) == FDB_NO_ERR;
     }
 
@@ -209,12 +247,11 @@ class Storage {
     struct Iterator {
         using iterator_category = std::forward_iterator_tag;
         using difference_type   = std::ptrdiff_t;
-        using value_type        = const char*;
-        using pointer           = const char**;
-        using reference         = const char* const&;
+        using value_type        = const char[FDB_KV_NAME_MAX];
+        using pointer           = value_type*;
+        using reference         = value_type&;
 
-        explicit Iterator(const Storage* const storage)
-            : ___storage(storage), ___kvdb(storage->__kvdb), ___iterator(), ___value(), ___reach_end(true) {
+        explicit Iterator(const Storage* const storage) : ___storage(storage), ___iterator(), ___reach_end(true) {
             if (!___storage) return;
             volatile const Guard guard(___storage);
             ___kvdb = storage->__kvdb;
@@ -224,22 +261,15 @@ class Storage {
             }
         }
 
-        reference operator*() const {
-            ___value = ___iterator.curr_kv.name;
-            return ___value;
-        }
+        reference operator*() const { return ___iterator.curr_kv.name; }
 
-        pointer operator->() const {
-            ___value = ___iterator.curr_kv.name;
-            return &___value;
-        }
+        pointer operator->() const { return &___iterator.curr_kv.name; }
 
         Iterator& operator++() {
             if (!___storage || !___kvdb) [[unlikely]]
                 return *this;
             volatile const Guard guard(___storage);
             ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
-
             return *this;
         }
 
@@ -261,7 +291,6 @@ class Storage {
         const Storage* const ___storage;
         fdb_kvdb_t           ___kvdb;
         fdb_kv_iterator      ___iterator;
-        mutable value_type   ___value;
         volatile bool        ___reach_end;
     };
 
