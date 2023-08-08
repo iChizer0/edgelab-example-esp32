@@ -9,19 +9,10 @@ struct some_config_t {
 };
 
 extern "C" void app_main() {
-    printf("Data Example:\n");
+    printf("Data storage demo:\n");
 
     printf("Getting data delegate...\n");
     DataDelegate* data_dalegate = DataDelegate::get();
-
-    printf("Geting models handler from data delegate...\n");
-    Models* models = data_dalegate->get_models_handler();
-
-    printf("Init models...\n");
-    models->init();
-
-
-
 
     printf("Geting storage handler from data delegate...\n");
     Storage* storage = data_dalegate->get_storage_handler();
@@ -92,6 +83,7 @@ extern "C" void app_main() {
     printf("Quering storage keys ->\n");
     for (const auto& k : *storage) printf("\t%s\n", k);
 
+    // TODO: move freeRTOS, ESP related function call to EdgeLab
     for (int i = 1000; i >= 0; --i) {
         printf("Restarting in %d seconds...\n", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);

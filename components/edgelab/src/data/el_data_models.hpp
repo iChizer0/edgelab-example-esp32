@@ -51,7 +51,7 @@ class Models {
 
     size_t                             seek_models_from_flash();
     bool                               has_model(el_model_id_t model_id);
-    el_err_code_t                      get(el_model_id_t model_id, el_model_info_t* model_info);
+    el_err_code_t                      get(el_model_id_t model_id, el_model_info_t& model_info);
     el_model_info_t                    get_model_info(el_model_id_t model_id);
     std::forward_list<el_model_info_t> get_all_model_info();
 
