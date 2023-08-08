@@ -107,9 +107,9 @@ static inline constexpr edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_
         return ++len;  // the nearest power of 2 value to key length
     }();
     static std::forward_list<std::pair<unsigned long, char*>> hash_list{};
-    auto it {std::find(hash_list.begin(), hash_list.end(), [](const auto& pair) {
+    auto it {std::find_if(hash_list.begin(), hash_list.end(), [&](const auto& pair) {
         return pair.first == hash;
-    }};
+    })};
     if (it != hash_list.end())
         static_buffer = it->second;
     else {
