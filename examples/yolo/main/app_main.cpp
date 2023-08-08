@@ -24,7 +24,7 @@ extern "C" void app_main(void) {
     // camera->init(240, 240);
     // display->init();
 
-    ModelLoader model_loader;
+    Models model_loader;
     auto models{model_loader.get_models()};
 
     printf("found modles: %d\n", models.size());
@@ -205,18 +205,13 @@ extern "C" void app_main(void) {
 //     static int boot_count  = 0;
 //     static int boot_time[] = {1, 2, 3, 4};
 
-//     static struct fdb_default_kv_node default_kv_table[] = {
-//       {"username", (void*)("armink"), 0},              /* string KV */
-//       {"password", (void*)("123456"), 0},              /* string KV */
-//       {"boot_count", &boot_count, sizeof(boot_count)}, /* int type KV */
-//       {"boot_time", &boot_time, sizeof(boot_time)},    /* int array type KV */
-//     };
+
 
 //     struct fdb_default_kv default_kv;
 //     default_kv.kvs = default_kv_table;
 //     default_kv.num = sizeof(default_kv_table) / sizeof(default_kv_table[0]);
 
-//     edgelab::data::PersistentMap map(CONFIG_EL_DATA_PERSISTENT_MAP_NAME, CONFIG_EL_DATA_PERSISTENT_MAP_PATH, &default_kv);
+//     edgelab::data::Storage map(CONFIG_EL_DATA_PERSISTENT_MAP_NAME, CONFIG_EL_DATA_PERSISTENT_MAP_PATH, &default_kv);
 //     // map.destory();
 //     int i = 0;
 
@@ -226,7 +221,7 @@ extern "C" void app_main(void) {
 
 
 //     printf("test %d\n", i);
-//     auto t0 = el_make_map_kv("t0", 0);
+//     auto t0 = el_make_storage_kv("t0", 0);
 //     map << t0;
 //     printf("quering %d ->\n", i);
 //     for (const auto& a : map) printf("\t%s\n", a.name);
@@ -245,42 +240,42 @@ extern "C" void app_main(void) {
 //     map["t0"];
 
 //     printf("test %d\n", ++i);
-//     auto t1 = el_make_map_kv("t0", 0);
+//     auto t1 = el_make_storage_kv("t0", 0);
 //     map >> t1;
 //     printf("\t value: %d\n", t1.value);
 
 //     printf("test %d\n", ++i);
-//     auto t2 = el_make_map_kv("boot_count", 0);
+//     auto t2 = el_make_storage_kv("boot_count", 0);
 //     map >> t2;
 //     printf("\t boot_count: %d\n", t2.value);
 
 //     printf("test %d\n", ++i);
-//     auto t3 = el_make_map_kv("boot_count", t2.value + 1);
+//     auto t3 = el_make_storage_kv("boot_count", t2.value + 1);
 //     map << t3;
 //     printf("\t setting boot_count to %d\n", t3.value);
 
 //     printf("test %d\n", ++i);
-//     auto t4 = el_make_map_kv("boot_count", 0);
+//     auto t4 = el_make_storage_kv("boot_count", 0);
 //     map >> t4;
 //     printf("\t boot_count: %d\n", t4.value);
 
 //     printf("test %d\n", ++i);
-//     auto t5 = el_make_map_kv("string", "hello");
+//     auto t5 = el_make_storage_kv("string", "hello");
 //     map << t5;
 //     for (const auto& a : map) printf("\t%s\n", a.name);
           
 //     printf("test %d\n", ++i);
-//     auto t6 = el_make_map_kv("string", "");
+//     auto t6 = el_make_storage_kv("string", "");
 //     map >> t6;
 //     printf("\t string: %s\n", t6.value);
 
 //     printf("test %d\n", ++i);
-//     auto t7 = el_make_map_kv("string", "hello world!");
+//     auto t7 = el_make_storage_kv("string", "hello world!");
 //     map << t7;
 //     printf("\t string: %s\n", t6.value);
 
 //     printf("test %d\n", ++i);
-//     auto t8 = el_make_map_kv("string", "");
+//     auto t8 = el_make_storage_kv("string", "");
 //     map >> t8;
 //     printf("\t string: %s\n", t8.value);
 

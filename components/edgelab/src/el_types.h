@@ -143,12 +143,12 @@ typedef struct EL_ATTR_PACKED {
 } el_sensor_t;
 
 /**
- * @brief algorithm types
+ * @brief Algorithm Types
  */
-typedef enum : uint8_t { UNDEFINED = 0u, FOMO = 1u, PFLD = 2u, YOLO = 3u } el_algorithm_type_t;
+typedef enum { UNDEFINED = 0u, FOMO = 1u, PFLD = 2u, YOLO = 3u } el_algorithm_type_t;
 
 /**
- * @brief Model header specification
+ * @brief Model Header Specification
  * @details
  *      [ 24 bits magic code | 4 bits id | 4 bits type | 24 bits size (unsigned) | 8 bits unused padding ]
  *      big-endian in file
@@ -159,7 +159,7 @@ typedef union EL_ATTR_PACKED {
 } el_model_header_t;
 
 /**
- * @brief Mdoel info specification
+ * @brief Mdoel Info Specification
  * @details 
  *      valid id range [1, 15]:
  *          0 -> undefined

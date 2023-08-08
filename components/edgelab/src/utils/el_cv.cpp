@@ -188,7 +188,9 @@ EL_ATTR_WEAK el_err_code_t rgb_to_jpeg(const el_img_t* src, el_img_t* dst) {
         err = EL_EIO;
         goto exit;
     }
+    printf("errrrrrr0\n");
     rc = jpg.encodeBegin(&jpe, src->width, src->height, pixelFormat, JPEG_SUBSAMPLE_444, JPEG_Q_BEST);
+    printf("errrrrrr1\n");
     if (rc != JPEG_SUCCESS) {
         err = EL_EIO;
         goto exit;
@@ -197,11 +199,13 @@ EL_ATTR_WEAK el_err_code_t rgb_to_jpeg(const el_img_t* src, el_img_t* dst) {
     for (int i = 0; i < iMCUCount && rc == JPEG_SUCCESS; i++) {
         rc = jpg.addMCU(&jpe, &src->data[jpe.x * bytesPerPixel + jpe.y * src->width * bytesPerPixel], pitch);
     }
+    printf("errrrrrr2\n");
     if (rc != JPEG_SUCCESS) {
         err = EL_EIO;
         goto exit;
     }
     dst->size = jpg.close();
+    printf("errrrrrr3\n");
 
 exit:
     return err;

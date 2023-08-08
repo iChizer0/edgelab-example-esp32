@@ -46,41 +46,18 @@
 
 namespace edgelab::data {
 
-// namespace traits {
-
-// template <typename T> struct remove_const_from_pointer {
-//     using type =
-//       typename std::add_pointer<typename std::remove_const<typename std::remove_pointer<T>::type>::type>::type;
-// };
-
-// template <typename T>
-// struct is_c_str
-//     : std::integral_constant<
-//         bool,
-//         std::is_same<char*, typename remove_const_from_pointer<typename std::decay<T>::type>::type>::value> {};
-
-// template <typename T, size_t Size> inline constexpr size_t bytesof_c_array(T (&)[Size]) { return Size * sizeof(T); }
-
-// template <typename T, size_t Size> inline constexpr size_t sizeof_c_array(T (&)[Size]) { return Size; }
-
-// }  // namespace traits
-
 namespace types {
 
-template <
-  typename ValueType,
-  typename _ValueType = typename std::decay<ValueType>::type,
-  typename std::enable_if<std::is_trivial<_ValueType>::value || std::is_standard_layout<_ValueType>::value>::type>
-struct el_storage_kv_t {
-    explicit el_storage_kv_t(const char* key_, ValueType&& value_) noexcept
-        : key(key_), value(value_), size(sizeof(_ValueType)), {
+template <typename ValueType> struct el_storage_kv_t {
+    explicit el_storage_kv_t(const char* key_, ValueType&& value_, size_t size_ = sizeof(ValueType)) noexcept
+        : key(key_), value(value_), size(size_) {
         EL_ASSERT(size > 0);
     }
 
     ~el_storage_kv_t() = default;
 
     const char* key;
-    _ValueType  value;
+    ValueType   value;
     size_t      size;
 };
 
@@ -88,16 +65,23 @@ struct el_storage_kv_t {
 
 namespace utility {
 
-//
+template <typename ValueType,
+          typename ValueTypeNoRef = typename std::remove_reference<ValueType>::type,
+          typename ValueTypeNoCV  = typename std::remove_cv<ValueType>::type,
+          typename std::enable_if<std::is_trivial<ValueTypeNoRef>::value ||
+                                  std::is_standard_layout<ValueTypeNoRef>::value>::type* = nullptr>
+edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv(const char* key, ValueType&& value) {
+    return edgelab::data::types::el_storage_kv_t<ValueTypeNoCV>(key, std::forward<ValueTypeNoCV>(value));
+}
+
+// template <typename DataType> edgelab::data::types::el_storage_kv_t<ValueType> el_storage_kv(DataType&& data) {
+
+// }
 
 }  // namespace utility
 
 class Storage {
    public:
-    // using KeyType = types::ELStorageKeyType;
-    // using HandlerType =
-    //   typename std::remove_pointer<typename std::decay<types::ELStorageKVHandlerPointerType>::type>::type;
-
     // currently the consistent of Storage is only ensured on a single instance if there're multiple instances that has same name and save path
     Storage() noexcept : __lock(xSemaphoreCreateCounting(1, 1)), __kvdb(new fdb_kvdb{}) {
         EL_ASSERT(__lock);
@@ -124,68 +108,67 @@ class Storage {
         }
     }
 
-    // fdb_kv operator[](const char* key) {
-    //     volatile const Guard guard(this);
-    //     fdb_kv               handler{};
-    //     fdb_kv_t             p_handler = fdb_kv_get_obj(__kvdb, key, &handler);
-    //     if (p_handler) [[likely]]
-    //         handler = *p_handler;
-    //     return handler;
-    // }
-
     // size of the buffer should be equal to handler->value_len
-    template <typename T, typename std::enable_if<std::is_trivial<T>::value || std::is_standard_layout<T>::value>::type>
-    el_storage_kv_t<T>* get(el_storage_kv_t<T>* kv) const {
+    template <typename ValueType, typename std::enable_if<!std::is_const<ValueType>::value>::type* = nullptr>
+    bool get(types::el_storage_kv_t<ValueType>& kv) const {
         volatile const Guard guard(this);
-        if (!kv->size || !__kvdb) [[unlikely]]
-            return nullptr;
+        if (!kv.size || !__kvdb) [[unlikely]]
+            return false;
 
         fdb_kv   handler{};
-        fdb_kv_t p_handler = fdb_kv_get_obj(__kvdb, kv->key, &handler);
+        fdb_kv_t p_handler = fdb_kv_get_obj(__kvdb, kv.key, &handler);
 
         if (!p_handler || !p_handler->value_len) [[unlikely]]
-            return nullptr;
+            return false;
 
         unsigned char* buffer = new unsigned char[p_handler->value_len];
         fdb_blob       blob{};
         fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
                       fdb_kv_to_blob(p_handler, fdb_blob_make(&blob, buffer, p_handler->value_len)));
-        std::memcpy(kv->value, buffer, std::min(kv->size, p_handler->value_len));
+        std::memcpy(&kv.value, buffer, std::min(kv.size, static_cast<size_t>(p_handler->value_len)));
         delete[] buffer;
 
-        return kv;
+        return true;
     }
 
-    template <typename T, typename std::enable_if<std::is_trivial<T>::value || std::is_standard_layout<T>::value>::type>
-    T get_value(const char* key) const {
-        volatile const Guard guard(this);
-        if (!kv->size || !__kvdb) [[unlikely]]
-            return nullptr;
-
-        fdb_kv   handler{};
-        fdb_kv_t p_handler = fdb_kv_get_obj(__kvdb, kv->key, &handler);
-
-        if (!p_handler || !p_handler->value_len) [[unlikely]]
-            return nullptr;
-
-        unsigned char* buffer = new unsigned char[p_handler->value_len];
-        fdb_blob       blob{};
-        fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
-                      fdb_kv_to_blob(p_handler, fdb_blob_make(&blob, buffer, p_handler->value_len)));
-        T value;
-        std::memcpy(kv->value, buffer, std::min(kv->size, p_handler->value_len));
-        delete[] buffer;
-
-        return kv;
+    template <typename ValueType,
+              typename std::enable_if<!std::is_const<ValueType>::value &&
+                                      std::is_lvalue_reference<ValueType>::value>::type* = nullptr>
+    bool get(types::el_storage_kv_t<ValueType>&& kv) const {
+        return get(static_cast<types::el_storage_kv_t<ValueType>&>(kv));
     }
 
-    template <typename T, typename std::enable_if<std::is_trivial<T>::value || std::is_standard_layout<T>::value>::type>
-    bool emplace(const el_storage_kv_t<T>* kv) {
+    template <
+      typename ValueType,
+      typename ValueTypeNoCVRef = typename std::remove_cv<typename std::remove_reference<ValueType>::type>::type,
+      typename std::enable_if<std::is_trivial<ValueTypeNoCVRef>::value ||
+                              std::is_standard_layout<ValueTypeNoCVRef>::value>::type* = nullptr>
+    ValueTypeNoCVRef get_value(const char* key) const {
+        ValueTypeNoCVRef value{};
+        auto             kv                            = utility::el_make_storage_kv(key, value);
+        bool             is_ok __attribute__((unused)) = get(kv);
+        EL_ASSERT(is_ok);
+        return value;
+    }
+
+    template <typename KVType> Storage& operator>>(KVType&& kv) {
+        bool is_ok __attribute__((unused)) = get(std::forward<KVType>(kv));
+        EL_ASSERT(is_ok);
+        return *this;
+    }
+
+    template <typename ValueType> bool emplace(const types::el_storage_kv_t<ValueType>& kv) {
         volatile const Guard guard(this);
-        if (!kv->size || !__kvdb) [[unlikely]]
+        if (!kv.size || !__kvdb) [[unlikely]]
             return false;
         fdb_blob blob{};
-        return fdb_kv_set_blob(__kvdb, kv->key, fdb_blob_make(&blob, kv->value, kv->size)) == FDB_NO_ERR;
+        return fdb_kv_set_blob(__kvdb, kv.key, fdb_blob_make(&blob, &kv.value, kv.size)) == FDB_NO_ERR;
+    }
+
+    template <typename KVType> Storage& operator<<(KVType&& kv) {
+        bool is_ok __attribute__((unused)) = emplace(std::forward<KVType>(kv));
+        EL_ASSERT(is_ok);
+        return *this;
     }
 
     bool erase(const char* key) {
@@ -209,65 +192,6 @@ class Storage {
         return __kvdb ? fdb_kv_set_default(__kvdb) == FDB_NO_ERR : false;
     }
 
-    // template <typename KT, typename CT, typename HPT>
-    // Storage& operator<<(const types::el_storage_kv_t<KT, CT, HPT>& rhs) {
-    //     struct fdb_blob blob;
-
-    //     if constexpr (std::is_pointer<CT>::value) [[unlikely]]
-    //         emplace(rhs.key, fdb_blob_make(&blob, rhs.value, rhs.size_in_bytes));
-    //     else
-    //         emplace(rhs.key, fdb_blob_make(&blob, &rhs.value, rhs.size_in_bytes));
-
-    //     return *this;
-    // }
-
-    // currently we're always allocating new memory on the heap for CT types
-    // TODO: automatically determine whether to allocate new memory based on the type of CT
-    // template <typename KT, typename CT, typename HPT> Storage& operator>>(types::el_storage_kv_t<KT, CT, HPT>& rhs) {
-    //     volatile const Guard guard(this);
-    //     if (!__kvdb) [[unlikely]]
-    //         return *this;
-
-    //     using CTNoRef = typename std::remove_reference<CT>::type;
-    //     using HT      = typename std::remove_pointer<HPT>::type;
-
-    //     // HPT of rhs should always be pointer type (currently we're not going to check it)
-    //     HT  kv;
-    //     HPT p_kv{fdb_kv_get_obj(__kvdb, rhs.key, &kv)};
-
-    //     if (!p_kv) [[unlikely]]
-    //         return *this;
-
-    //     rhs.handler              = new HT(*p_kv);
-    //     rhs.__call_handel_delete = true;
-
-    //     struct fdb_blob blob;
-    //     if constexpr (traits::is_c_str<CTNoRef>::value || std::is_array<CTNoRef>::value ||
-    //                   std::is_pointer<CTNoRef>::value) {
-    //         using CIT = typename std::remove_const<
-    //           typename std::remove_pointer<typename std::remove_all_extents<CTNoRef>::type>::type>::type;
-    //         using CIPT = typename std::add_pointer<CIT>::type;
-
-    //         CIPT buffer{new CIT[p_kv->value_len]};
-    //         rhs.size_in_bytes =
-    //           fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
-    //                         fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, buffer, p_kv->value_len)));
-
-    //         rhs.value               = buffer;
-    //         rhs.__call_value_delete = true;
-    //     } else {
-    //         CTNoRef value;
-    //         rhs.size_in_bytes =
-    //           fdb_blob_read(reinterpret_cast<fdb_db_t>(__kvdb),
-    //                         fdb_kv_to_blob(const_cast<fdb_kv_t>(p_kv), fdb_blob_make(&blob, &value, p_kv->value_len)));
-
-    //         rhs.value = value;
-    //     }
-    //     rhs.size = rhs.size_in_bytes / sizeof(CTNoRef);
-
-    //     return *this;
-    // }
-
    protected:
     inline void m_lock() const noexcept { xSemaphoreTake(__lock, portMAX_DELAY); }
     inline void m_unlock() const noexcept { xSemaphoreGive(__lock); }
@@ -285,7 +209,7 @@ class Storage {
     struct Iterator {
         using iterator_category = std::forward_iterator_tag;
         using difference_type   = std::ptrdiff_t;
-        using value_type        = cconst har*;
+        using value_type        = const char*;
         using pointer           = const char**;
         using reference         = const char* const&;
 
@@ -311,17 +235,15 @@ class Storage {
         }
 
         Iterator& operator++() {
-            if (!___storage) [[unlikely]]
+            if (!___storage || !___kvdb) [[unlikely]]
                 return *this;
             volatile const Guard guard(___storage);
-
-            if (___kvdb) [[likely]]
-                ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
+            ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
 
             return *this;
         }
 
-        Iterator& operator++(int) {
+        Iterator operator++(int) {
             Iterator tmp = *this;
             ++(*this);
             return tmp;
@@ -339,7 +261,7 @@ class Storage {
         const Storage* const ___storage;
         fdb_kvdb_t           ___kvdb;
         fdb_kv_iterator      ___iterator;
-        value_type           ___value;
+        mutable value_type   ___value;
         volatile bool        ___reach_end;
     };
 

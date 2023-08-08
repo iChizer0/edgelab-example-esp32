@@ -67,7 +67,7 @@ size_t Models::seek_models_from_flash() {
 
         __model_info.emplace(model_id,
                              el_model_info_t{.id          = model_id,
-                                             .type        = model_type,
+                                             .type        = static_cast<el_algorithm_type_t>(model_type),
                                              .addr_flash  = __partition_start_addr + it,
                                              .size        = model_size,
                                              .addr_memory = mem_addr + header_size});
