@@ -32,34 +32,35 @@
 #include "el_misc.h"
 #include "el_types.h"
 
-#define EL_VERSION "2023.09.08"
+#define EL_VERSION                 "2023.09.11"
+#define EL_VERSION_LENTH_MAX       32
 
-#define EL_CONCAT(a, b) a##b
-#define EL_STRINGIFY(s) #s
+#define EL_CONCAT(a, b)            a##b
+#define EL_STRINGIFY(s)            #s
 
-#define EL_UNUSED(x) (void)(x)
-#define EL_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define EL_UNUSED(x)               (void)(x)
+#define EL_ARRAY_SIZE(x)           (sizeof(x) / sizeof((x)[0]))
 
-#define EL_MAX(a, b) ((a) > (b) ? (a) : (b))
-#define EL_MIN(a, b) ((a) < (b) ? (a) : (b))
-#define EL_CLIP(x, a, b) ((x) < (a) ? (a) : ((x) > (b) ? (b) : (x)))
+#define EL_MAX(a, b)               ((a) > (b) ? (a) : (b))
+#define EL_MIN(a, b)               ((a) < (b) ? (a) : (b))
+#define EL_CLIP(x, a, b)           ((x) < (a) ? (a) : ((x) > (b) ? (b) : (x)))
 
-#define EL_ABS(a) ((a) < 0 ? -(a) : (a))
-#define EL_ALIGN(x, a) (((x) + ((a)-1)) & ~((a)-1))
-#define EL_ALIGN_DOWN(x, a) ((x) & ~((a)-1))
-#define EL_ALIGN_UP(x, a) (((x) + ((a)-1)) & ~((a)-1))
-#define EL_IS_ALIGNED(x, a) (((x) & ((typeof(x))(a)-1)) == 0)
-#define EL_IS_ALIGNED_DOWN(x, a) (((x) & ((typeof(x))(a)-1)) == 0)
-#define EL_IS_ALIGNED_UP(x, a) (((x) & ((typeof(x))(a)-1)) == 0)
+#define EL_ABS(a)                  ((a) < 0 ? -(a) : (a))
+#define EL_ALIGN(x, a)             (((x) + ((a)-1)) & ~((a)-1))
+#define EL_ALIGN_DOWN(x, a)        ((x) & ~((a)-1))
+#define EL_ALIGN_UP(x, a)          (((x) + ((a)-1)) & ~((a)-1))
+#define EL_IS_ALIGNED(x, a)        (((x) & ((typeof(x))(a)-1)) == 0)
+#define EL_IS_ALIGNED_DOWN(x, a)   (((x) & ((typeof(x))(a)-1)) == 0)
+#define EL_IS_ALIGNED_UP(x, a)     (((x) & ((typeof(x))(a)-1)) == 0)
 
-#define EL_BIT(n) (1 << (n))
-#define EL_BIT_MASK(n) (EL_BIT(n) - 1)
-#define EL_BIT_SET(x, n) ((x) |= EL_BIT(n))
-#define EL_BIT_CLR(x, n) ((x) &= ~EL_BIT(n))
-#define EL_BIT_GET(x, n) (((x) >> (n)) & 1)
-#define EL_BIT_SET_MASK(x, n, m) ((x) |= ((m) << (n)))
-#define EL_BIT_CLR_MASK(x, n, m) ((x) &= ~((m) << (n)))
-#define EL_BIT_GET_MASK(x, n, m) (((x) >> (n)) & (m))
+#define EL_BIT(n)                  (1 << (n))
+#define EL_BIT_MASK(n)             (EL_BIT(n) - 1)
+#define EL_BIT_SET(x, n)           ((x) |= EL_BIT(n))
+#define EL_BIT_CLR(x, n)           ((x) &= ~EL_BIT(n))
+#define EL_BIT_GET(x, n)           (((x) >> (n)) & 1)
+#define EL_BIT_SET_MASK(x, n, m)   ((x) |= ((m) << (n)))
+#define EL_BIT_CLR_MASK(x, n, m)   ((x) &= ~((m) << (n)))
+#define EL_BIT_GET_MASK(x, n, m)   (((x) >> (n)) & (m))
 #define EL_BIT_SET_MASKED(x, n, m) ((x) |= ((m) & (EL_BIT_MASK(n) << (n))))
 #define EL_BIT_CLR_MASKED(x, n, m) ((x) &= ~((m) & (EL_BIT_MASK(n) << (n))))
 #define EL_BIT_GET_MASKED(x, n, m) (((x) >> (n)) & (m))

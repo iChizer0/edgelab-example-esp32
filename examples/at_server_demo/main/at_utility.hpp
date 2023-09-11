@@ -151,6 +151,17 @@ std::string simple_reply_ok(const std::string& cmd) {
     return str;
 }
 
+std::string algorithm_info_2_json_str(const el_algorithm_info_t* info) {
+    using namespace edgelab;
+    auto os{std::ostringstream(std::ios_base::ate)};
+
+    os << "{\"type\": " << static_cast<unsigned>(info->type)
+       << ", \"categroy\": " << static_cast<unsigned>(info->categroy)
+       << ", \"input_from\": " << static_cast<unsigned>(info->input_from) << "}";
+
+    return std::string(os.str());
+}
+
 template <typename InfoConfType> std::string algorithm_info_and_conf_2_json_str(const InfoConfType& info_and_conf) {
     using namespace edgelab;
     auto os{std::ostringstream(std::ios_base::ate)};

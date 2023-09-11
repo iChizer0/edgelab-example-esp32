@@ -108,51 +108,6 @@ void at_break(const std::string& cmd) {
     serial->send_bytes(str.c_str(), str.size());
 }
 
-void at_get_available_algorithms(const std::string& cmd) {
-    auto* serial                = Device::get_device()->get_serial();
-    auto& registered_algorithms = AlgorithmDelegate::get_delegate()->get_all_algorithm_info();
-    auto* storage               = DataDelegate::get_delegate()->get_storage_handler();
-    auto  os                    = std::ostringstream(std::ios_base::ate);
-
-    os << REPLY_CMD_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(EL_OK) << ", \"data\": [";
-    DELIM_RESET;
-    for (const auto& i : registered_algorithms) {
-        DELIM_PRINT(os);
-        switch (i->type) {
-        case EL_ALGO_TYPE_FOMO: {
-            el_algorithm_fomo_config_t info_and_conf{};
-            auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
-            if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
-            os << algorithm_info_and_conf_2_json_str(info_and_conf);
-        } break;
-        case EL_ALGO_TYPE_IMCLS: {
-            el_algorithm_imcls_config_t info_and_conf{};
-            auto                        kv{el_make_storage_kv_from_type(info_and_conf)};
-            if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
-            os << algorithm_info_and_conf_2_json_str(info_and_conf);
-        } break;
-        case EL_ALGO_TYPE_PFLD: {
-            el_algorithm_pfld_config_t info_and_conf{};
-            auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
-            if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
-            os << algorithm_info_and_conf_2_json_str(info_and_conf);
-        } break;
-        case EL_ALGO_TYPE_YOLO: {
-            el_algorithm_yolo_config_t info_and_conf{};
-            auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
-            if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
-            os << algorithm_info_and_conf_2_json_str(info_and_conf);
-        } break;
-        default:
-            break;
-        }
-    }
-    os << "]}\n";
-
-    const auto& str{os.str()};
-    serial->send_bytes(str.c_str(), str.size());
-}
-
 void at_get_available_models(const std::string& cmd) {
     auto* serial      = Device::get_device()->get_serial();
     auto* models      = DataDelegate::get_delegate()->get_models_handler();
@@ -195,12 +150,6 @@ void at_set_model(const std::string& cmd, uint8_t model_id, InferenceEngine* eng
     if (ret != EL_OK) [[unlikely]]
         goto ModelError;
 
-    model_info.type = model_info.type ? model_info.type : el_algorithm_type_from_engine(engine);
-    if (model_info.type == 0) [[unlikely]] {
-        ret = EL_EINVAL;
-        goto ModelError;
-    }
-
     if (current_model_id != model_id) {
         current_model_id = model_id;
         if (is_ready.load()) [[likely]]
@@ -231,13 +180,126 @@ void at_get_model_info(const std::string& cmd, const InferenceEngine* engine, ui
     if (ret != EL_OK) [[unlikely]]
         goto ModelInfoReply;
 
-    model_info.type = model_info.type ? model_info.type : el_algorithm_type_from_engine(engine);
-    if (model_info.type == 0) [[unlikely]]
-        ret = EL_EINVAL;
-
 ModelInfoReply:
     os << REPLY_CMD_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(ret)
        << ", \"data\": " << model_info_2_json(model_info) << "}\n";
+
+    const auto& str{os.str()};
+    serial->send_bytes(str.c_str(), str.size());
+}
+
+void at_get_available_algorithms(const std::string& cmd) {
+    auto* serial                = Device::get_device()->get_serial();
+    auto& registered_algorithms = AlgorithmDelegate::get_delegate()->get_all_algorithm_info();
+    auto  os                    = std::ostringstream(std::ios_base::ate);
+
+    os << REPLY_CMD_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(EL_OK) << ", \"data\": [";
+    DELIM_RESET;
+    for (const auto& i : registered_algorithms) {
+        DELIM_PRINT(os);
+        os << algorithm_info_2_json_str(i);
+    }
+    os << "]}\n";
+
+    const auto& str{os.str()};
+    serial->send_bytes(str.c_str(), str.size());
+}
+
+void at_set_algorithm(const std::string&   cmd,
+                      el_algorithm_type_t  algorithm_type,
+                      el_algorithm_type_t& current_algorithm_type) {
+    auto* serial             = Device::get_device()->get_serial();
+    auto* storage            = DataDelegate::get_delegate()->get_storage_handler();
+    auto* algorithm_delegate = AlgorithmDelegate::get_delegate();
+    auto  os                 = std::ostringstream(std::ios_base::ate);
+
+    el_algorithm_info_t algorithm_info = algorithm_delegate->get_algorithm_info(algorithm_type);
+    el_err_code_t       ret            = algorithm_type == algorithm_info.type ? EL_OK : EL_EINVAL;
+
+    if (algorithm_info.type != current_algorithm_type) [[likely]] {
+        current_algorithm_type = algorithm_info.type;
+        if (is_ready.load()) [[likely]]
+            *storage << el_make_storage_kv("current_algorithm_type", current_algorithm_type);
+    }
+
+    os << REPLY_CMD_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(ret) << ", \"data\": ";
+    switch (algorithm_info.type) {
+    case EL_ALGO_TYPE_FOMO: {
+        el_algorithm_fomo_config_t info_and_conf{};
+        auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+    case EL_ALGO_TYPE_IMCLS: {
+        el_algorithm_imcls_config_t info_and_conf{};
+        auto                        kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+    case EL_ALGO_TYPE_PFLD: {
+        el_algorithm_pfld_config_t info_and_conf{};
+        auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+    case EL_ALGO_TYPE_YOLO: {
+        el_algorithm_yolo_config_t info_and_conf{};
+        auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+
+    default:
+        os << "{\"type\": " << static_cast<unsigned>(algorithm_info.type)
+           << ", \"categroy\": " << static_cast<unsigned>(algorithm_info.categroy)
+           << ", \"input_from\": " << static_cast<unsigned>(algorithm_info.input_from) << ", \"config\": {}}";
+    }
+    os << "}\n";
+
+    const auto& str{os.str()};
+    serial->send_bytes(str.c_str(), str.size());
+}
+
+void at_get_algorithm_info(const std::string& cmd, const el_algorithm_type_t& current_algorithm_type) {
+    auto* serial             = Device::get_device()->get_serial();
+    auto* storage            = DataDelegate::get_delegate()->get_storage_handler();
+    auto* algorithm_delegate = AlgorithmDelegate::get_delegate();
+    auto  os                 = std::ostringstream(std::ios_base::ate);
+
+    el_algorithm_info_t algorithm_info = algorithm_delegate->get_algorithm_info(current_algorithm_type);
+
+    os << REPLY_CMD_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(EL_OK) << ", \"data\": ";
+    switch (algorithm_info.type) {
+    case EL_ALGO_TYPE_FOMO: {
+        el_algorithm_fomo_config_t info_and_conf{};
+        auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+    case EL_ALGO_TYPE_IMCLS: {
+        el_algorithm_imcls_config_t info_and_conf{};
+        auto                        kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+    case EL_ALGO_TYPE_PFLD: {
+        el_algorithm_pfld_config_t info_and_conf{};
+        auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+    case EL_ALGO_TYPE_YOLO: {
+        el_algorithm_yolo_config_t info_and_conf{};
+        auto                       kv{el_make_storage_kv_from_type(info_and_conf)};
+        if (storage->contains(kv.key)) *storage >> el_make_storage_kv_from_type(info_and_conf);
+        os << algorithm_info_and_conf_2_json_str(info_and_conf);
+    } break;
+    default:
+        os << "{\"type\": " << static_cast<unsigned>(algorithm_info.type)
+           << ", \"categroy\": " << static_cast<unsigned>(algorithm_info.categroy)
+           << ", \"input_from\": " << static_cast<unsigned>(algorithm_info.input_from) << ", \"config\": {}}";
+    }
+    os << "}\n";
 
     const auto& str{os.str()};
     serial->send_bytes(str.c_str(), str.size());
@@ -518,14 +580,15 @@ void run_invoke_on_img(AlgorithmType*     algorithm,
     is_invoke.store(false);
 }
 
-void at_run_invoke(const std::string& cmd,
-                   int                n_times,
-                   bool               result_only,
-                   std::atomic<bool>& stop_token,
-                   InferenceEngine*   engine,
-                   uint8_t            current_model_id,
-                   uint8_t            current_sensor_id,
-                   std::atomic<bool>& is_invoke) {
+void at_run_invoke(const std::string&  cmd,
+                   int                 n_times,
+                   bool                result_only,
+                   std::atomic<bool>&  stop_token,
+                   InferenceEngine*    engine,
+                   uint8_t             current_model_id,
+                   el_algorithm_type_t current_algotirhm_type,
+                   uint8_t             current_sensor_id,
+                   std::atomic<bool>&  is_invoke) {
     auto* device             = Device::get_device();
     auto* serial             = device->get_serial();
     auto* algorithm_delegate = AlgorithmDelegate::get_delegate();
@@ -553,13 +616,13 @@ void at_run_invoke(const std::string& cmd,
     if (model_info.id == 0) [[unlikely]]
         goto InvokeErrorReply;
 
-    if (model_info.type != 0)
-        algorithm_info = algorithm_delegate->get_algorithm_info(model_info.type);
-    else {
-        algorithm_info  = algorithm_delegate->get_algorithm_info(el_algorithm_type_from_engine(engine));
-        model_info.type = algorithm_info.type;
-    }
-    if (algorithm_info.type == 0) [[unlikely]]
+    if (current_algotirhm_type != EL_ALGO_TYPE_UNDEFINED)
+        algorithm_info = algorithm_delegate->get_algorithm_info(current_algotirhm_type);
+    else
+        algorithm_info = model_info.type != EL_ALGO_TYPE_UNDEFINED
+                           ? algorithm_delegate->get_algorithm_info(model_info.type)
+                           : algorithm_delegate->get_algorithm_info(el_algorithm_type_from_engine(engine));
+    if (algorithm_info.type == EL_ALGO_TYPE_UNDEFINED) [[unlikely]]
         goto InvokeErrorReply;
 
     sensor_info = device->get_sensor_info(current_sensor_id, algorithm_info.input_from);
@@ -568,6 +631,8 @@ void at_run_invoke(const std::string& cmd,
 
     switch (algorithm_info.type) {
     case EL_ALGO_TYPE_IMCLS: {
+        if (!AlgorithmIMCLS::is_model_valid(engine)) [[unlikely]]
+            break;
         std::unique_ptr<AlgorithmIMCLS> algorithm(new AlgorithmIMCLS(engine));
 
         auto algo_config_helper{AlgorithmConfigHelper<AlgorithmIMCLS>(algorithm.get())};
@@ -578,6 +643,8 @@ void at_run_invoke(const std::string& cmd,
         return;
 
     case EL_ALGO_TYPE_FOMO: {
+        if (!AlgorithmFOMO::is_model_valid(engine)) [[unlikely]]
+            break;
         std::unique_ptr<AlgorithmFOMO> algorithm(new AlgorithmFOMO(engine));
 
         auto algo_config_helper{AlgorithmConfigHelper<AlgorithmFOMO>(algorithm.get())};
@@ -588,6 +655,8 @@ void at_run_invoke(const std::string& cmd,
         return;
 
     case EL_ALGO_TYPE_PFLD: {
+        if (!AlgorithmPFLD::is_model_valid(engine)) [[unlikely]]
+            break;
         std::unique_ptr<AlgorithmPFLD> algorithm(new AlgorithmPFLD(engine));
         direct_reply(algorithm_info_and_conf_2_json_str(algorithm->get_algorithm_config()));
 
@@ -596,6 +665,8 @@ void at_run_invoke(const std::string& cmd,
         return;
 
     case EL_ALGO_TYPE_YOLO: {
+        if (!AlgorithmYOLO::is_model_valid(engine)) [[unlikely]]
+            break;
         std::unique_ptr<AlgorithmYOLO> algorithm(new AlgorithmYOLO(engine));
 
         auto algo_config_helper{AlgorithmConfigHelper<AlgorithmYOLO>(algorithm.get())};
@@ -611,7 +682,7 @@ void at_run_invoke(const std::string& cmd,
 
 InvokeErrorReply:
     ret = EL_EINVAL;
-    direct_reply("{\"type\": 0,\"categroy\": 0, \"input_from\": 0, \"config\": {}}");
+    direct_reply(algorithm_info_2_json_str(&algorithm_info));
 }
 
 void at_get_task_status(const std::string& cmd, const std::atomic<bool>& sta) {

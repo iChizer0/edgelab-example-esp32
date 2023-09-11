@@ -39,19 +39,24 @@ namespace edgelab {
 
 namespace algorithm::utility {
 
+// Note: the order index influences the algorthm type in current implementation
 el_algorithm_type_t el_algorithm_type_from_engine(const edgelab::InferenceEngine* engine) {
-#ifdef _EL_ALGORITHM_FOMO_HPP_
-    if (algorithm::FOMO::is_model_valid(engine)) return EL_ALGO_TYPE_FOMO;
-#endif
-#ifdef _EL_ALGORITHM_PFLD_HPP_
-    if (algorithm::PFLD::is_model_valid(engine)) return EL_ALGO_TYPE_PFLD;
-#endif
-#ifdef _EL_ALGORITHM_YOLO_HPP_
+#ifdef _EL_ALGORITHM_YOLO_HPP_  // index 1
     if (algorithm::YOLO::is_model_valid(engine)) return EL_ALGO_TYPE_YOLO;
 #endif
-#ifdef _EL_ALGORITHM_IMCLS_HPP_
+
+#ifdef _EL_ALGORITHM_FOMO_HPP_  // index 2
+    if (algorithm::FOMO::is_model_valid(engine)) return EL_ALGO_TYPE_FOMO;
+#endif
+
+#ifdef _EL_ALGORITHM_IMCLS_HPP_  // index 3
     if (algorithm::IMCLS::is_model_valid(engine)) return EL_ALGO_TYPE_IMCLS;
 #endif
+
+#ifdef _EL_ALGORITHM_PFLD_HPP_  // index 4
+    if (algorithm::PFLD::is_model_valid(engine)) return EL_ALGO_TYPE_PFLD;
+#endif
+
     return EL_ALGO_TYPE_UNDEFINED;
 }
 

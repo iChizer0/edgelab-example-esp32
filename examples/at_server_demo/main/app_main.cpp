@@ -29,20 +29,27 @@ extern "C" void app_main(void) {
     storage->init();
 
     // temporary variables
-    int32_t           boot_count        = 0;
-    uint8_t           current_model_id  = 1;
-    uint8_t           current_sensor_id = 1;
-    std::atomic<bool> is_sample(false);
-    std::atomic<bool> is_invoke(false);
+    int32_t             boot_count             = 0;
+    uint8_t             current_model_id       = 1;
+    el_algorithm_type_t current_algorithm_type = EL_ALGO_TYPE_UNDEFINED;
+    uint8_t             current_sensor_id      = 1;
+    std::atomic<bool>   is_sample(false);
+    std::atomic<bool>   is_invoke(false);
 
-    // init configs
-    if (!storage->contains("edgelab")) {
+    // init configs (TODO: version number instead of version string)
+    if (!storage->contains("edgelab") || [&]() -> bool {
+            char version[EL_VERSION_LENTH_MAX]{};
+            *storage >> el_make_storage_kv("edgelab", version);
+            return std::string(EL_VERSION) != version;
+        }()) {
         *storage << el_make_storage_kv("edgelab", EL_VERSION)
                  << el_make_storage_kv("current_model_id", current_model_id)
+                 << el_make_storage_kv("current_algorithm_type", current_algorithm_type)
                  << el_make_storage_kv("current_sensor_id", current_sensor_id)
                  << el_make_storage_kv("boot_count", boot_count);
     }
     *storage >> el_make_storage_kv("current_model_id", current_model_id) >>
+      el_make_storage_kv("current_algorithm_type", current_algorithm_type) >>
       el_make_storage_kv("current_sensor_id", current_sensor_id) >> el_make_storage_kv("boot_count", boot_count);
     *storage << el_make_storage_kv("boot_count", ++boot_count);
 
@@ -95,12 +102,6 @@ extern "C" void app_main(void) {
           return EL_OK;
       }));
 
-    instance->register_cmd(
-      "ALGOS?", "Get available algorithms", "", el_repl_cmd_cb_t([&](std::vector<std::string> argv) {
-          at_get_available_algorithms(argv[0]);
-          return EL_OK;
-      }));
-
     instance->register_cmd("MODELS?", "Get available models", "", el_repl_cmd_cb_t([&](std::vector<std::string> argv) {
                                at_get_available_models(argv[0]);
                                return EL_OK;
@@ -120,6 +121,31 @@ extern "C" void app_main(void) {
                                at_get_model_info(argv[0], engine, current_model_id);
                                return EL_OK;
                            }));
+
+    instance->register_cmd(
+      "ALGOS?", "Get available algorithms", "", el_repl_cmd_cb_t([&](std::vector<std::string> argv) {
+          at_get_available_algorithms(argv[0]);
+          return EL_OK;
+      }));
+
+    instance->register_cmd(
+      "ALGO",
+      "Set a algorithm by algorithm type ID",
+      "ALGORITHM_ID",
+      el_repl_cmd_cb_t([&](std::vector<std::string> argv) {
+          el_algorithm_type_t algorithm_type = static_cast<el_algorithm_type_t>(std::atoi(argv[1].c_str()));
+          executor->add_task(
+            [&, cmd = std::string(argv[0]), algorithm_type = std::move(algorithm_type)](std::atomic<bool>& stop_token) {
+                at_set_algorithm(cmd, algorithm_type, current_algorithm_type);
+            });
+          return EL_OK;
+      }));
+
+    instance->register_cmd(
+      "ALGO?", "Get current algorithm info", "", el_repl_cmd_cb_t([&](std::vector<std::string> argv) {
+          at_get_algorithm_info(argv[0], current_algorithm_type);
+          return EL_OK;
+      }));
 
     instance->register_cmd(
       "SENSORS?", "Get available sensors", "", el_repl_cmd_cb_t([&](std::vector<std::string> argv) {
@@ -174,8 +200,15 @@ extern "C" void app_main(void) {
           executor->add_task(
             [&, cmd = std::string(argv[0]), n_times = std::move(n_times), result_only = std::move(result_only)](
               std::atomic<bool>& stop_token) mutable {
-                at_run_invoke(
-                  cmd, n_times, result_only, stop_token, engine, current_model_id, current_sensor_id, is_invoke);
+                at_run_invoke(cmd,
+                              n_times,
+                              result_only,
+                              stop_token,
+                              engine,
+                              current_model_id,
+                              current_algorithm_type,
+                              current_sensor_id,
+                              is_invoke);
             });
           return EL_OK;
       }));
