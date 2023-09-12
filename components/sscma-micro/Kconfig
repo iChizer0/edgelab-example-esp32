@@ -1,0 +1,44 @@
+menu "SSCMA-Micro-SDK Configuration"
+
+    rsource "src/ports/Kconfig"
+
+    config MA_DEBUG
+        bool "Debug Logging"
+        default y
+        help
+            "Enable SSCMA-Micro-SDK debug"
+
+    menu "Logging Options"
+        depends on MA_DEBUG
+
+        config MA_DEBUG_COLOR
+            bool "color"
+            default y
+            help
+                "Enable SSCMA-Micro-SDK debug color"
+
+        config MA_DEBUG_MORE_INFO
+            bool "more info"
+            default y
+            help
+                "Enable SSCMA-Micro-SDK debug more info"
+
+        config MA_DEBUG_LEVEL
+            int "level"
+            default 3
+            range 0 4
+            help
+                "SSCMA-Micro-SDK debug level"
+
+        config MA_ASSERT
+            bool "assert"
+            default y
+            help
+                "Enable SSCMA-Micro-SDK assert"
+
+    endmenu
+
+    rsource "src/inference/Kconfig"
+    rsource "third_party/Kconfig"
+
+endmenu

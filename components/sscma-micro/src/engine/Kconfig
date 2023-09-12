@@ -1,0 +1,591 @@
+menu "Inference Engine"
+
+    config MA_TFLITE
+        bool "Enable TFLite"
+        default y
+        help
+            "Enable TFLite inference engine"
+
+    menu "TFLite Options"
+        depends on MA_TFLITE
+
+        config MA_TFLITE_OP_ABS
+            bool "ABS"
+            default n
+            help
+                ABS
+
+        config MA_TFLITE_OP_ADD
+            bool "ADD"
+            default y
+            help
+                ADD
+
+        config MA_TFLITE_OP_ADDN
+            bool "ADDN"
+            default n
+            help
+                ADDN
+
+        config MA_TFLITE_OP_ARGMAX
+            bool "ARGMAX"
+            default n
+            help
+                ARGMAX
+
+        config MA_TFLITE_OP_ARGMIN
+            bool "ARGMIN"
+            default n
+            help
+                ARGMIN
+
+        config MA_TFLITE_OP_ASSIGN_VARIABLE
+            bool "ASSIGN_VARIABLE"
+            default n
+            help
+                ASSIGN_VARIABLE
+
+        config MA_TFLITE_OP_AVERAGE_POOL_2D
+            bool "AVERAGE_POOL_2D"
+            default n
+            help
+                AVERAGE_POOL_2D
+
+        config MA_TFLITE_OP_BATCH_TO_SPACE_ND
+            bool "BATCH_TO_SPACE_ND"
+            default n
+            help
+                BATCH_TO_SPACE_ND
+
+        config MA_TFLITE_OP_BROADCAST_ARGS
+            bool "BROADCAST_ARGS"
+            default n
+            help
+                BROADCAST_ARGS
+
+        config MA_TFLITE_OP_BROADCAST_TO
+            bool "BROADCAST_TO"
+            default n
+            help
+                BROADCAST_TO
+
+        config MA_TFLITE_OP_CALL_ONCE
+            bool "CALL_ONCE"
+            default n
+            help
+                CALL_ONCE
+
+        config MA_TFLITE_OP_CAST
+            bool "CAST"
+            default n
+            help
+                CAST
+
+        config MA_TFLITE_OP_CEIL
+            bool "CEIL"
+            default n
+            help
+                CEIL
+
+        config MA_TFLITE_OP_CIRULAR_BUFFER
+            bool "CIRULAR_BUFFER"
+            default n
+            help
+                CIRULAR_BUFFER
+
+        config MA_TFLITE_OP_CONCATENATION
+            bool "CONCATENATION"
+            default y
+            help
+                CONCATENATION
+
+        config MA_TFLITE_OP_CONV_2D
+            bool "CONV_2D"
+            default y
+            help
+                CONV_2D
+
+        config MA_TFLITE_OP_COS
+            bool "COS"
+            default n
+            help
+                COS
+
+        config MA_TFLITE_OP_CUM_SUM
+            bool "CUM_SUM"
+            default n
+            help
+                CUM_SUM
+
+        config MA_TFLITE_OP_DEPTH_TO_SPACE
+            bool "DEPTH_TO_SPACE"
+            default n
+            help
+                DEPTH_TO_SPACE
+
+        config MA_TFLITE_OP_DEPTHWISE_CONV_2D
+            bool "DEPTHWISE_CONV_2D"
+            default n
+            help
+                DEPTHWISE_CONV_2D
+
+        config MA_TFLITE_OP_DEQUANTIZE
+            bool "DEQUANTIZE"
+            default n
+            help
+                DEQUANTIZE
+
+        config MA_TFLITE_OP_DETECTION_POSTPROCESS
+            bool "DETECTION_POSTPROCESS"
+            default n
+            help
+                DETECTION_POSTPROCESS
+
+        config MA_TFLITE_OP_DIV
+            bool "DIV"
+            default n
+            help
+                DIV
+
+        config MA_TFLITE_OP_ELU
+            bool "ELU"
+            default n
+            help
+                ELU
+
+        config MA_TFLITE_OP_EQUAL
+            bool "EQUAL"
+            default n
+            help
+                EQUAL
+
+        config MA_TFLITE_ETHOS_U
+            bool "Enable TFLite ETHOS_U"
+            default n
+            help
+                Enable TFLite ETHOS_U
+
+        config MA_TFLITE_OP_EXP
+            bool "EXP"
+            default n
+            help
+                EXP
+
+        config MA_TFLITE_OP_EXPAND_DIMS
+            bool "EXPAND_DIMS"
+            default n
+            help
+                EXPAND_DIMS
+
+        config MA_TFLITE_OP_FILL
+            bool "FILL"
+            default n
+            help
+                FILL
+
+        config MA_TFLITE_OP_FLOOR
+            bool "FLOOR"
+            default n
+            help
+                FLOOR
+
+        config MA_TFLITE_OP_FLOOR_DIV
+            bool "FLOOR_DIV"
+            default n
+            help
+                FLOOR_DIV
+
+        config MA_TFLITE_OP_FLOOR_MOD
+            bool "FLOOR_MOD"
+            default n
+            help
+                FLOOR_MOD
+
+        config MA_TFLITE_OP_FULLY_CONNECTED
+            bool "FULLY_CONNECTED"
+            default n
+            help
+                FULLY_CONNECTED
+
+        config MA_TFLITE_OP_GATHER
+            bool "GATHER"
+            default n
+            help
+                GATHER
+
+        config MA_TFLITE_OP_GATHER_ND
+            bool "GATHER_ND"
+            default n
+            help
+                GATHER_ND
+
+        config MA_TFLITE_OP_GREATER
+            bool "GREATER"
+            default n
+            help
+                GREATER
+
+        config MA_TFLITE_OP_GREATER_EQUAL
+            bool "GREATER_EQUAL"
+            default n
+            help
+                GREATER_EQUAL
+
+        config MA_TFLITE_OP_HARD_SWISH
+            bool "HARD_SWISH"
+            default n
+            help
+                HARD_SWISH
+
+
+        config MA_TFLITE_OP_L2_NORMALIZATION
+            bool "L2_NORMALIZATION"
+            default n
+            help
+                L2_NORMALIZATION
+
+        config MA_TFLITE_OP_L2_POOL_2D
+            bool "L2_POOL_2D"
+            default n
+            help
+                L2_POOL_2D
+
+        config MA_TFLITE_OP_LEAKY_RELU
+            bool "LEAKY_RELU"
+            default y
+            help
+                LEAKY_RELU
+
+        config MA_TFLITE_OP_LESS
+            bool "LESS"
+            default n
+            help
+                LESS
+
+        config MA_TFLITE_OP_LESS_EQUAL
+            bool "LESS_EQUAL"
+            default n
+            help
+                LESS_EQUAL
+
+        config MA_TFLITE_OP_LOG
+            bool "LOG"
+            default n
+            help
+                LOG
+
+        config MA_TFLITE_OP_LOGICAL_AND
+            bool "LOGICAL_AND"
+            default n
+            help
+                LOGICAL_AND
+
+        config MA_TFLITE_OP_LOGICAL_NOT
+            bool "LOGICAL_NOT"
+            default n
+            help
+                LOGICAL_NOT
+
+        config MA_TFLITE_OP_LOGICAL_OR
+            bool "LOGICAL_OR"
+            default n
+            help
+                LOGICAL_OR
+
+        config MA_TFLITE_OP_LOGISTIC
+            bool "LOGISTIC"
+            default y
+            help
+                LOGISTIC
+
+        config MA_TFLITE_OP_LOG_SOFTMAX
+            bool "LOG_SOFTMAX"
+            default n
+            help
+                LOG_SOFTMAX
+
+        config MA_TFLITE_OP_MAX_POOL_2D
+            bool "MAX_POOL_2D"
+            default y
+            help
+                MAX_POOL_2D
+
+        config MA_TFLITE_OP_MAXIMUM
+            bool "MAXIMUM"
+            default n
+            help
+                MAXIMUM
+
+        config MA_TFLITE_OP_MEAN
+            bool "MEAN"
+            default y
+            help
+                MEAN
+
+        config MA_TFLITE_OP_MINIMUM
+            bool "MINIMUM"
+            default n
+            help
+                MINIMUM
+
+        config MA_TFLITE_OP_MIRROR_PAD
+            bool "MIRROR_PAD"
+            default n
+            help
+                MIRROR_PAD
+
+        config MA_TFLITE_OP_MUL
+            bool "MUL"
+            default y
+            help
+                MUL
+
+        config MA_TFLITE_OP_NEG
+            bool "NEG"
+            default n
+            help
+                NEG
+
+        config MA_TFLITE_OP_NOT_EQUAL
+            bool "NOT_EQUAL"
+            default n
+            help
+                NOT_EQUAL
+
+        config MA_TFLITE_OP_PACK
+            bool "PACK"
+            default n
+            help
+                PACK
+
+        config MA_TFLITE_OP_PAD
+            bool "PAD"
+            default y
+            help
+                PAD
+
+        config MA_TFLITE_OP_PADV2
+            bool "PADV2"
+            default y
+            help
+                PADV2
+
+        config MA_TFLITE_OP_PRELU
+            bool "PRELU"
+            default n
+            help
+                PRELU
+
+        config MA_TFLITE_OP_QUANTIZE
+            bool "QUANTIZE"
+            default y
+            help
+                QUANTIZE
+
+        config MA_TFLITE_OP_READ_VARIABLE
+            bool "READ_VARIABLE"
+            default n
+            help
+                READ_VARIABLE
+
+        config MA_TFLITE_OP_REDUCE_ANY
+            bool "REDUCE_ANY"
+            default n
+            help
+                REDUCE_ANY
+
+        config MA_TFLITE_OP_RELU
+            bool "RELU"
+            default y
+            help
+                RELU
+
+        config MA_TFLITE_OP_RELU6
+            bool "RELU6"
+            default n
+            help
+                RELU6
+
+        config MA_TFLITE_OP_RESHAPE
+            bool "RESHAPE"
+            default y
+            help
+                RESHAPE
+
+        config MA_TFLITE_OP_RESIZE_BILINEAR
+            bool "RESIZE_BILINEAR"
+            default n
+            help
+                RESIZE_BILINEAR
+
+        config MA_TFLITE_OP_RESIZE_NEAREST_NEIGHBOR
+            bool "RESIZE_NEAREST_NEIGHBOR"
+            default y
+            help
+                RESIZE_NEAREST_NEIGHBOR
+
+        config MA_TFLITE_OP_ROUND
+            bool "ROUND"
+            default n
+            help
+                ROUND
+
+        config MA_TFLITE_OP_RSQRT
+            bool "RSQRT"
+            default n
+            help
+                RSQRT
+
+        config MA_TFLITE_OP_SELECT_V2
+            bool "SELECT_V2"
+            default n
+            help
+                SELECT_V2
+
+        config MA_TFLITE_OP_SHAPE
+            bool "SHAPE"
+            default y
+            help
+                SHAPE
+
+        config MA_TFLITE_OP_SIN
+            bool "SIN"
+            default n
+            help
+                SIN
+
+        config MA_TFLITE_OP_SLICE
+            bool "SLICE"
+            default n
+            help
+                SLICE
+
+        config MA_TFLITE_OP_SOFTMAX
+            bool "SOFTMAX"
+            default y
+            help
+                SOFTMAX
+
+        config MA_TFLITE_OP_SPACE_TO_BATCH_ND
+            bool "SPACE_TO_BATCH_ND"
+            default n
+            help
+                SPACE_TO_BATCH_ND
+
+        config MA_TFLITE_OP_SPACE_TO_DEPTH
+            bool "SPACE_TO_DEPTH"
+            default n
+            help
+                SPACE_TO_DEPTH
+
+        config MA_TFLITE_OP_SPLIT
+            bool "SPLIT"
+            default y
+            help
+                SPLIT
+
+        config MA_TFLITE_OP_SPLIT_V
+            bool "SPLIT_V"
+            default y
+            help
+                SPLIT_V
+
+        config MA_TFLITE_OP_SQRT
+            bool "SQRT"
+            default n
+            help
+                SQRT
+
+        config MA_TFLITE_OP_SQUARE
+            bool "SQUARE"
+            default n
+            help
+                SQUARE
+
+        config MA_TFLITE_OP_SQUARED_DIFFERENCE
+            bool "SQUARED_DIFFERENCE"
+            default n
+            help
+                SQUARED_DIFFERENCE
+
+        config MA_TFLITE_OP_SQUEEZE
+            bool "SQUEEZE"
+            default n
+            help
+                SQUEEZE
+
+        config MA_TFLITE_OP_STRIDED_SLICE
+            bool "STRIDED_SLICE"
+            default y
+            help
+                STRIDED_SLICE
+
+        config MA_TFLITE_OP_SUB
+            bool "SUB"
+            default y
+            help
+                SUB
+
+        config MA_TFLITE_OP_SUM
+            bool "SUM"
+            default n
+            help
+                SUM
+
+        config MA_TFLITE_SVDF
+            bool "SVDF"
+            default n
+            help
+                SVDF
+
+        config MA_TFLITE_OP_TANH
+            bool "TANH"
+            default n
+            help
+                TANH
+
+        config MA_TFLITE_OP_TRANSPOSE
+            bool "TRANSPOSE"
+            default y
+            help
+                TRANSPOSE
+
+        config MA_TFLITE_OP_TRANSPOSE_CONV
+            bool "TRANSPOSE_CONV"
+            default n
+            help
+                TRANSPOSE_CONV
+
+        config MA_TFLITE_OP_UNIDIRECTIONAL_SEQUENCE_LSTM
+            bool "UNIDIRECTIONAL_SEQUENCE_LSTM"
+            default n
+            help
+                UNIDIRECTIONAL_SEQUENCE_LSTM
+
+        config MA_TFLITE_OP_UNPACK
+            bool "UNPACK"
+            default n
+            help
+                UNPACK
+
+        config MA_TFLITE_OP_VARHANDLE
+            bool "VARHANDLE"
+            default n
+            help
+                VARHANDLE
+
+        config MA_TFLITE_OP_WHILE
+            bool "WHILE"
+            default n
+            help
+                WHILE
+
+        config MA_TFLITE_OP_ZEROS_LIKE
+            bool "ZEROS_LIKE"
+            default n
+            help
+                ZEROS_LIKE
+
+    endmenu
+
+endmenu
