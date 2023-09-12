@@ -117,7 +117,7 @@ std::string img_2_jpeg_json_str(const el_img_t* img) {
     auto os = std::ostringstream(std::ios_base::ate);
 
     if (!img || !img->data) [[unlikely]]
-        return {};
+        return "\"image\": \"\"";
 
     os << "\"image\": \"";
     size_t size     = img->width * img->height * 3;
