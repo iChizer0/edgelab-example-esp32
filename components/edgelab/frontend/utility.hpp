@@ -9,7 +9,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "at_definations.hpp"
+#include "frontend/utility/algorithm_config_helper.hpp"
+
 #include "el_algorithm.hpp"
 #include "el_base64.h"
 #include "el_cv.h"
@@ -17,6 +18,9 @@
 #include "el_device_esp.h"
 #include "el_repl.hpp"
 #include "el_types.h"
+#include "frontend/definations.hpp"
+
+namespace frontend::utility {
 
 std::string string_2_str(const std::string& str) {
     std::string ss(1, '"');
@@ -42,8 +46,6 @@ inline uint32_t color_literal(uint8_t i) {
     };
     return color[i % 5];
 }
-
-void draw_results_on_image(const std::forward_list<el_class_t>& results, el_img_t* img) {}
 
 void draw_results_on_image(const std::forward_list<el_point_t>& results, el_img_t* img) {
     uint8_t i = 0;
@@ -141,16 +143,6 @@ std::string img_2_jpeg_json_str(const el_img_t* img) {
     return std::string(os.str());
 }
 
-std::string simple_reply_ok(const std::string& cmd) {
-    std::string str{};
-
-    str += "{\"";
-    str += cmd;
-    str += "\": {\"status\": \"OK\"}}";
-
-    return str;
-}
-
 std::string algorithm_info_2_json_str(const el_algorithm_info_t* info) {
     using namespace edgelab;
     auto os{std::ostringstream(std::ios_base::ate)};
@@ -196,118 +188,6 @@ std::string img_invoke_results_2_json_str(
     return std::string(os.str());
 }
 
-template <typename AlgorithmType> class AlgorithmConfigHelper {
-   public:
-    using ConfigType = typename AlgorithmType::ConfigType;
-
-    AlgorithmConfigHelper(AlgorithmType* algorithm)
-        : _instance(edgelab::ReplDelegate::get_delegate()->get_server_handler()),
-          _algorithm(algorithm),
-          _config(algorithm->get_algorithm_config()),
-          _kv(el_make_storage_kv_from_type(_config)),
-          _storage(edgelab::DataDelegate::get_delegate()->get_storage_handler()),
-          _serial(edgelab::Device::get_device()->get_serial()) {
-        using namespace edgelab;
-
-        if (_storage->contains(_kv.key)) [[likely]]
-            *_storage >> _kv;
-        else
-            *_storage << _kv;
-        _algorithm->set_algorithm_config(_kv.value);
-
-        if constexpr (std::is_same<ConfigType, el_algorithm_fomo_config_t>::value ||
-                      std::is_same<ConfigType, el_algorithm_imcls_config_t>::value ||
-                      std::is_same<ConfigType, el_algorithm_yolo_config_t>::value) {
-            el_err_code_t ret = _instance->register_cmd(
-              "TSCORE", "Set score threshold", "SCORE_THRESHOLD", [this](std::vector<std::string> argv) {
-                  auto          os    = std::ostringstream(std::ios_base::ate);
-                  uint8_t       value = std::atoi(argv[1].c_str());
-                  el_err_code_t ret   = value <= 100 ? EL_OK : EL_EINVAL;
-
-                  if (ret == EL_OK) {
-                      this->_algorithm->set_score_threshold(value);
-                      this->_kv.value.score_threshold = value;
-                      *(this->_storage) << this->_kv;
-                  }
-
-                  os << REPLY_CMD_HEADER << "\"name\": \"" << argv[0] << "\", \"code\": " << static_cast<int>(ret)
-                     << ", \"data\": " << static_cast<unsigned>(this->_kv.value.score_threshold) << "}\n";
-
-                  const auto& str{os.str()};
-                  this->_serial->send_bytes(str.c_str(), str.size());
-
-                  return EL_OK;
-              });
-            if (ret == EL_OK) _config_cmds.emplace_front("TSCORE");
-
-            ret = _instance->register_cmd("TSCORE?", "Get score threshold", "", [this](std::vector<std::string> argv) {
-                auto os = std::ostringstream(std::ios_base::ate);
-
-                os << REPLY_CMD_HEADER << "\"name\": \"" << argv[0] << "\", \"code\": " << static_cast<int>(EL_OK)
-                   << ", \"data\": " << static_cast<unsigned>(this->_algorithm->get_score_threshold()) << "}\n";
-
-                const auto& str{os.str()};
-                this->_serial->send_bytes(str.c_str(), str.size());
-
-                return EL_OK;
-            });
-            if (ret == EL_OK) _config_cmds.emplace_front("TSCORE?");
-        }
-        if constexpr (std::is_same<ConfigType, el_algorithm_yolo_config_t>::value) {
-            el_err_code_t ret = _instance->register_cmd(
-              "TIOU", "Set IoU threshold", "IOU_THRESHOLD", [this](std::vector<std::string> argv) {
-                  auto          os    = std::ostringstream(std::ios_base::ate);
-                  uint8_t       value = std::atoi(argv[1].c_str());
-                  el_err_code_t ret   = value <= 100 ? EL_OK : EL_EINVAL;
-
-                  if (ret == EL_OK) {
-                      this->_algorithm->set_iou_threshold(value);
-                      this->_kv.value.iou_threshold = value;
-                      *(this->_storage) << this->_kv;
-                  }
-
-                  os << REPLY_CMD_HEADER << "\"name\": \"" << argv[0] << "\", \"code\": " << static_cast<int>(ret)
-                     << ", \"data\": " << static_cast<unsigned>(this->_kv.value.iou_threshold) << "}\n";
-
-                  const auto& str{os.str()};
-                  this->_serial->send_bytes(str.c_str(), str.size());
-
-                  return EL_OK;
-              });
-            if (ret == EL_OK) _config_cmds.emplace_front("TIOU");
-
-            ret = _instance->register_cmd("TIOU?", "Get IoU threshold", "", [this](std::vector<std::string> argv) {
-                auto os = std::ostringstream(std::ios_base::ate);
-
-                os << REPLY_CMD_HEADER << "\"name\": \"" << argv[0] << "\", \"code\": " << static_cast<int>(EL_OK)
-                   << ", \"data\": " << static_cast<unsigned>(this->_algorithm->get_iou_threshold()) << "}\n";
-
-                const auto& str{os.str()};
-                this->_serial->send_bytes(str.c_str(), str.size());
-
-                return EL_OK;
-            });
-            if (ret == EL_OK) _config_cmds.emplace_front("TIOU?");
-        }
-    }
-
-    ConfigType dump_config() { return _config; }
-
-    ~AlgorithmConfigHelper() {
-        for (const auto& cmd : _config_cmds) _instance->unregister_cmd(cmd);
-    }
-
-   private:
-    edgelab::repl::ReplServer*     _instance;
-    std::forward_list<std::string> _config_cmds;
-
-    AlgorithmType*                                     _algorithm;
-    ConfigType                                         _config;
-    edgelab::data::types::el_storage_kv_t<ConfigType&> _kv;
-
-    edgelab::data::Storage* _storage;
-    edgelab::Serial*        _serial;
-};
 
 std::vector<std::string> tokenize_function_2_argv(const std::string& input) {
     std::vector<std::string> argv;
@@ -360,3 +240,5 @@ std::string action_str_2_cmd(const char* str) {
 
     return std::string(os.str());
 }
+
+}  // namespace frontend::utility

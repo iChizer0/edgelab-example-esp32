@@ -7,20 +7,29 @@
 #include <string>
 #include <unordered_map>
 
-#include "at_interpreter.hpp"
+#include "frontend/interpreter/lexer.hpp"
+#include "frontend/interpreter/parser.hpp"
+#include "frontend/interpreter/types.hpp"
+
+namespace frontend::callback::internal {
+
+namespace types {
 
 typedef std::function<void(void)>                     branch_cb_t;
 typedef std::function<int(void)>                      mutable_cb_t;
 typedef std::unordered_map<std::string, mutable_cb_t> mutable_map_t;
 
-class ActionDelegate {
-   public:
-    static ActionDelegate* get_delegate() {
-        static auto action_delegate = ActionDelegate();
-        return &action_delegate;
-    }
+}  // namespace types
 
-    ~ActionDelegate() { unset_condition(); }
+using namespace frontend::callback::internal::types;
+using namespace frontend::interpreter;
+using namespace frontend::interpreter::types;
+
+class ActionHelper {
+   public:
+    ActionHelper() : _node(nullptr), _eval_lock(xSemaphoreCreateCounting(1, 1)){};
+
+    ~ActionHelper() { unset_condition(); }
 
     bool has_condition() {
         const Guard guard(this);
@@ -31,9 +40,9 @@ class ActionDelegate {
     bool set_condition(const std::string& input) {
         const Guard guard(this);
 
-        intr::Lexer    lexer(input);
-        intr::Mutables mutables;
-        intr::Parser   parser(lexer, mutables);
+        Lexer    lexer(input);
+        Mutables mutables;
+        Parser   parser(lexer, mutables);
 
         _node = parser.parse();
 
@@ -75,12 +84,14 @@ class ActionDelegate {
         if (!_node) [[unlikely]]
             return false;
 
-        if (_node->evaluate([this](intr::types::NodeType, const std::string& name) {
-                auto it = this->_mutable_map.find(name);
-                if (it != this->_mutable_map.end() && it->second) [[likely]]
-                    return it->second();
-                return 0;
-            })) {
+        auto result = _node->evaluate([this](intr::types::NodeType, const std::string& name) {
+            auto it = this->_mutable_map.find(name);
+            if (it != this->_mutable_map.end() && it->second) [[likely]]
+                return it->second();
+            return Result{.status = EvalStatus::EXCEPTION, .value = 0};
+        });
+
+        if (result.status == EvalStatus::OK && result.value) {
             if (_true_cb) [[likely]]
                 _true_cb();
         } else if (_false_or_exception_cb) [[likely]]
@@ -100,20 +111,18 @@ class ActionDelegate {
     }
 
    protected:
-    ActionDelegate() : _node(nullptr), _eval_lock(xSemaphoreCreateCounting(1, 1)){};
-
     inline void m_lock() const noexcept { xSemaphoreTake(_eval_lock, portMAX_DELAY); }
     inline void m_unlock() const noexcept { xSemaphoreGive(_eval_lock); }
 
     struct Guard {
-        Guard(const ActionDelegate* const action) noexcept : __action(action) { __action->m_lock(); }
+        Guard(const ActionHelper* const action) noexcept : __action(action) { __action->m_lock(); }
         ~Guard() noexcept { __action->m_unlock(); }
 
         Guard(const Guard&)            = delete;
         Guard& operator=(const Guard&) = delete;
 
        private:
-        const ActionDelegate* const __action;
+        const ActionHelper* const __action;
     };
 
    private:
@@ -126,3 +135,5 @@ class ActionDelegate {
     branch_cb_t _true_cb;
     branch_cb_t _false_or_exception_cb;
 };
+
+}  // namespace frontend::callback::internal

@@ -1,6 +1,6 @@
 menu "Edgelab Configuration"
 
-    rsource "src/ports/Kconfig"
+    rsource "porting/Kconfig"
 
     config EL_DEBUG
         bool "Log debug"
@@ -33,7 +33,7 @@ menu "Edgelab Configuration"
     endmenu
 
 
-    rsource "src/inference/Kconfig"
+    rsource "core/inference/Kconfig"
     rsource "third_party/Kconfig"
 
 endmenu

@@ -27,6 +27,7 @@
 #define _EDGELAB_H_
 
 #include "el_base64.h"
+#include "el_hash.h"
 #include "el_common.h"
 #include "el_cv.h"
 #include "el_device.h"

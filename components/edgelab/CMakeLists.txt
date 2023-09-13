@@ -3,20 +3,26 @@ cmake_minimum_required(VERSION 3.5)
 set(idf_version "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}")
 
 FILE(GLOB_RECURSE SRCS_EDGELAB
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/frontend/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/porting/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/porting/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/porting/*.c
 )
 
 set(INCLUDES_EDGELAB
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ports
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ports/espressif
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/repl
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/inference
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithm
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/data
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/frontend
+    ${CMAKE_CURRENT_SOURCE_DIR}/porting
+    ${CMAKE_CURRENT_SOURCE_DIR}/porting/espressif
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/repl
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/inference
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/algorithm
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/data
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FlashDB
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/JPEGENC
 )
