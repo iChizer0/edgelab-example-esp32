@@ -6,11 +6,16 @@
 #include <sstream>
 #include <string>
 
-#include "core/edgelab.h"
+#include "core/algorithm/el_algorithm.hpp"
+#include "core/data/el_data.hpp"
+#include "core/inference/el_inference.hpp"
+#include "core/utils/el_hash.h"
+
 #include "frontend/interpreter/condition.hpp"
 #include "frontend/repl/executor.hpp"
 #include "frontend/repl/server.hpp"
 #include "frontend/utility.hpp"
+
 #include "porting/espressif/el_device_esp.h"
 
 namespace frontend {
@@ -18,6 +23,8 @@ namespace frontend {
 using namespace frontend::utility;
 using namespace frontend::interpreter;
 using namespace frontend::repl;
+
+using namespace edgelab;
 
 class StaticResourse {
    public:

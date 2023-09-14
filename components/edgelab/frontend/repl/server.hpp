@@ -96,10 +96,9 @@ class Server {
     Server(Server const&)            = delete;
     Server& operator=(Server const&) = delete;
 
-    void init(repl_echo_cb_t echo_cb = [](el_err_code_t, const std::string& str) { el_printf(str.c_str()); }) {
+    void init(repl_echo_cb_t echo_cb) {
         {
             const Guard guard(this, _cmd_list_lock);
-            EL_ASSERT(echo_cb);
             _echo_cb = echo_cb;
         }
 
@@ -265,7 +264,7 @@ class Server {
             if (std::isprint(c)) {
                 _line.insert(++_line_index, 1, c);
                 if (_line_index == (_line.size() - 1))
-                    el_putchar(c);
+                    m_echo_cb(EL_OK, c);
                 else
                     m_echo_cb(EL_OK, "\r> ", _line, "\033[", _line_index + 4, "G");
             }
