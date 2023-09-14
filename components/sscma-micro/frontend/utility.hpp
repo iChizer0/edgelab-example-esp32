@@ -3,19 +3,18 @@
 #include <array>
 #include <cstdint>
 #include <forward_list>
-#include <vector>
 #include <iomanip>
 #include <sstream>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
-#include "el_algorithm.hpp"
-#include "el_base64.h"
-#include "el_cv.h"
-#include "el_data.hpp"
-#include "el_device_esp.h"
-#include "el_types.h"
+#include "core/algorithm/el_algorithm.hpp"
+#include "core/data/el_data.hpp"
+#include "core/el_types.h"
+#include "core/utils/el_base64.h"
+#include "core/utils/el_cv.h"
 #include "frontend/definations.hpp"
 
 namespace frontend::utility {
