@@ -18,7 +18,6 @@ set(INCLUDES_EDGELAB
     ${CMAKE_CURRENT_SOURCE_DIR}/frontend
     ${CMAKE_CURRENT_SOURCE_DIR}/porting
     ${CMAKE_CURRENT_SOURCE_DIR}/porting/espressif
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/repl
     ${CMAKE_CURRENT_SOURCE_DIR}/core/inference
     ${CMAKE_CURRENT_SOURCE_DIR}/core/algorithm
     ${CMAKE_CURRENT_SOURCE_DIR}/core/data

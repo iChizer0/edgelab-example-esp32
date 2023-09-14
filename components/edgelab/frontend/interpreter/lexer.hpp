@@ -5,8 +5,8 @@
 #include <string>
 #include <utility>
 
-#include "types.hpp"
-#include "utility.hpp"
+#include "frontend/interpreter/types.hpp"
+#include "frontend/interpreter/utility.hpp"
 
 namespace frontend::interpreter {
 

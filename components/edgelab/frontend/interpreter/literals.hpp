@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "types.hpp"
+#include "frontend/interpreter/types.hpp"
 
 namespace frontend::interpreter::literals {
 

@@ -39,7 +39,6 @@
     #include "el_algorithm.hpp"
     #include "el_data.hpp"
     #include "el_inference.hpp"
-    #include "el_repl.hpp"
 
 using namespace edgelab;
 

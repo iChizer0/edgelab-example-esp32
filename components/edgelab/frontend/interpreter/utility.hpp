@@ -2,7 +2,7 @@
 
 #include <locale>
 
-#include "types.hpp"
+#include "frontend/interpreter/types.hpp"
 
 namespace frontend::interpreter::utility {
 

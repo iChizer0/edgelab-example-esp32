@@ -3,26 +3,24 @@
 #include <array>
 #include <cstdint>
 #include <forward_list>
+#include <vector>
 #include <iomanip>
 #include <sstream>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "frontend/utility/algorithm_config_helper.hpp"
-
 #include "el_algorithm.hpp"
 #include "el_base64.h"
 #include "el_cv.h"
 #include "el_data.hpp"
 #include "el_device_esp.h"
-#include "el_repl.hpp"
 #include "el_types.h"
 #include "frontend/definations.hpp"
 
 namespace frontend::utility {
 
-std::string string_2_str(const std::string& str) {
+std::string quoted_stringify(const std::string& str) {
     std::string ss(1, '"');
     for (char c : str) {
         if (c == '"') [[unlikely]]
@@ -61,7 +59,7 @@ void draw_results_on_image(const std::forward_list<el_box_t>& results, el_img_t*
     }
 }
 
-std::string model_info_2_json(el_model_info_t model_info) {
+std::string model_info_2_json_str(el_model_info_t model_info) {
     auto os{std::ostringstream(std::ios_base::ate)};
 
     os << "{\"id\": " << static_cast<unsigned>(model_info.id)
@@ -72,7 +70,7 @@ std::string model_info_2_json(el_model_info_t model_info) {
     return std::string(os.str());
 }
 
-std::string sensor_info_2_json(el_sensor_info_t sensor_info) {
+std::string sensor_info_2_json_str(el_sensor_info_t sensor_info) {
     auto os{std::ostringstream(std::ios_base::ate)};
 
     os << "{\"id\": " << static_cast<unsigned>(sensor_info.id)
@@ -82,7 +80,7 @@ std::string sensor_info_2_json(el_sensor_info_t sensor_info) {
     return std::string(os.str());
 }
 
-template <typename T> constexpr std::string results_2_json(const std::forward_list<T>& results) {
+template <typename T> constexpr std::string results_2_json_str(const std::forward_list<T>& results) {
     auto os{std::ostringstream(std::ios_base::ate)};
 
     DELIM_RESET;
@@ -181,13 +179,13 @@ std::string img_invoke_results_2_json_str(
     os << REPLY_EVT_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(ret)
        << ", \"data\": {\"perf\": [" << static_cast<unsigned>(algorithm->get_preprocess_time()) << ", "
        << static_cast<unsigned>(algorithm->get_run_time()) << ", "
-       << static_cast<unsigned>(algorithm->get_postprocess_time()) << "], " << results_2_json(algorithm->get_results());
+       << static_cast<unsigned>(algorithm->get_postprocess_time()) << "], "
+       << results_2_json_str(algorithm->get_results());
     if (!result_only) os << ", " << img_2_jpeg_json_str(img);
     os << "}}\n";
 
     return std::string(os.str());
 }
-
 
 std::vector<std::string> tokenize_function_2_argv(const std::string& input) {
     std::vector<std::string> argv;
@@ -214,7 +212,7 @@ std::vector<std::string> tokenize_function_2_argv(const std::string& input) {
     return argv;
 }
 
-std::string action_str_2_json(const char* str) {
+std::string action_str_2_json_str(const char* str) {
     std::ostringstream         os;
     std::string                buf;
     std::stringstream          ss(str);
@@ -222,13 +220,13 @@ std::string action_str_2_json(const char* str) {
 
     for (size_t i = 0; i < argv_3.size() && std::getline(ss, buf, '\t'); ++i) argv_3[i] = buf;
 
-    os << "\"cond\": " << string_2_str(argv_3[0]) << ", \"true\": " << string_2_str(argv_3[1])
-       << ", \"false_or_exception\": " << string_2_str(argv_3[2]);
+    os << "\"cond\": " << quoted_stringify(argv_3[0]) << ", \"true\": " << quoted_stringify(argv_3[1])
+       << ", \"false\": " << quoted_stringify(argv_3[2]) << ", \"exception\": " << quoted_stringify(argv_3[3]);
 
     return std::string(os.str());
 }
 
-std::string action_str_2_cmd(const char* str) {
+std::string action_str_2_cmd_str(const char* str) {
     std::ostringstream         os;
     std::string                buf;
     std::stringstream          ss(str);
@@ -236,7 +234,8 @@ std::string action_str_2_cmd(const char* str) {
 
     for (size_t i = 0; i < argv_3.size() && std::getline(ss, buf, '\t'); ++i) argv_3[i] = buf;
 
-    os << "AT+ACTION=" << string_2_str(argv_3[0]) << "," << string_2_str(argv_3[1]) << "," << string_2_str(argv_3[2]);
+    os << "AT+ACTION=" << quoted_stringify(argv_3[0]) << "," << quoted_stringify(argv_3[1]) << ","
+       << quoted_stringify(argv_3[2]);
 
     return std::string(os.str());
 }

@@ -2,9 +2,9 @@
 
 #include <stack>
 
-#include "lexer.hpp"
-#include "nodes.hpp"
-#include "types.hpp"
+#include "frontend/interpreter/lexer.hpp"
+#include "frontend/interpreter/nodes.hpp"
+#include "frontend/interpreter/types.hpp"
 
 namespace frontend::interpreter {
 

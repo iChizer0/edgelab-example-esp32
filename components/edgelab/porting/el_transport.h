@@ -42,6 +42,10 @@ class Transport {
     virtual el_err_code_t read_bytes(char* buffer, size_t size)       = 0;
     virtual el_err_code_t send_bytes(const char* buffer, size_t size) = 0;
 
+    virtual char   echo(bool only_visible = true)                               = 0;
+    virtual char   get_char()                                                   = 0;
+    virtual size_t get_line(char* buffer, size_t size, const char delim = 0x0d) = 0;
+
     operator bool() { return _is_present; }
 
    protected:

@@ -35,13 +35,6 @@ class Serial : public Transport {
    public:
     Serial()          = default;
     virtual ~Serial() = default;
-
-    virtual el_err_code_t init()   = 0;
-    virtual el_err_code_t deinit() = 0;
-
-    virtual char   echo(bool only_visible = true)                               = 0;
-    virtual char   get_char()                                                   = 0;
-    virtual size_t get_line(char* buffer, size_t size, const char delim = 0x0d) = 0;
 };
 
 }  // namespace edgelab

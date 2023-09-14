@@ -13,34 +13,28 @@
 namespace frontend::callback {
 
 using namespace frontend::utility;
-using namespace frontend::static_resource;
 
 template <typename AlgorithmType>
-void run_invoke_on_img(AlgorithmType*     algorithm,
-                       const std::string& cmd,
-                       int                n_times,
-                       bool               result_only,
-                       std::atomic<bool>& stop_token,
-                       std::atomic<bool>& is_invoke) {
-    auto* camera          = device->get_camera();
-    auto* action_delegate = ActionDelegate::get_delegate();
-    auto  img             = el_img_t{.data   = nullptr,
-                                     .size   = 0,
-                                     .width  = 0,
-                                     .height = 0,
-                                     .format = EL_PIXEL_FORMAT_UNKNOWN,
-                                     .rotate = EL_PIXEL_ROTATE_UNKNOWN};
-    auto  ret             = algorithm ? EL_OK : EL_EINVAL;
-    auto  event_reply     = [&]() {
+void run_invoke_on_img(
+  AlgorithmType* algorithm, const std::string& cmd, int n_times, bool result_only, std::atomic<bool>& stop_token) {
+    auto* camera      = static_resourse->device->get_camera();
+    auto  img         = el_img_t{.data   = nullptr,
+                                 .size   = 0,
+                                 .width  = 0,
+                                 .height = 0,
+                                 .format = EL_PIXEL_FORMAT_UNKNOWN,
+                                 .rotate = EL_PIXEL_ROTATE_UNKNOWN};
+    auto  ret         = algorithm ? EL_OK : EL_EINVAL;
+    auto  event_reply = [&]() {
         const auto& str = img_invoke_results_2_json_str(algorithm, &img, cmd, result_only, ret);
-        serial->send_bytes(str.c_str(), str.size());
+        static_resourse->transport->send_bytes(str.c_str(), str.size());
     };
     if (ret != EL_OK) [[unlikely]] {
         event_reply();
         return;
     }
     {
-        auto mutable_map = action_delegate->get_mutable_map();
+        auto mutable_map = static_resourse->action_cond->get_mutable_map();
         for (auto& kv : mutable_map) {
             const auto& argv = tokenize_function_2_argv(kv.first);
 
@@ -91,10 +85,10 @@ void run_invoke_on_img(AlgorithmType*     algorithm,
                 }
             }
         }
-        action_delegate->set_mutable_map(mutable_map);
+        static_resourse->action_cond->set_mutable_map(mutable_map);
     }
 
-    is_invoke.store(true);
+    static_resourse->is_invoke.store(true);
     while ((n_times < 0 || --n_times >= 0) && !stop_token.load()) {
         ret = camera->start_stream();
         if (ret != EL_OK) [[unlikely]]
@@ -108,7 +102,7 @@ void run_invoke_on_img(AlgorithmType*     algorithm,
         if (ret != EL_OK) [[unlikely]]
             goto InvokeErrorReply;
 
-        action_delegate->evalute();
+        static_resourse->action_cond->evalute();
 
         event_reply();
         camera->stop_stream();  // Note: discarding return err_code (always EL_OK)
@@ -119,18 +113,10 @@ void run_invoke_on_img(AlgorithmType*     algorithm,
         event_reply();
         break;
     }
-    is_invoke.store(false);
+    static_resourse->is_invoke.store(false);
 }
 
-void run_invoke(const std::string&  cmd,
-                int                 n_times,
-                bool                result_only,
-                std::atomic<bool>&  stop_token,
-                InferenceEngine*    engine,
-                uint8_t             current_model_id,
-                el_algorithm_type_t current_algotirhm_type,
-                uint8_t             current_sensor_id,
-                std::atomic<bool>&  is_invoke) {
+void run_invoke(const std::string& cmd, int n_times, bool result_only, std::atomic<bool>& stop_token) {
     auto os             = std::ostringstream(std::ios_base::ate);
     auto model_info     = el_model_info_t{};
     auto algorithm_info = el_algorithm_info_t{};
@@ -138,75 +124,78 @@ void run_invoke(const std::string&  cmd,
     auto ret            = EL_OK;
     auto direct_reply   = [&](const std::string& algorithm_info_and_conf) {
         os << REPLY_CMD_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(ret)
-           << ", \"data\": {\"model\": " << model_info_2_json(model_info)
-           << ", \"algorithm\": " << algorithm_info_and_conf << ", \"sensor\": " << sensor_info_2_json(sensor_info)
+           << ", \"data\": {\"model\": " << model_info_2_json_str(model_info)
+           << ", \"algorithm\": " << algorithm_info_and_conf << ", \"sensor\": " << sensor_info_2_json_str(sensor_info)
            << "}}\n";
 
         const auto& str{os.str()};
-        serial->send_bytes(str.c_str(), str.size());
+        static_resourse->transport->send_bytes(str.c_str(), str.size());
     };
 
-    model_info = models->get_model_info(current_model_id);
+    model_info = static_resourse->models->get_model_info(static_resourse->current_model_id);
     if (model_info.id == 0) [[unlikely]]
         goto InvokeErrorReply;
 
-    if (current_algotirhm_type != EL_ALGO_TYPE_UNDEFINED)
-        algorithm_info = algorithm_delegate->get_algorithm_info(current_algotirhm_type);
+    if (static_resourse->current_algorithm_type != EL_ALGO_TYPE_UNDEFINED)
+        algorithm_info =
+          static_resourse->algorithm_delegate->get_algorithm_info(static_resourse->current_algorithm_type);
     else
         algorithm_info = model_info.type != EL_ALGO_TYPE_UNDEFINED
-                           ? algorithm_delegate->get_algorithm_info(model_info.type)
-                           : algorithm_delegate->get_algorithm_info(el_algorithm_type_from_engine(engine));
+                           ? static_resourse->algorithm_delegate->get_algorithm_info(model_info.type)
+                           : static_resourse->algorithm_delegate->get_algorithm_info(
+                               el_algorithm_type_from_engine(static_resourse->engine));
     if (algorithm_info.type == EL_ALGO_TYPE_UNDEFINED) [[unlikely]]
         goto InvokeErrorReply;
 
-    sensor_info = device->get_sensor_info(current_sensor_id, algorithm_info.input_from);
+    sensor_info =
+      static_resourse->device->get_sensor_info(static_resourse->current_sensor_id, algorithm_info.input_from);
     if (sensor_info.id == 0 || sensor_info.state != EL_SENSOR_STA_AVAIL) [[unlikely]]
         goto InvokeErrorReply;
 
     switch (algorithm_info.type) {
     case EL_ALGO_TYPE_IMCLS: {
-        if (!AlgorithmIMCLS::is_model_valid(engine)) [[unlikely]]
+        if (!AlgorithmIMCLS::is_model_valid(static_resourse->engine)) [[unlikely]]
             break;
-        std::unique_ptr<AlgorithmIMCLS> algorithm(new AlgorithmIMCLS(engine));
+        std::unique_ptr<AlgorithmIMCLS> algorithm(new AlgorithmIMCLS(static_resourse->engine));
 
         auto algo_config_helper{AlgorithmConfigHelper<AlgorithmIMCLS>(algorithm.get())};
         direct_reply(algorithm_info_and_conf_2_json_str(algo_config_helper.dump_config()));
 
-        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token, is_invoke);
+        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token);
     }
         return;
 
     case EL_ALGO_TYPE_FOMO: {
-        if (!AlgorithmFOMO::is_model_valid(engine)) [[unlikely]]
+        if (!AlgorithmFOMO::is_model_valid(static_resourse->engine)) [[unlikely]]
             break;
-        std::unique_ptr<AlgorithmFOMO> algorithm(new AlgorithmFOMO(engine));
+        std::unique_ptr<AlgorithmFOMO> algorithm(new AlgorithmFOMO(static_resourse->engine));
 
         auto algo_config_helper{AlgorithmConfigHelper<AlgorithmFOMO>(algorithm.get())};
         direct_reply(algorithm_info_and_conf_2_json_str(algo_config_helper.dump_config()));
 
-        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token, is_invoke);
+        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token);
     }
         return;
 
     case EL_ALGO_TYPE_PFLD: {
-        if (!AlgorithmPFLD::is_model_valid(engine)) [[unlikely]]
+        if (!AlgorithmPFLD::is_model_valid(static_resourse->engine)) [[unlikely]]
             break;
-        std::unique_ptr<AlgorithmPFLD> algorithm(new AlgorithmPFLD(engine));
+        std::unique_ptr<AlgorithmPFLD> algorithm(new AlgorithmPFLD(static_resourse->engine));
         direct_reply(algorithm_info_and_conf_2_json_str(algorithm->get_algorithm_config()));
 
-        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token, is_invoke);
+        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token);
     }
         return;
 
     case EL_ALGO_TYPE_YOLO: {
-        if (!AlgorithmYOLO::is_model_valid(engine)) [[unlikely]]
+        if (!AlgorithmYOLO::is_model_valid(static_resourse->engine)) [[unlikely]]
             break;
-        std::unique_ptr<AlgorithmYOLO> algorithm(new AlgorithmYOLO(engine));
+        std::unique_ptr<AlgorithmYOLO> algorithm(new AlgorithmYOLO(static_resourse->engine));
 
         auto algo_config_helper{AlgorithmConfigHelper<AlgorithmYOLO>(algorithm.get())};
         direct_reply(algorithm_info_and_conf_2_json_str(algo_config_helper.dump_config()));
 
-        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token, is_invoke);
+        run_invoke_on_img(algorithm.get(), cmd, n_times, result_only, stop_token);
     }
         return;
 
