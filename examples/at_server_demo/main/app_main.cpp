@@ -1,6 +1,6 @@
-#include "frontend/main_task.hpp"
+#include "sscma/main_task.hpp"
 
 
 extern "C" void app_main(void) {
-    frontend::main_task::run();
+    sscma::main_task::run();
 }

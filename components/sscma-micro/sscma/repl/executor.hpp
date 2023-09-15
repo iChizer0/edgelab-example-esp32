@@ -11,12 +11,12 @@
 #include <queue>
 #include <utility>
 
-#include "frontend/definations.hpp"
-#include "frontend/types.hpp"
+#include "sscma/definations.hpp"
+#include "sscma/types.hpp"
 
-namespace frontend::repl {
+namespace sscma::repl {
 
-using namespace frontend::types;
+using namespace sscma::types;
 
 class Executor {
    public:
@@ -99,4 +99,4 @@ class Executor {
     std::queue<repl_task_t> _task_queue;
 };
 
-}  // namespace frontend::repl
+}  // namespace sscma::repl

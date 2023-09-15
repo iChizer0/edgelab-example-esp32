@@ -5,13 +5,13 @@
 #include <string>
 #include <utility>
 
-#include "frontend/interpreter/types.hpp"
-#include "frontend/interpreter/utility.hpp"
+#include "sscma/interpreter/types.hpp"
+#include "sscma/interpreter/utility.hpp"
 
-namespace frontend::interpreter {
+namespace sscma::interpreter {
 
-using namespace frontend::interpreter::types;
-using namespace frontend::interpreter::utility;
+using namespace sscma::interpreter::types;
+using namespace sscma::interpreter::utility;
 
 class Lexer {
    public:
@@ -126,4 +126,4 @@ class Lexer {
     char               _current_char;
 };
 
-}  // namespace frontend::interpreter
+}  // namespace sscma::interpreter

@@ -7,9 +7,9 @@
 #include <string>
 #include <type_traits>
 
-#include "frontend/static_resourse.hpp"
+#include "sscma/static_resourse.hpp"
 
-namespace frontend::callback {
+namespace sscma::callback {
 
 template <typename AlgorithmType> class AlgorithmConfigHelper {
    public:
@@ -102,4 +102,4 @@ template <typename AlgorithmType> class AlgorithmConfigHelper {
     ConfigType     _config;
 };
 
-}  // namespace frontend::callback
+}  // namespace sscma::callback

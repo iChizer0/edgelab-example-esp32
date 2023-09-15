@@ -7,13 +7,13 @@
 #include <sstream>
 #include <string>
 
-#include "frontend/definations.hpp"
-#include "frontend/static_resourse.hpp"
-#include "frontend/utility.hpp"
+#include "sscma/definations.hpp"
+#include "sscma/static_resourse.hpp"
+#include "sscma/utility.hpp"
 
-namespace frontend::callback {
+namespace sscma::callback {
 
-using namespace frontend::utility;
+using namespace sscma::utility;
 
 void set_info(const std::vector<std::string>& argv) {
     auto os = std::ostringstream(std::ios_base::ate);
@@ -48,4 +48,4 @@ void get_info(const std::string& cmd) {
     static_resourse->transport->send_bytes(str.c_str(), str.size());
 }
 
-}  // namespace frontend::callback
+}  // namespace sscma::callback

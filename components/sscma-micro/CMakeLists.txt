@@ -5,7 +5,7 @@ FILE(GLOB_RECURSE SSCMA_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/core/*.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/frontend/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sscma/*.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/porting/*.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/porting/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/porting/*.c

@@ -2,11 +2,11 @@
 
 #include <string>
 
-#include "frontend/interpreter/types.hpp"
+#include "sscma/interpreter/types.hpp"
 
-namespace frontend::interpreter {
+namespace sscma::interpreter {
 
-using namespace frontend::interpreter::types;
+using namespace sscma::interpreter::types;
 
 class IdentifierNode : public ASTNode {
    public:
@@ -98,4 +98,4 @@ class FunctionCallNode : public ASTNode {
     std::string _function_call;
 };
 
-}  // namespace frontend::interpreter
+}  // namespace sscma::interpreter

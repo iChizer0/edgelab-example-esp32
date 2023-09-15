@@ -6,13 +6,13 @@
 #include <sstream>
 #include <string>
 
-#include "frontend/definations.hpp"
-#include "frontend/static_resourse.hpp"
-#include "frontend/utility.hpp"
+#include "sscma/definations.hpp"
+#include "sscma/static_resourse.hpp"
+#include "sscma/utility.hpp"
 
-namespace frontend::callback {
+namespace sscma::callback {
 
-using namespace frontend::utility;
+using namespace sscma::utility;
 
 void run_sample(const std::string& cmd, int n_times, std::atomic<bool>& stop_token) {
     const auto& sensor_info  = static_resourse->device->get_sensor_info(static_resourse->current_sensor_id);
@@ -76,4 +76,4 @@ SampleErrorReply:
     direct_reply();
 }
 
-}  // namespace frontend::callback
+}  // namespace sscma::callback

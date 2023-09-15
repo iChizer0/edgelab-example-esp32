@@ -7,16 +7,16 @@
 #include <string>
 #include <unordered_map>
 
-#include "frontend/interpreter/lexer.hpp"
-#include "frontend/interpreter/parser.hpp"
-#include "frontend/interpreter/types.hpp"
-#include "frontend/types.hpp"
+#include "sscma/interpreter/lexer.hpp"
+#include "sscma/interpreter/parser.hpp"
+#include "sscma/interpreter/types.hpp"
+#include "sscma/types.hpp"
 
-namespace frontend::interpreter {
+namespace sscma::interpreter {
 
-using namespace frontend::types;
-using namespace frontend::interpreter;
-using namespace frontend::interpreter::types;
+using namespace sscma::types;
+using namespace sscma::interpreter;
+using namespace sscma::interpreter::types;
 
 class Condition {
    public:
@@ -136,4 +136,4 @@ class Condition {
     branch_cb_t _exception_cb;
 };
 
-}  // namespace frontend
+}  // namespace sscma

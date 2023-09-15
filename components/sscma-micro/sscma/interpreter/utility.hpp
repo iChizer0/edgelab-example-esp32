@@ -2,11 +2,11 @@
 
 #include <locale>
 
-#include "frontend/interpreter/types.hpp"
+#include "sscma/interpreter/types.hpp"
 
-namespace frontend::interpreter::utility {
+namespace sscma::interpreter::utility {
 
-using namespace frontend::interpreter::types;
+using namespace sscma::interpreter::types;
 
 bool is_identifier(char c) { return std::isalnum(c) || c == '_'; }
 
@@ -26,4 +26,4 @@ bool is_rparn(char c) { return c == rparn; }
 
 bool is_comma(char c) { return c == ','; }
 
-}  // namespace frontend::interpreter::utility
+}  // namespace sscma::interpreter::utility

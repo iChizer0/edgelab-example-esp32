@@ -1,20 +1,20 @@
 #pragma once
 
-#include "frontend/callback/action.hpp"
-#include "frontend/callback/algorithm.hpp"
-#include "frontend/callback/default.hpp"
-#include "frontend/callback/info.hpp"
-#include "frontend/callback/invoke.hpp"
-#include "frontend/callback/model.hpp"
-#include "frontend/callback/sample.hpp"
-#include "frontend/callback/sensor.hpp"
-#include "frontend/static_resourse.hpp"
-#include "frontend/types.hpp"
+#include "sscma/callback/action.hpp"
+#include "sscma/callback/algorithm.hpp"
+#include "sscma/callback/default.hpp"
+#include "sscma/callback/info.hpp"
+#include "sscma/callback/invoke.hpp"
+#include "sscma/callback/model.hpp"
+#include "sscma/callback/sample.hpp"
+#include "sscma/callback/sensor.hpp"
+#include "sscma/static_resourse.hpp"
+#include "sscma/types.hpp"
 
-namespace frontend::main_task {
+namespace sscma::main_task {
 
-using namespace frontend::types;
-using namespace frontend::callback;
+using namespace sscma::types;
+using namespace sscma::callback;
 
 void run() {
     static_resourse->instance->register_cmd("HELP?", "List available commands", "", [&](std::vector<std::string> argv) {
@@ -238,4 +238,4 @@ void run() {
     delete[] buf;
 }
 
-}  // namespace frontend::main_task
+}  // namespace sscma::main_task

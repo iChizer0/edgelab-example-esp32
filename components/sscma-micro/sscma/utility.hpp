@@ -15,9 +15,9 @@
 #include "core/el_types.h"
 #include "core/utils/el_base64.h"
 #include "core/utils/el_cv.h"
-#include "frontend/definations.hpp"
+#include "sscma/definations.hpp"
 
-namespace frontend::utility {
+namespace sscma::utility {
 
 using namespace edgelab;
 using namespace edgelab::utility;
@@ -238,4 +238,4 @@ std::string action_str_2_cmd_str(const char* str) {
     return std::string(os.str());
 }
 
-}  // namespace frontend::utility
+}  // namespace sscma::utility

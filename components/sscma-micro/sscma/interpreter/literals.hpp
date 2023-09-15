@@ -2,11 +2,11 @@
 
 #include <iostream>
 
-#include "frontend/interpreter/types.hpp"
+#include "sscma/interpreter/types.hpp"
 
-namespace frontend::interpreter::literals {
+namespace sscma::interpreter::literals {
 
-using namespace frontend::interpreter::types;
+using namespace sscma::interpreter::types;
 
 std::ostream& operator<<(std::ostream& os, TokenType token_type) {
     switch (token_type) {
@@ -29,4 +29,4 @@ std::ostream& operator<<(std::ostream& os, TokenType token_type) {
     };
 }
 
-}  // namespace frontend::interpreter::literals
+}  // namespace sscma::interpreter::literals

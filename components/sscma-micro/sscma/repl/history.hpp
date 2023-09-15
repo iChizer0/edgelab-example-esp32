@@ -5,10 +5,10 @@
 #include <deque>
 #include <string>
 
-#include "frontend/definations.hpp"
-#include "frontend/types.hpp"
+#include "sscma/definations.hpp"
+#include "sscma/types.hpp"
 
-namespace frontend::repl {
+namespace sscma::repl {
 
 class History {
    public:
@@ -93,4 +93,4 @@ class History {
     int                     _max_size;
 };
 
-}  // namespace frontend::repl
+}  // namespace sscma::repl

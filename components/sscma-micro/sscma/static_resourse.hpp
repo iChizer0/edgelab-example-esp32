@@ -12,17 +12,17 @@
 #include "core/el_common.h"
 #include "core/engine/el_engine_tflite.h"
 #include "core/utils/el_hash.h"
-#include "frontend/interpreter/condition.hpp"
-#include "frontend/repl/executor.hpp"
-#include "frontend/repl/server.hpp"
-#include "frontend/utility.hpp"
+#include "sscma/interpreter/condition.hpp"
+#include "sscma/repl/executor.hpp"
+#include "sscma/repl/server.hpp"
+#include "sscma/utility.hpp"
 #include "porting/espressif/el_device_esp.h"
 
-namespace frontend {
+namespace sscma {
 
-using namespace frontend::utility;
-using namespace frontend::interpreter;
-using namespace frontend::repl;
+using namespace sscma::utility;
+using namespace sscma::interpreter;
+using namespace sscma::repl;
 
 using namespace edgelab;
 using namespace edgelab::base;
@@ -137,4 +137,4 @@ class StaticResourse {
 
 static auto* static_resourse{StaticResourse::get_static_resource()};
 
-}  // namespace frontend
+}  // namespace sscma

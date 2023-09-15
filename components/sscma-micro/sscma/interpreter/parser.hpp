@@ -2,13 +2,13 @@
 
 #include <stack>
 
-#include "frontend/interpreter/lexer.hpp"
-#include "frontend/interpreter/nodes.hpp"
-#include "frontend/interpreter/types.hpp"
+#include "sscma/interpreter/lexer.hpp"
+#include "sscma/interpreter/nodes.hpp"
+#include "sscma/interpreter/types.hpp"
 
-namespace frontend::interpreter {
+namespace sscma::interpreter {
 
-using namespace frontend::interpreter::types;
+using namespace sscma::interpreter::types;
 
 class Parser {
    public:
@@ -91,4 +91,4 @@ class Parser {
     std::stack<ASTNode*> _node_stack;
 };
 
-}  // namespace frontend::interpreter
+}  // namespace sscma::interpreter

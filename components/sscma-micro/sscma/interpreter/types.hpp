@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace frontend::interpreter::types {
+namespace sscma::interpreter::types {
 
 static const char lparn = '(';
 static const char rparn = ')';
@@ -36,4 +36,4 @@ class ASTNode {
     virtual Result evaluate(EvalCallback callback) const = 0;
 };
 
-}  // namespace frontend::interpreter::types
+}  // namespace sscma::interpreter::types

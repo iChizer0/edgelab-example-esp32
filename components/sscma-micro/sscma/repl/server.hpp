@@ -37,9 +37,9 @@
 #include <vector>
 
 #include "core/el_types.h"
-#include "frontend/repl/history.hpp"
+#include "sscma/repl/history.hpp"
 
-namespace frontend {
+namespace sscma {
 
 namespace repl {
 
@@ -66,7 +66,7 @@ struct repl_cmd_t {
     std::string   args;
     repl_cmd_cb_t cmd_cb;
 
-    friend class frontend::repl::Server;
+    friend class sscma::repl::Server;
 
    private:
     uint8_t _argc;
@@ -74,9 +74,9 @@ struct repl_cmd_t {
 
 }  // namespace types
 
-}  // namespace frontend
+}  // namespace sscma
 
-namespace frontend::repl {
+namespace sscma::repl {
 
 class Server {
    public:
@@ -396,4 +396,4 @@ class Server {
     int         _line_index;
 };
 
-}  // namespace frontend::repl
+}  // namespace sscma::repl
