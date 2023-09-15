@@ -26,8 +26,7 @@
 #ifndef _EL_SERIAL_H_
 #define _EL_SERIAL_H_
 
-#include "el_transport.h"
-#include "el_types.h"
+#include "porting/el_transport.h"
 
 namespace edgelab {
 

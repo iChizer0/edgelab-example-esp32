@@ -26,14 +26,13 @@
 #ifndef _EL_FLASH_ESP_H_
 #define _EL_FLASH_ESP_H_
 
-#include <assert.h>
 #include <esp_partition.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <spi_flash_mmap.h>
 
-#include "el_config_internal.h"
-#include "el_types.h"
+#include "core/el_config_internal.h"
+#include "core/el_types.h"
 
 #ifdef __cplusplus
 extern "C" {

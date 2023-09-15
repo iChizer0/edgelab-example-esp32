@@ -26,11 +26,10 @@
 #ifndef _EL_COMMON_H_
 #define _EL_COMMON_H_
 
-#include "el_compiler.h"
-#include "el_config_internal.h"
-#include "el_debug.h"
-#include "el_misc.h"
-#include "el_types.h"
+#include "core/el_compiler.h"
+#include "core/el_config_internal.h"
+#include "core/el_debug.h"
+#include "core/el_types.h"
 
 #define EL_VERSION                 "2023.09.12"
 #define EL_VERSION_LENTH_MAX       32

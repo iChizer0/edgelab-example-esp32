@@ -23,23 +23,17 @@
  *
  */
 
-#ifndef _BOARD_H_
-#define _BOARD_H_
+#ifndef _BOARDS_H_
+#define _BOARDS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "sdkconfig.h"
 
 #ifdef CONFIG_EL_BOARD_SEEED_XIAO_ESP32S3
-#include "seeed_xiao_esp32s3/board.h"
+    #include "seeed_xiao_esp32s3/board.h"
 #elif defined(CONFIG_EL_BOARD_ESPRESSIF_ESP32S3_EYE)
-#include "espressif_esp32s3_eye/board.h"
+    #include "espressif_esp32s3_eye/board.h"
 #else
-#error "No board defined"
-#endif
-
-#ifdef __cplusplus
-}
+    #error "No board defined"
 #endif
 
 #endif

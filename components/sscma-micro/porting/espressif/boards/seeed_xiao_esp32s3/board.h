@@ -26,32 +26,29 @@
 #ifndef _SEEED_XIAO_ESP32S3_BOARD_H_
 #define _SEEED_XIAO_ESP32S3_BOARD_H_
 
-/* LED */
-#define LED_0_PIN GPIO_NUM_21
+#define LED_0_PIN                    GPIO_NUM_21
 
-/* CAMERA */
-#define CAMERA_MODULE_NAME "XIAO-S3"
-#define CAMERA_PIN_PWDN    -1
-#define CAMERA_PIN_RESET   -1
+#define CAMERA_MODULE_NAME           "XIAO-S3"
+#define CAMERA_PIN_PWDN              -1
+#define CAMERA_PIN_RESET             -1
 
-#define CAMERA_PIN_VSYNC   38
-#define CAMERA_PIN_HREF    47
-#define CAMERA_PIN_PCLK    13
-#define CAMERA_PIN_XCLK    10
+#define CAMERA_PIN_VSYNC             38
+#define CAMERA_PIN_HREF              47
+#define CAMERA_PIN_PCLK              13
+#define CAMERA_PIN_XCLK              10
 
-#define CAMERA_PIN_SIOD    40
-#define CAMERA_PIN_SIOC    39
+#define CAMERA_PIN_SIOD              40
+#define CAMERA_PIN_SIOC              39
 
-#define CAMERA_PIN_D0      15
-#define CAMERA_PIN_D1      17
-#define CAMERA_PIN_D2      18
-#define CAMERA_PIN_D3      16
-#define CAMERA_PIN_D4      14
-#define CAMERA_PIN_D5      12
-#define CAMERA_PIN_D6      11
-#define CAMERA_PIN_D7      48
+#define CAMERA_PIN_D0                15
+#define CAMERA_PIN_D1                17
+#define CAMERA_PIN_D2                18
+#define CAMERA_PIN_D3                16
+#define CAMERA_PIN_D4                14
+#define CAMERA_PIN_D5                12
+#define CAMERA_PIN_D6                11
+#define CAMERA_PIN_D7                48
 
-/* LCD */
 #define BOARD_LCD_MOSI               9
 #define BOARD_LCD_MISO               8
 #define BOARD_LCD_SCK                7
@@ -70,4 +67,4 @@
 #define LCD_HOST                     SPI2_HOST
 #define BOARD_LCD_CONTROLLER         SCREEN_CONTROLLER_GC9A01
 
-#endif /* _SEEED_XIAO_ESP32S3_BOARD_H_ */
+#endif

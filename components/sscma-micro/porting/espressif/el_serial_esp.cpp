@@ -23,14 +23,16 @@
  *
  */
 
-#include "el_serial_esp.h"
+#include "porting/espressif/el_serial_esp.h"
 
-#include <ctype.h>
 #include <driver/usb_serial_jtag.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-#include "el_debug.h"
+#include <locale>
+
+#include "core/el_debug.h"
+#include "core/el_types.h"
 
 namespace edgelab {
 
@@ -60,7 +62,7 @@ char SerialEsp::echo(bool only_visible) {
     EL_ASSERT(this->_is_present);
 
     char c{get_char()};
-    if (only_visible && !isprint(c)) return c;
+    if (only_visible && !std::isprint(c)) return c;
     send_bytes(&c, sizeof(c));
     return c;
 }

@@ -23,7 +23,9 @@
  *
  */
 
-#include "el_camera_esp.h"
+#include "porting/espressif/el_camera_esp.h"
+
+#include "core/el_debug.h"
 
 namespace edgelab {
 
@@ -57,7 +59,7 @@ el_err_code_t CameraEsp::init(size_t width, size_t height) {
     // camera init
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) {
-        EL_ELOG("Camera init failed with error 0x%x", err);
+        EL_ELOG("[Camera] init failed with error 0x%x", err);
         return EL_EIO;
     }
 
@@ -77,13 +79,13 @@ el_err_code_t CameraEsp::init(size_t width, size_t height) {
 
 el_err_code_t CameraEsp::deinit() {
     this->_is_present = !(esp_camera_deinit() == ESP_OK);
-    return EL_OK;
+    return this->_is_present ? EL_AGAIN : EL_OK;
 }
 
 el_err_code_t CameraEsp::start_stream() {
     fb = esp_camera_fb_get();
     if (!fb) {
-        EL_ELOG("Camera capture failed");
+        EL_ELOG("[Camera] capture failed");
         return EL_EIO;
     }
     this->_is_streaming = true;
@@ -91,16 +93,21 @@ el_err_code_t CameraEsp::start_stream() {
 }
 
 el_err_code_t CameraEsp::stop_stream() {
-    esp_camera_fb_return(fb);
-    this->_is_streaming = false;
-    return EL_OK;
+    if (this->_is_streaming) [[likely]] {
+        esp_camera_fb_return(fb);
+        this->_is_streaming = false;
+        return EL_OK;
+    }
+    return EL_ELOG;
 }
+
 el_err_code_t CameraEsp::get_frame(el_img_t* img) {
     if (!this->_is_streaming) {
         return EL_EIO;
     }
     if (!fb) {
-        EL_ELOG("Camera capture failed");
+        EL_ELOG("[Camera] capture failed");
+        this->_is_streaming = false;
         return EL_EIO;
     }
     img->width  = fb->width;
@@ -110,8 +117,6 @@ el_err_code_t CameraEsp::get_frame(el_img_t* img) {
     img->format = EL_PIXEL_FORMAT_RGB565;
     return EL_OK;
 }
-el_err_code_t CameraEsp::get_jpeg(el_img_t* img) { return EL_OK; }
-el_err_code_t CameraEsp::get_resolutions(el_res_t** res, size_t* res_count) { return EL_OK; }
 
 framesize_t CameraEsp::fit_resolution(size_t width, size_t height) {
     framesize_t res = FRAMESIZE_INVALID;

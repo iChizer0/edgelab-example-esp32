@@ -26,25 +26,26 @@
 #ifndef _EL_DISPLAY_H_
 #define _EL_DISPLAY_H_
 
-#include "el_common.h"
-#include "el_cv.h"
+#include "core/el_types.h"
 
 namespace edgelab {
 
 class Display {
-   protected:
-    bool _is_present;
-
    public:
-    Display(/* args */){};
-    virtual ~Display(){};
-    virtual el_err_code_t init()                    = 0;
-    virtual el_err_code_t deinit()                  = 0;
+    Display() : _is_present(false) {}
+    virtual ~Display() = default;
+
+    virtual el_err_code_t init()   = 0;
+    virtual el_err_code_t deinit() = 0;
+
     virtual el_err_code_t show(const el_img_t* img) = 0;
 
-    operator bool() { return _is_present; }
+    operator bool() const { return _is_present; }
+
+   protected:
+    bool _is_present;
 };
 
 }  // namespace edgelab
 
-#endif /* _EL_DISPLAY_H_ */
+#endif

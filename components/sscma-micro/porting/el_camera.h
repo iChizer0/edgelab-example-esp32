@@ -23,41 +23,38 @@
  *
  */
 
-#ifndef _EL_CAMERA_H
-#define _EL_CAMERA_H
+#ifndef _EL_CAMERA_H_
+#define _EL_CAMERA_H_
 
-#include "el_common.h"
-#include "el_cv.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "core/el_types.h"
 
 namespace edgelab {
 
 class Camera {
-   protected:
-    el_img_t        _src_img;   // source image
-    el_img_t        _jpeg_img;  // jpeg image
-    size_t          _width, _height;
-    bool            _is_present;
-    bool            _is_streaming;
-    static el_res_t _available_res[];
-
    public:
-    Camera(/* args */){};
-    virtual ~Camera(){};
-    virtual el_err_code_t init(size_t width, size_t height)                  = 0;
-    virtual el_err_code_t deinit()                                           = 0;
-    virtual el_err_code_t start_stream()                                     = 0;
-    virtual el_err_code_t stop_stream()                                      = 0;
-    virtual el_err_code_t get_frame(el_img_t* img)                           = 0;
-    virtual el_err_code_t get_jpeg(el_img_t* img)                            = 0;
-    virtual el_err_code_t get_resolutions(el_res_t** res, size_t* res_count) = 0;
+    Camera() : _is_present(false), _is_streaming(false) {}
+    virtual ~Camera() = default;
 
-    bool is_present() { return _is_streaming; }
-    operator bool() { return _is_present; }
+    virtual el_err_code_t init(size_t width, size_t height) = 0;
+    virtual el_err_code_t deinit()                          = 0;
 
-    size_t width() { return _width; }
-    size_t height() { return _height; }
+    virtual el_err_code_t start_stream() = 0;
+    virtual el_err_code_t stop_stream()  = 0;
+
+    virtual el_err_code_t get_frame(el_img_t* img) = 0;
+
+    operator bool() const { return _is_present; }
+
+    bool is_streaming() const { return _is_streaming; }
+
+   protected:
+    bool _is_present;
+    bool _is_streaming;
 };
 
 }  // namespace edgelab
 
-#endif  // _EL_CAMERA_H
+#endif

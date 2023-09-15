@@ -26,11 +26,10 @@
 #ifndef _EL_FLASH_H_
 #define _EL_FLASH_H_
 
-#include "el_types.h"
+#include <sdkconfig.h>
 
 #ifdef CONFIG_EL_TARGET_ESPPRESSIF
     #include "el_flash_esp.h"
 #endif
 
 #endif
-

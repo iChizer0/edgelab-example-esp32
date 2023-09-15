@@ -26,19 +26,17 @@
 #ifndef _EL_DEBUG_H_
 #define _EL_DEBUG_H_
 
-#include "el_common.h"
-#include "el_misc.h"
+#include "porting/el_misc.h"
 
 #if CONFIG_EL_DEBUG
-
     #if CONFIG_EL_DEBUG_COLOR
-        #define EL_DEBUG_COLOR_RED "\033[31m"
-        #define EL_DEBUG_COLOR_GREEN "\033[32m"
-        #define EL_DEBUG_COLOR_YELLOW "\033[33m"
-        #define EL_DEBUG_COLOR_BLUE "\033[34m"
+        #define EL_DEBUG_COLOR_RED     "\033[31m"
+        #define EL_DEBUG_COLOR_GREEN   "\033[32m"
+        #define EL_DEBUG_COLOR_YELLOW  "\033[33m"
+        #define EL_DEBUG_COLOR_BLUE    "\033[34m"
         #define EL_DEBUG_COLOR_MAGENTA "\033[35m"
-        #define EL_DEBUG_COLOR_CYAN "\033[36m"
-        #define EL_DEBUG_COLOR_RESET "\033[0m"
+        #define EL_DEBUG_COLOR_CYAN    "\033[36m"
+        #define EL_DEBUG_COLOR_RESET   "\033[0m"
     #else
         #define EL_DEBUG_COLOR_RED
         #define EL_DEBUG_COLOR_GREEN

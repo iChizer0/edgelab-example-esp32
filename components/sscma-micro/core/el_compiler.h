@@ -29,7 +29,7 @@
 #define EL_LITTLE_ENDIAN (0x12u)
 #define EL_BIG_ENDIAN (0x21u)
 
-// TODO refactor since __attribute__ is supported across many compiler
+// TODO: refactor since __attribute__ is supported across many compiler
 #if defined(__GNUC__)
     #define EL_ATTR_ALIGNED(Bytes) __attribute__((aligned(Bytes)))
     #define EL_ATTR_SECTION(sec_name) __attribute__((section(#sec_name)))

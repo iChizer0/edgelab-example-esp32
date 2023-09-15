@@ -26,15 +26,8 @@
 #ifndef _EL_BOARD_CONDIG_H_
 #define _EL_BOARD_CONDIG_H_
 
-#include "sdkconfig.h"
-
-#include "esp_timer.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <sdkconfig.h>
 
 #include "boards/boards.h"
-
-
-
 
 #endif

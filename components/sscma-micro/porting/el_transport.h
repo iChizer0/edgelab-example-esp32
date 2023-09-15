@@ -26,14 +26,14 @@
 #ifndef _EL_TRANSPORT_H_
 #define _EL_TRANSPORT_H_
 
-#include "el_types.h"
+#include "core/el_types.h"
 
 namespace edgelab {
 
 // No status transport protocol (framed), TCP alternative should have a server class, a connection could derive from Transport
 class Transport {
    public:
-    Transport()          = default;
+    Transport() : _is_present(false) {}
     virtual ~Transport() = default;
 
     virtual el_err_code_t init()   = 0;
@@ -46,7 +46,7 @@ class Transport {
     virtual char   get_char()                                                   = 0;
     virtual size_t get_line(char* buffer, size_t size, const char delim = 0x0d) = 0;
 
-    operator bool() { return _is_present; }
+    operator bool() const { return _is_present; }
 
    protected:
     bool _is_present;

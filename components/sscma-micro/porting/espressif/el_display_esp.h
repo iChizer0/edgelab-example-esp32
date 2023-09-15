@@ -23,31 +23,32 @@
  *
  */
 
-#ifndef _EL_DISPLAY_ESP_H
-#define _EL_DISPLAY_ESP_H
+#ifndef _EL_DISPLAY_ESP_H_
+#define _EL_DISPLAY_ESP_H_
 
-#include <stdint.h>
+#include <esp_log.h>
+#include <screen_driver.h>
 
-#include "el_common.h"
-#include "el_display.h"
-#include "esp_log.h"
-#include "screen_driver.h"
+#include "core/el_types.h"
+#include "porting/el_display.h"
 
 namespace edgelab {
 
 class DisplayEsp : public Display {
-   private:
-    scr_driver_t _lcd;
-    scr_info_t _lcd_info;
-
    public:
-    DisplayEsp();
-    ~DisplayEsp();
+    DisplayEsp()  = default;
+    ~DisplayEsp() = default;
+
     el_err_code_t init() override;
     el_err_code_t deinit() override;
-    el_err_code_t show(const el_img_t *img) override;
+
+    el_err_code_t show(const el_img_t* img) override;
+
+   private:
+    scr_driver_t _lcd;
+    scr_info_t   _lcd_info;
 };
 
-} // namespace edgelab
+}  // namespace edgelab
 
-#endif /* EL_DISPLAY_ESP_H */
+#endif

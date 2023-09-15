@@ -29,10 +29,11 @@
 #include <algorithm>
 #include <forward_list>
 
-#include "el_camera.h"
-#include "el_common.h"
-#include "el_display.h"
-#include "el_serial.h"
+#include "core/el_types.h"
+#include "porting/el_camera.h"
+#include "porting/el_display.h"
+#include "porting/el_serial.h"
+#include "porting/el_transport.h"
 
 namespace edgelab {
 
@@ -42,9 +43,9 @@ class Device {
 
     static Device* get_device();
 
-    const char* get_device_name() { return _device_name; }
-    uint32_t    get_device_id() { return _device_id; }
-    uint32_t    get_chip_revision_id() { return _revision_id; }
+    const char* get_device_name() const { return _device_name; }
+    uint32_t    get_device_id() const { return _device_id; }
+    uint32_t    get_chip_revision_id() const { return _revision_id; }
 
     Camera*  get_camera() { return _camera; }
     Display* get_display() { return _display; }
@@ -52,7 +53,7 @@ class Device {
 
     virtual void restart() = 0;
 
-    el_sensor_info_t get_sensor_info(uint8_t id) {
+    el_sensor_info_t get_sensor_info(uint8_t id) const {
         auto it = std::find_if(_registered_sensors.begin(), _registered_sensors.end(), [&](const el_sensor_info_t& s) {
             return s.id == id;
         });
@@ -60,7 +61,7 @@ class Device {
         return {};
     }
 
-    el_sensor_info_t get_sensor_info(uint8_t id, el_sensor_type_t type) {
+    el_sensor_info_t get_sensor_info(uint8_t id, el_sensor_type_t type) const {
         auto it = std::find_if(_registered_sensors.begin(), _registered_sensors.end(), [&](const el_sensor_info_t& s) {
             return s.id == id && s.type == type;
         });
@@ -98,7 +99,8 @@ class Device {
     }
 
    protected:
-    Device() = default;
+    Device()
+        : _device_name(""), _device_id(0), _revision_id(0), _camera(nullptr), _display(nullptr), _serial(nullptr) {}
 
     const char* _device_name;
     uint32_t    _device_id;

@@ -23,37 +23,42 @@
  *
  */
 
-#ifndef _EL_CAMERA_ESP_H
-#define _EL_CAMERA_ESP_H
+#ifndef _EL_CAMERA_ESP_H_
+#define _EL_CAMERA_ESP_H_
 
-#include "el_camera.h"
-#include "el_common.h"
-#include "esp_camera.h"
-#include "esp_log.h"
+#include <esp_camera.h>
+#include <esp_log.h>
+
+#include "core/el_types.h"
+#include "porting/el_camera.h"
+#include "porting/espressif/el_board_config.h"
 
 #define XCLK_FREQ_HZ 15000000
 
 namespace edgelab {
 
 class CameraEsp : public Camera {
+   public:
+    CameraEsp()  = default;
+    ~CameraEsp() = default;
+
+    el_err_code_t init(size_t width, size_t height) override;
+    el_err_code_t deinit() override;
+
+    el_err_code_t start_stream() override;
+    el_err_code_t stop_stream() override;
+
+    el_err_code_t get_frame(el_img_t* img) override;
+
+   protected:
+    framesize_t fit_resolution(size_t width, size_t height);
+
    private:
     camera_config_t config;
     camera_fb_t*    fb;
     sensor_t*       sensor;
-
-   public:
-    el_err_code_t init(size_t width, size_t height) override;
-    el_err_code_t deinit() override;
-    el_err_code_t start_stream() override;
-    el_err_code_t stop_stream() override;
-    el_err_code_t get_frame(el_img_t* img) override;
-    el_err_code_t get_jpeg(el_img_t* img) override;
-    el_err_code_t get_resolutions(el_res_t** res, size_t* res_count) override;
-
-   private:
-    framesize_t fit_resolution(size_t width, size_t height);
 };
 
 }  // namespace edgelab
 
-#endif  // EDGELAB_CAMERA_ESP_H_
+#endif

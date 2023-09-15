@@ -23,11 +23,10 @@
  *
  */
 
-#ifndef _EL_DEVICE_ESP_H
-#define _EL_DEVICE_ESP_H
+#ifndef _EL_DEVICE_ESP_H_
+#define _EL_DEVICE_ESP_H_
 
-#include "el_common.h"
-#include "el_device.h"
+#include "porting/el_device.h"
 
 namespace edgelab {
 
@@ -41,4 +40,4 @@ class DeviceEsp : public Device {
 
 }  // namespace edgelab
 
-#endif /* EL_DEVICE_ESP_H */
+#endif

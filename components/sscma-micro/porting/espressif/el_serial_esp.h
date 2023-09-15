@@ -30,7 +30,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-#include "el_serial.h"
+#include "porting/el_serial.h"
 
 namespace edgelab {
 

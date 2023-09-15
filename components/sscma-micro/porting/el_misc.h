@@ -26,93 +26,33 @@
 #ifndef _EL_MISC_H_
 #define _EL_MISC_H_
 
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
-#ifdef __cplusplus
-extern "C" {
 namespace edgelab {
-#endif  // defined(__cplusplus)
 
-/*
- * @brief: sleep for ms
- * @param: ms
- * @return: void
- */
 void el_sleep(uint32_t ms);
 
-/*
- * @brief: get current time in ms
- * @param: none
- * @return: uint64_t
- */
 uint64_t el_get_time_ms(void);
 
-/*
- * @brief: get current time in us
- * @param: none
- * @return: uint64_t
- */
 uint64_t el_get_time_us(void);
 
-/*
- * @brief: wrapper of malloc
- * @param: size
- * @return: void*
- */
 void* el_malloc(size_t size);
 
-/*
- * @brief: wrapper of calloc
- * @param: nmemb
- * @param: size
- * @return: void*
- */
 void* el_calloc(size_t nmemb, size_t size);
 
-/*
- * @brief: free memory
- * @param: ptr
- * @return: void
- */
 void el_free(void* ptr);
 
-/*
- * @brief: wrapper of printf
- * @param: format
- * @param: ...
- * @return: int
- */
 int el_printf(const char* format, ...);
 
-/*
- * @brief: wrapper of putchar
- * @param: c
- * @return: int
- */
 int el_putchar(char c);
 
-/*
- * @brief: wrapper of getline
- * @param: lineptr
- * @param: n
- * @param: stream
- * @return: size_t
- * @note: this function is not thread safe
- */
 size_t el_getline(char** lineptr, size_t* n, FILE* stream);
 
-/*
- * @brief: reset the system
- * @param: none
- * @return: void
- */
 void el_reset(void);
 
 void el_status_led(bool on);
 
-#if defined(__cplusplus) == 1
 }  // namespace edgelab
-}
-#endif  // defined(__cplusplus)
 
-#endif  // _EL_MISC_H_
+#endif

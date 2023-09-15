@@ -23,96 +23,86 @@
  *
  */
 
-#include "el_display_esp.h"
+#include "porting/espressif/el_display_esp.h"
 
+#include "core/el_debug.h"
+#include "porting/espressif/el_board_config.h"
 
 namespace edgelab {
 
-DisplayEsp::DisplayEsp()
-{
-}
-
-DisplayEsp::~DisplayEsp()
-{
-}
-
-el_err_code_t DisplayEsp::init()
-{
+el_err_code_t DisplayEsp::init() {
     spi_config_t bus_conf = {
-        .miso_io_num = static_cast<gpio_num_t>(BOARD_LCD_MISO),
-        .mosi_io_num = static_cast<gpio_num_t>(BOARD_LCD_MOSI),
-        .sclk_io_num = static_cast<gpio_num_t>(BOARD_LCD_SCK),
-        .max_transfer_sz = 2 * BOARD_LCD_H_RES * BOARD_LCD_V_RES + 10,
+      .miso_io_num     = static_cast<gpio_num_t>(BOARD_LCD_MISO),
+      .mosi_io_num     = static_cast<gpio_num_t>(BOARD_LCD_MOSI),
+      .sclk_io_num     = static_cast<gpio_num_t>(BOARD_LCD_SCK),
+      .max_transfer_sz = 2 * BOARD_LCD_H_RES * BOARD_LCD_V_RES + 10,
     };
 
     spi_bus_handle_t spi_bus = spi_bus_create(LCD_HOST, &bus_conf);
 
     scr_interface_spi_config_t spi_lcd_cfg = {
-        .spi_bus = spi_bus,
-        .pin_num_cs = BOARD_LCD_CS,
-        .pin_num_dc = BOARD_LCD_DC,
-        .clk_freq = BOARD_LCD_PIXEL_CLOCK_HZ,
-        .swap_data = 0,
+      .spi_bus    = spi_bus,
+      .pin_num_cs = BOARD_LCD_CS,
+      .pin_num_dc = BOARD_LCD_DC,
+      .clk_freq   = BOARD_LCD_PIXEL_CLOCK_HZ,
+      .swap_data  = 0,
     };
 
-    scr_interface_driver_t *iface_drv;
+    scr_interface_driver_t* iface_drv;
     scr_interface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &iface_drv);
 
     esp_err_t ret = scr_find_driver(BOARD_LCD_CONTROLLER, &_lcd);
 
     if (ESP_OK != ret) {
         return EL_EIO;
-        EL_ELOG("screen find failed");
+        EL_ELOG("[Screen] find deiver failed");
     }
 
     scr_controller_config_t lcd_cfg = {
-        .interface_drv = iface_drv,
-        .pin_num_rst = static_cast<gpio_num_t>(BOARD_LCD_RST),
-        .pin_num_bckl = static_cast<gpio_num_t>(BOARD_LCD_BL),
-        .rst_active_level = 0,
-        .bckl_active_level = 0,
-        .width = BOARD_LCD_H_RES,
-        .height = BOARD_LCD_V_RES,
-        .offset_hor = 0,
-        .offset_ver = 0,
-        .rotate = static_cast<scr_dir_t>(BOARD_LCD_ROTATE),
+      .interface_drv     = iface_drv,
+      .pin_num_rst       = static_cast<gpio_num_t>(BOARD_LCD_RST),
+      .pin_num_bckl      = static_cast<gpio_num_t>(BOARD_LCD_BL),
+      .rst_active_level  = 0,
+      .bckl_active_level = 0,
+      .width             = BOARD_LCD_H_RES,
+      .height            = BOARD_LCD_V_RES,
+      .offset_hor        = 0,
+      .offset_ver        = 0,
+      .rotate            = static_cast<scr_dir_t>(BOARD_LCD_ROTATE),
     };
 
     ret = _lcd.init(&lcd_cfg);
 
     if (ESP_OK != ret) {
         return EL_EIO;
-        EL_ELOG("screen initialize failed");
+        EL_ELOG("[Screen] initialize failed");
     }
 
     _lcd.get_info(&_lcd_info);
 
-    LOG_D(
-        "Screen name:%s | width:%d | height:%d", _lcd_info.name, _lcd_info.width, _lcd_info.height);
+    LOG_D("[Screen] name:%s | width:%d | height:%d", _lcd_info.name, _lcd_info.width, _lcd_info.height);
 
     this->_is_present = true;
     return EL_OK;
 }
 
-el_err_code_t DisplayEsp::show(const el_img_t *img)
-{
-    esp_err_t ret = _lcd.draw_bitmap(0, 0, img->width, img->height, (uint16_t *)(img->data));
-    if (ESP_OK != ret) {
-        return EL_EIO;
-        EL_ELOG("screen show failed");
-    }
-    return EL_OK;
-}
-
-el_err_code_t DisplayEsp::deinit()
-{
+el_err_code_t DisplayEsp::deinit() {
     esp_err_t ret = _lcd.deinit();
     if (ESP_OK != ret) {
         return EL_EIO;
-        EL_ELOG("screen deinitialize failed");
+        EL_ELOG("[Screen] deinitialize failed");
     }
     this->_is_present = false;
     return EL_OK;
 }
 
-} // namespace edgelab
+el_err_code_t DisplayEsp::show(const el_img_t* img) {
+    esp_err_t ret = _lcd.draw_bitmap(0, 0, img->width, img->height, (uint16_t*)(img->data));
+    if (ESP_OK != ret) {
+        return EL_EIO;
+        EL_ELOG("[Screen] show failed");
+    }
+    return EL_OK;
+}
+
+}  // namespace edgelab

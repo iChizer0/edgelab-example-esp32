@@ -26,8 +26,7 @@
 #ifndef _EL_CONFIG_INTERNAL_H_
 #define _EL_CONFIG_INTERNAL_H_
 
-#include "el_board_config.h"
-#include "el_config.h"
+#include "core/el_config.h"
 
 /* debug config check */
 #ifndef CONFIG_EL_DEBUG
@@ -50,17 +49,17 @@
 #endif
 
 /* model related config */
-#define CONFIG_EL_MODEL_TFLITE_MAGIC 0x54464C33
-#define CONFIG_EL_MODEL_HEADER_MAGIC 0x4C4854
+#define CONFIG_EL_MODEL_TFLITE_MAGIC   0x54464C33
+#define CONFIG_EL_MODEL_HEADER_MAGIC   0x4C4854
 #define CONFIG_EL_MODEL_PARTITION_NAME "models"
 
 /* storage related config */
-#define CONFIG_EL_STORAGE_NAME "edgelab_db"
-#define CONFIG_EL_STORAGE_PATH "kvdb0"
-#define CONFIG_EL_STORAGE_PARTITION_NAME "db"
+#define CONFIG_EL_STORAGE_NAME                  "edgelab_db"
+#define CONFIG_EL_STORAGE_PATH                  "kvdb0"
+#define CONFIG_EL_STORAGE_PARTITION_NAME        "db"
 #define CONFIG_EL_STORAGE_PARTITION_MOUNT_POINT "nor_flash0"
-#define CONFIG_EL_STORAGE_PARTITION_FS_NAME_0 "kvdb0"
-#define CONFIG_EL_STORAGE_PARTITION_FS_SIZE_0 (192 * 1024)
-#define CONFIG_EL_STORAGE_KEY_SIZE_MAX (64)
+#define CONFIG_EL_STORAGE_PARTITION_FS_NAME_0   "kvdb0"
+#define CONFIG_EL_STORAGE_PARTITION_FS_SIZE_0   (192 * 1024)
+#define CONFIG_EL_STORAGE_KEY_SIZE_MAX          (64)
 
 #endif

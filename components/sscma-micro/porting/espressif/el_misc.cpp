@@ -24,9 +24,16 @@
  */
 
 #include <driver/gpio.h>
+#include <esp_timer.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
-#include "el_board_config.h"
-#include "el_common.h"
+#include <cstdarg>
+#include <cstdint>
+#include <cstdio>
+
+#include "core/el_compiler.h"
+#include "porting/espressif/el_board_config.h"
 
 namespace edgelab {
 
