@@ -23,46 +23,35 @@
  *
  */
 
-#ifndef _EL_ALGORITHM_HPP_
-#define _EL_ALGORITHM_HPP_
+#ifndef _EL_ALGORITHM_DELEGATE_H_
+#define _EL_ALGORITHM_DELEGATE_H_
 
 #include <forward_list>
 
-#include "el_algorithm_fomo.hpp"
-#include "el_algorithm_imcls.hpp"
-#include "el_algorithm_pfld.hpp"
-#include "el_algorithm_yolo.hpp"
-#include "el_engine_base.h"
+#include "el_algorithm_fomo.h"
+#include "el_algorithm_imcls.h"
+#include "el_algorithm_pfld.h"
+#include "el_algorithm_yolo.h"
+
+#include "core/engine/el_engine_base.h"
+#include "el_algorithm_base.h"
 
 namespace edgelab {
 
-namespace algorithm::utility {
+using namespace edgelab::base;
+using namespace edgelab::types;
 
-el_algorithm_type_t el_algorithm_type_from_engine(const edgelab::base::Engine* engine);
+namespace utility {
 
-}  // namespace algorithm::utility
+el_algorithm_type_t el_algorithm_type_from_engine(const Engine* engine);
 
-using Algorithm = class algorithm::base::Algorithm;
+}  // namespace utility
 
-#ifdef _EL_ALGORITHM_FOMO_HPP_
-using AlgorithmFOMO = class algorithm::FOMO;
-#endif
-
-#ifdef _EL_ALGORITHM_PFLD_HPP_
-using AlgorithmPFLD = class algorithm::PFLD;
-#endif
-
-#ifdef _EL_ALGORITHM_YOLO_HPP_
-using AlgorithmYOLO = class algorithm::YOLO;
-#endif
-
-#ifdef _EL_ALGORITHM_IMCLS_HPP_
-using AlgorithmIMCLS = class algorithm::IMCLS;
-#endif
+using Algorithm = class base::Algorithm;
 
 class AlgorithmDelegate {
    public:
-    using InfoType = typename algorithm::types::el_algorithm_info_t;
+    using InfoType = el_algorithm_info_t;
 
     ~AlgorithmDelegate() = default;
 
@@ -84,9 +73,5 @@ class AlgorithmDelegate {
 };
 
 }  // namespace edgelab
-
-// TODO: avoid expose this name space globally
-using namespace edgelab::algorithm::types;
-using namespace edgelab::algorithm::utility;
 
 #endif

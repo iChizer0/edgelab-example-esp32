@@ -23,40 +23,33 @@
  *
  */
 
-#include "el_algorithm_fomo.hpp"
+#include "el_algorithm_fomo.h"
 
-#include <atomic>
-#include <cstdint>
 #include <type_traits>
 
-#include "el_algorithm_base.hpp"
-#include "el_cv.h"
-#include "el_debug.h"
-#include "el_types.h"
+#include "core/el_debug.h"
+#include "core/utils/el_cv.h"
 
-namespace edgelab::algorithm {
+namespace edgelab {
 
-FOMO::InfoType FOMO::algorithm_info{types::el_algorithm_fomo_config_t::info};
+AlgorithmFOMO::InfoType AlgorithmFOMO::algorithm_info{el_algorithm_fomo_config_t::info};
 
-FOMO::FOMO(EngineType* engine, ScoreType score_threshold)
-    : edgelab::algorithm::base::Algorithm(engine, FOMO::algorithm_info),
+AlgorithmFOMO::AlgorithmFOMO(EngineType* engine, ScoreType score_threshold)
+    : Algorithm(engine, AlgorithmFOMO::algorithm_info),
       _w_scale(1.f),
       _h_scale(1.f),
       _score_threshold(score_threshold) {
     init();
 }
 
-FOMO::FOMO(EngineType* engine, const ConfigType& config)
-    : edgelab::algorithm::base::Algorithm(engine, config.info),
-      _w_scale(1.f),
-      _h_scale(1.f),
-      _score_threshold(config.score_threshold) {
+AlgorithmFOMO::AlgorithmFOMO(EngineType* engine, const ConfigType& config)
+    : Algorithm(engine, config.info), _w_scale(1.f), _h_scale(1.f), _score_threshold(config.score_threshold) {
     init();
 }
 
-FOMO::~FOMO() { _results.clear(); }
+AlgorithmFOMO::~AlgorithmFOMO() { _results.clear(); }
 
-bool FOMO::is_model_valid(const EngineType* engine) {
+bool AlgorithmFOMO::is_model_valid(const EngineType* engine) {
     const auto& input_shape{engine->get_input_shape(0)};
     if (input_shape.size != 4 ||      // B, W, H, C
         input_shape.dims[0] != 1 ||   // B = 1
@@ -80,7 +73,7 @@ bool FOMO::is_model_valid(const EngineType* engine) {
     return true;
 }
 
-inline void FOMO::init() {
+inline void AlgorithmFOMO::init() {
     EL_ASSERT(is_model_valid(this->__p_engine));
     EL_ASSERT(_score_threshold.is_lock_free());
 
@@ -100,7 +93,7 @@ inline void FOMO::init() {
     EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 }
 
-el_err_code_t FOMO::run(ImageType* input) {
+el_err_code_t AlgorithmFOMO::run(ImageType* input) {
     _w_scale = static_cast<float>(input->width) / static_cast<float>(_input_img.width);
     _h_scale = static_cast<float>(input->height) / static_cast<float>(_input_img.height);
 
@@ -108,7 +101,7 @@ el_err_code_t FOMO::run(ImageType* input) {
     return underlying_run(input);
 };
 
-el_err_code_t FOMO::preprocess() {
+el_err_code_t AlgorithmFOMO::preprocess() {
     auto* i_img{static_cast<ImageType*>(this->__p_input)};
 
     // convert image
@@ -122,7 +115,7 @@ el_err_code_t FOMO::preprocess() {
     return EL_OK;
 }
 
-el_err_code_t FOMO::postprocess() {
+el_err_code_t AlgorithmFOMO::postprocess() {
     _results.clear();
 
     // get output
@@ -173,14 +166,18 @@ el_err_code_t FOMO::postprocess() {
     return EL_OK;
 }
 
-const std::forward_list<FOMO::BoxType>& FOMO::get_results() const { return _results; }
+const std::forward_list<AlgorithmFOMO::BoxType>& AlgorithmFOMO::get_results() const { return _results; }
 
-void FOMO::set_score_threshold(ScoreType threshold) { _score_threshold.store(threshold); }
+void AlgorithmFOMO::set_score_threshold(ScoreType threshold) { _score_threshold.store(threshold); }
 
-FOMO::ScoreType FOMO::get_score_threshold() const { return _score_threshold.load(); }
+AlgorithmFOMO::ScoreType AlgorithmFOMO::get_score_threshold() const { return _score_threshold.load(); }
 
-void FOMO::set_algorithm_config(const ConfigType& config) { set_score_threshold(config.score_threshold); }
+void AlgorithmFOMO::set_algorithm_config(const ConfigType& config) { set_score_threshold(config.score_threshold); }
 
-FOMO::ConfigType FOMO::get_algorithm_config() const { return ConfigType{.score_threshold = get_score_threshold()}; }
+AlgorithmFOMO::ConfigType AlgorithmFOMO::get_algorithm_config() const {
+    ConfigType config;
+    config.score_threshold = get_score_threshold();
+    return config;
+}
 
-}  // namespace edgelab::algorithm
+}  // namespace edgelab

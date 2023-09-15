@@ -23,28 +23,21 @@
  *
  */
 
-#include "el_algorithm_yolo.hpp"
-#include "el_common.h"
-#include "el_debug.h"
+#include "el_algorithm_yolo.h"
 
-#include <atomic>
-#include <cstdint>
-#include <forward_list>
 #include <type_traits>
-#include <utility>
 
-#include "el_algorithm_base.hpp"
-#include "el_cv.h"
-#include "el_debug.h"
-#include "el_nms.h"
-#include "el_types.h"
+#include "core/el_common.h"
+#include "core/el_debug.h"
+#include "core/utils/el_cv.h"
+#include "core/utils/el_nms.h"
 
-namespace edgelab::algorithm {
+namespace edgelab {
 
-YOLO::InfoType YOLO::algorithm_info{types::el_algorithm_yolo_config_t::info};
+AlgorithmYOLO::InfoType AlgorithmYOLO::algorithm_info{types::el_algorithm_yolo_config_t::info};
 
-YOLO::YOLO(EngineType* engine, ScoreType score_threshold, IoUType iou_threshold)
-    : edgelab::algorithm::base::Algorithm(engine, YOLO::algorithm_info),
+AlgorithmYOLO::AlgorithmYOLO(EngineType* engine, ScoreType score_threshold, IoUType iou_threshold)
+    : Algorithm(engine, AlgorithmYOLO::algorithm_info),
       _w_scale(1.f),
       _h_scale(1.f),
       _score_threshold(score_threshold),
@@ -52,8 +45,8 @@ YOLO::YOLO(EngineType* engine, ScoreType score_threshold, IoUType iou_threshold)
     init();
 }
 
-YOLO::YOLO(EngineType* engine, const ConfigType& config)
-    : edgelab::algorithm::base::Algorithm(engine, config.info),
+AlgorithmYOLO::AlgorithmYOLO(EngineType* engine, const ConfigType& config)
+    : Algorithm(engine, config.info),
       _w_scale(1.f),
       _h_scale(1.f),
       _score_threshold(config.score_threshold),
@@ -61,12 +54,12 @@ YOLO::YOLO(EngineType* engine, const ConfigType& config)
     init();
 }
 
-YOLO::~YOLO() {
+AlgorithmYOLO::~AlgorithmYOLO() {
     _results.clear();
     this->__p_engine = nullptr;
 }
 
-bool YOLO::is_model_valid(const EngineType* engine) {
+bool AlgorithmYOLO::is_model_valid(const EngineType* engine) {
     const auto& input_shape{engine->get_input_shape(0)};
     if (input_shape.size != 4 ||                      // B, W, H, C
         input_shape.dims[0] != 1 ||                   // B = 1
@@ -96,7 +89,7 @@ bool YOLO::is_model_valid(const EngineType* engine) {
     return true;
 }
 
-inline void YOLO::init() {
+inline void AlgorithmYOLO::init() {
     EL_ASSERT(is_model_valid(this->__p_engine));
     EL_ASSERT(_score_threshold.is_lock_free());
     EL_ASSERT(_iou_threshold.is_lock_free());
@@ -117,7 +110,7 @@ inline void YOLO::init() {
     EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 }
 
-el_err_code_t YOLO::run(ImageType* input) {
+el_err_code_t AlgorithmYOLO::run(ImageType* input) {
     _w_scale = static_cast<float>(input->width) / static_cast<float>(_input_img.width);
     _h_scale = static_cast<float>(input->height) / static_cast<float>(_input_img.height);
 
@@ -125,7 +118,7 @@ el_err_code_t YOLO::run(ImageType* input) {
     return underlying_run(input);
 };
 
-el_err_code_t YOLO::preprocess() {
+el_err_code_t AlgorithmYOLO::preprocess() {
     auto* i_img{static_cast<ImageType*>(this->__p_input)};
 
     // convert image
@@ -139,7 +132,7 @@ el_err_code_t YOLO::preprocess() {
     return EL_OK;
 }
 
-el_err_code_t YOLO::postprocess() {
+el_err_code_t AlgorithmYOLO::postprocess() {
     _results.clear();
 
     // get output
@@ -205,23 +198,26 @@ el_err_code_t YOLO::postprocess() {
     return EL_OK;
 }
 
-const std::forward_list<YOLO::BoxType>& YOLO::get_results() const { return _results; }
+const std::forward_list<AlgorithmYOLO::BoxType>& AlgorithmYOLO::get_results() const { return _results; }
 
-void YOLO::set_score_threshold(ScoreType threshold) { _score_threshold.store(threshold); }
+void AlgorithmYOLO::set_score_threshold(ScoreType threshold) { _score_threshold.store(threshold); }
 
-YOLO::ScoreType YOLO::get_score_threshold() const { return _score_threshold.load(); }
+AlgorithmYOLO::ScoreType AlgorithmYOLO::get_score_threshold() const { return _score_threshold.load(); }
 
-void YOLO::set_iou_threshold(IoUType threshold) { _iou_threshold.store(threshold); }
+void AlgorithmYOLO::set_iou_threshold(IoUType threshold) { _iou_threshold.store(threshold); }
 
-YOLO::IoUType YOLO::get_iou_threshold() const { return _iou_threshold.load(); }
+AlgorithmYOLO::IoUType AlgorithmYOLO::get_iou_threshold() const { return _iou_threshold.load(); }
 
-void YOLO::set_algorithm_config(const ConfigType& config) {
+void AlgorithmYOLO::set_algorithm_config(const ConfigType& config) {
     set_score_threshold(config.score_threshold);
     set_iou_threshold(config.iou_threshold);
 }
 
-YOLO::ConfigType YOLO::get_algorithm_config() const {
-    return ConfigType{.score_threshold = get_score_threshold(), .iou_threshold = get_iou_threshold()};
+AlgorithmYOLO::ConfigType AlgorithmYOLO::get_algorithm_config() const {
+    ConfigType config;
+    config.score_threshold = get_score_threshold();
+    config.iou_threshold   = get_iou_threshold();
+    return config;
 }
 
-}  // namespace edgelab::algorithm
+}  // namespace edgelab

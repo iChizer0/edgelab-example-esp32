@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "core/algorithm/el_algorithm.hpp"
+#include "core/algorithm/el_algorithm_delegate.h"
 #include "core/data/el_data.hpp"
 #include "core/el_types.h"
 #include "core/utils/el_base64.h"
@@ -18,6 +18,9 @@
 #include "frontend/definations.hpp"
 
 namespace frontend::utility {
+
+using namespace edgelab;
+using namespace edgelab::utility;
 
 std::string quoted_stringify(const std::string& str) {
     std::string ss(1, '"');
@@ -112,7 +115,6 @@ template <typename T> constexpr std::string results_2_json_str(const std::forwar
 
 // TODO: avoid repeatly allocate/release memory in for loop
 std::string img_2_jpeg_json_str(const el_img_t* img) {
-    using namespace edgelab;
     auto os = std::ostringstream(std::ios_base::ate);
 
     if (!img || !img->data) [[unlikely]]
@@ -141,7 +143,6 @@ std::string img_2_jpeg_json_str(const el_img_t* img) {
 }
 
 std::string algorithm_info_2_json_str(const el_algorithm_info_t* info) {
-    using namespace edgelab;
     auto os{std::ostringstream(std::ios_base::ate)};
 
     os << "{\"type\": " << static_cast<unsigned>(info->type)
@@ -152,7 +153,6 @@ std::string algorithm_info_2_json_str(const el_algorithm_info_t* info) {
 }
 
 template <typename InfoConfType> std::string algorithm_info_and_conf_2_json_str(const InfoConfType& info_and_conf) {
-    using namespace edgelab;
     auto os{std::ostringstream(std::ios_base::ate)};
 
     os << "{\"type\": " << static_cast<unsigned>(info_and_conf.info.type)
@@ -172,7 +172,6 @@ template <typename InfoConfType> std::string algorithm_info_and_conf_2_json_str(
 template <typename AlgorithmType>
 std::string img_invoke_results_2_json_str(
   const AlgorithmType* algorithm, const el_img_t* img, const std::string& cmd, bool result_only, el_err_code_t ret) {
-    using namespace edgelab;
     auto os{std::ostringstream(std::ios_base::ate)};
 
     os << REPLY_EVT_HEADER << "\"name\": \"" << cmd << "\", \"code\": " << static_cast<int>(ret)

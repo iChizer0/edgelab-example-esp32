@@ -23,43 +23,44 @@
  *
  */
 
-#ifndef _EL_ALGORITHM_YOLO_HPP_
-#define _EL_ALGORITHM_YOLO_HPP_
+#ifndef _EL_ALGORITHM_FOMO_H_
+#define _EL_ALGORITHM_FOMO_H_
 
 #include <atomic>
 #include <cstdint>
 #include <forward_list>
 
-#include "el_algorithm_base.hpp"
-#include "el_types.h"
+#include "core/el_types.h"
+#include "el_algorithm_base.h"
 
-namespace edgelab::algorithm {
+namespace edgelab {
+
+using namespace edgelab::base;
+using namespace edgelab::types;
 
 namespace types {
 
 // we're not using inheritance since it not standard layout
-struct el_algorithm_yolo_config_t {
+struct el_algorithm_fomo_config_t {
     static constexpr el_algorithm_info_t info{
-      .type = EL_ALGO_TYPE_YOLO, .categroy = EL_ALGO_CAT_DET, .input_from = EL_SENSOR_TYPE_CAM};
-    uint8_t score_threshold = 50;
-    uint8_t iou_threshold = 45;
+      .type = EL_ALGO_TYPE_FOMO, .categroy = EL_ALGO_CAT_DET, .input_from = EL_SENSOR_TYPE_CAM};
+    uint8_t score_threshold = 80;
 };
 
 }  // namespace types
 
-class YOLO : public base::Algorithm {
+class AlgorithmFOMO : public Algorithm {
    public:
     using ImageType  = el_img_t;
     using BoxType    = el_box_t;
-    using ConfigType = types::el_algorithm_yolo_config_t;
-    using ScoreType  = decltype(types::el_algorithm_yolo_config_t::score_threshold);
-    using IoUType    = decltype(types::el_algorithm_yolo_config_t::iou_threshold);
+    using ConfigType = el_algorithm_fomo_config_t;
+    using ScoreType  = decltype(el_algorithm_fomo_config_t::score_threshold);
 
     static InfoType algorithm_info;
 
-    YOLO(EngineType* engine, ScoreType score_threshold = 50, IoUType iou_threshold = 45);
-    YOLO(EngineType* engine, const ConfigType& config);
-    ~YOLO();
+    AlgorithmFOMO(EngineType* engine, ScoreType score_threshold = 80);
+    AlgorithmFOMO(EngineType* engine, const ConfigType& config);
+    ~AlgorithmFOMO();
 
     static bool is_model_valid(const EngineType* engine);
 
@@ -68,9 +69,6 @@ class YOLO : public base::Algorithm {
 
     void      set_score_threshold(ScoreType threshold);
     ScoreType get_score_threshold() const;
-
-    void    set_iou_threshold(IoUType threshold);
-    IoUType get_iou_threshold() const;
 
     void       set_algorithm_config(const ConfigType& config);
     ConfigType get_algorithm_config() const;
@@ -82,25 +80,15 @@ class YOLO : public base::Algorithm {
     el_err_code_t postprocess() override;
 
    private:
-    enum {
-        INDEX_X = 0,
-        INDEX_Y = 1,
-        INDEX_W = 2,
-        INDEX_H = 3,
-        INDEX_S = 4,
-        INDEX_T = 5,
-    };
-
     ImageType _input_img;
     float     _w_scale;
     float     _h_scale;
 
     std::atomic<ScoreType> _score_threshold;
-    std::atomic<IoUType>   _iou_threshold;
 
     std::forward_list<BoxType> _results;
 };
 
-}  // namespace edgelab::algorithm
+}  // namespace edgelab
 
 #endif

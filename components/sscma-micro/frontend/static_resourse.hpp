@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-#include "core/algorithm/el_algorithm.hpp"
+#include "core/algorithm/el_algorithm_delegate.h"
 #include "core/data/el_data.hpp"
 #include "core/el_common.h"
 #include "core/engine/el_engine_tflite.h"

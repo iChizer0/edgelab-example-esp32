@@ -23,15 +23,15 @@
  *
  */
 
-#include "el_algorithm_base.hpp"
+#include "el_algorithm_base.h"
 
 #include <cstdint>
 
-#include "el_debug.h"
-#include "el_engine_base.h"
-#include "el_types.h"
+#include "core/el_debug.h"
+#include "core/el_types.h"
+#include "core/engine/el_engine_base.h"
 
-namespace edgelab::algorithm::base {
+namespace edgelab::base {
 
 Algorithm::Algorithm(EngineType* engine, const InfoType& info)
     : __p_engine(engine),
@@ -101,4 +101,4 @@ uint32_t Algorithm::get_run_time() const { return __run_time; }
 
 uint32_t Algorithm::get_postprocess_time() const { return __postprocess_time; }
 
-}  // namespace edgelab::algorithm::base
+}  // namespace edgelab::base

@@ -23,35 +23,30 @@
  *
  */
 
-#include "el_algorithm_imcls.hpp"
+#include "el_algorithm_imcls.h"
 
-#include <atomic>
-#include <cstdint>
-#include <forward_list>
 #include <type_traits>
 
-#include "el_algorithm_base.hpp"
-#include "el_cv.h"
-#include "el_debug.h"
-#include "el_types.h"
+#include "core/el_debug.h"
+#include "core/utils/el_cv.h"
 
-namespace edgelab::algorithm {
+namespace edgelab {
 
-IMCLS::InfoType IMCLS::algorithm_info{types::el_algorithm_imcls_config_t::info};
+AlgorithmIMCLS::InfoType AlgorithmIMCLS::algorithm_info{el_algorithm_imcls_config_t::info};
 
-IMCLS::IMCLS(EngineType* engine, ScoreType score_threshold)
-    : edgelab::algorithm::base::Algorithm(engine, IMCLS::algorithm_info), _score_threshold(score_threshold) {
+AlgorithmIMCLS::AlgorithmIMCLS(EngineType* engine, ScoreType score_threshold)
+    : Algorithm(engine, AlgorithmIMCLS::algorithm_info), _score_threshold(score_threshold) {
     init();
 }
 
-IMCLS::IMCLS(EngineType* engine, const ConfigType& config)
-    : edgelab::algorithm::base::Algorithm(engine, config.info), _score_threshold(config.score_threshold) {
+AlgorithmIMCLS::AlgorithmIMCLS(EngineType* engine, const ConfigType& config)
+    : Algorithm(engine, config.info), _score_threshold(config.score_threshold) {
     init();
 }
 
-IMCLS::~IMCLS() { _results.clear(); }
+AlgorithmIMCLS::~AlgorithmIMCLS() { _results.clear(); }
 
-bool IMCLS::is_model_valid(const EngineType* engine) {
+bool AlgorithmIMCLS::is_model_valid(const EngineType* engine) {
     const auto& input_shape{engine->get_input_shape(0)};
     if (input_shape.size != 4 ||      // B, W, H, C
         input_shape.dims[0] != 1 ||   // B = 1
@@ -71,7 +66,7 @@ bool IMCLS::is_model_valid(const EngineType* engine) {
     return true;
 }
 
-inline void IMCLS::init() {
+inline void AlgorithmIMCLS::init() {
     EL_ASSERT(is_model_valid(this->__p_engine));
     EL_ASSERT(_score_threshold.is_lock_free());
 
@@ -91,12 +86,12 @@ inline void IMCLS::init() {
     EL_ASSERT(_input_img.rotate != EL_PIXEL_ROTATE_UNKNOWN);
 }
 
-el_err_code_t IMCLS::run(ImageType* input) {
+el_err_code_t AlgorithmIMCLS::run(ImageType* input) {
     // TODO: image type conversion before underlying_run, because underlying_run doing a type erasure
     return underlying_run(input);
 };
 
-el_err_code_t IMCLS::preprocess() {
+el_err_code_t AlgorithmIMCLS::preprocess() {
     auto* i_img{static_cast<ImageType*>(this->__p_input)};
 
     // convert image
@@ -110,7 +105,7 @@ el_err_code_t IMCLS::preprocess() {
     return EL_OK;
 }
 
-el_err_code_t IMCLS::postprocess() {
+el_err_code_t AlgorithmIMCLS::postprocess() {
     _results.clear();
 
     // get output
@@ -137,14 +132,18 @@ el_err_code_t IMCLS::postprocess() {
     return EL_OK;
 }
 
-const std::forward_list<IMCLS::ClassType>& IMCLS::get_results() const { return _results; }
+const std::forward_list<AlgorithmIMCLS::ClassType>& AlgorithmIMCLS::get_results() const { return _results; }
 
-void IMCLS::set_score_threshold(ScoreType threshold) { _score_threshold.store(threshold); }
+void AlgorithmIMCLS::set_score_threshold(ScoreType threshold) { _score_threshold.store(threshold); }
 
-IMCLS::ScoreType IMCLS::get_score_threshold() const { return _score_threshold.load(); }
+AlgorithmIMCLS::ScoreType AlgorithmIMCLS::get_score_threshold() const { return _score_threshold.load(); }
 
-void IMCLS::set_algorithm_config(const ConfigType& config) { set_score_threshold(config.score_threshold); }
+void AlgorithmIMCLS::set_algorithm_config(const ConfigType& config) { set_score_threshold(config.score_threshold); }
 
-IMCLS::ConfigType IMCLS::get_algorithm_config() const { return ConfigType{.score_threshold = get_score_threshold()}; }
+AlgorithmIMCLS::ConfigType AlgorithmIMCLS::get_algorithm_config() const {
+    ConfigType config;
+    config.score_threshold = get_score_threshold();
+    return config;
+}
 
-}  // namespace edgelab::algorithm
+}  // namespace edgelab

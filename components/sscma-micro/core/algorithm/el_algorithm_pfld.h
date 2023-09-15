@@ -23,16 +23,19 @@
  *
  */
 
-#ifndef _EL_ALGORITHM_PFLD_HPP_
-#define _EL_ALGORITHM_PFLD_HPP_
+#ifndef _EL_ALGORITHM_PFLD_H_
+#define _EL_ALGORITHM_PFLD_H_
 
 #include <cstdint>
 #include <forward_list>
 
-#include "el_algorithm_base.hpp"
-#include "el_types.h"
+#include "core/el_types.h"
+#include "el_algorithm_base.h"
 
-namespace edgelab::algorithm {
+namespace edgelab {
+
+using namespace edgelab::base;
+using namespace edgelab::types;
 
 namespace types {
 
@@ -44,17 +47,17 @@ struct el_algorithm_pfld_config_t {
 
 }  // namespace types
 
-class PFLD : public edgelab::algorithm::base::Algorithm {
+class AlgorithmPFLD : public Algorithm {
    public:
     using ImageType  = el_img_t;
     using PointType  = el_point_t;
-    using ConfigType = types::el_algorithm_pfld_config_t;
+    using ConfigType = el_algorithm_pfld_config_t;
 
-    static  InfoType algorithm_info;
+    static InfoType algorithm_info;
 
-    PFLD(EngineType* engine);
-    PFLD(EngineType* engine, const ConfigType& config);
-    ~PFLD();
+    AlgorithmPFLD(EngineType* engine);
+    AlgorithmPFLD(EngineType* engine, const ConfigType& config);
+    ~AlgorithmPFLD();
 
     static bool is_model_valid(const EngineType* engine);
 
@@ -78,6 +81,6 @@ class PFLD : public edgelab::algorithm::base::Algorithm {
     std::forward_list<PointType> _results;
 };
 
-}  // namespace edgelab::algorithm
+}  // namespace edgelab
 
 #endif

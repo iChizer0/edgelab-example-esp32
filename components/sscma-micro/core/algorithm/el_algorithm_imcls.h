@@ -23,46 +23,49 @@
  *
  */
 
-#ifndef _EL_ALGORITHM_FOMO_HPP_
-#define _EL_ALGORITHM_FOMO_HPP_
+#ifndef _EL_ALGORITHM_IMCLS_H_
+#define _EL_ALGORITHM_IMCLS_H_
 
 #include <atomic>
 #include <cstdint>
 #include <forward_list>
 
-#include "el_algorithm_base.hpp"
-#include "el_types.h"
+#include "core/el_types.h"
+#include "el_algorithm_base.h"
 
-namespace edgelab::algorithm {
+namespace edgelab {
+
+using namespace edgelab::base;
+using namespace edgelab::types;
 
 namespace types {
 
 // we're not using inheritance since it not standard layout
-struct el_algorithm_fomo_config_t {
+struct el_algorithm_imcls_config_t {
     static constexpr el_algorithm_info_t info{
-      .type = EL_ALGO_TYPE_FOMO, .categroy = EL_ALGO_CAT_DET, .input_from = EL_SENSOR_TYPE_CAM};
-    uint8_t score_threshold = 80;
+      .type = EL_ALGO_TYPE_IMCLS, .categroy = EL_ALGO_CAT_CLS, .input_from = EL_SENSOR_TYPE_CAM};
+    uint8_t score_threshold = 50;
 };
 
 }  // namespace types
 
-class FOMO : public edgelab::algorithm::base::Algorithm {
+class AlgorithmIMCLS : public Algorithm {
    public:
     using ImageType  = el_img_t;
-    using BoxType    = el_box_t;
-    using ConfigType = types::el_algorithm_fomo_config_t;
-    using ScoreType  = decltype(types::el_algorithm_fomo_config_t::score_threshold);
+    using ClassType  = el_class_t;
+    using ConfigType = el_algorithm_imcls_config_t;
+    using ScoreType  = decltype(el_algorithm_imcls_config_t::score_threshold);
 
     static InfoType algorithm_info;
 
-    FOMO(EngineType* engine, ScoreType score_threshold = 80);
-    FOMO(EngineType* engine, const ConfigType& config);
-    ~FOMO();
+    AlgorithmIMCLS(EngineType* engine, ScoreType score_threshold = 50);
+    AlgorithmIMCLS(EngineType* engine, const ConfigType& config);
+    ~AlgorithmIMCLS();
 
     static bool is_model_valid(const EngineType* engine);
 
-    el_err_code_t                     run(ImageType* input);
-    const std::forward_list<BoxType>& get_results() const;
+    el_err_code_t                       run(ImageType* input);
+    const std::forward_list<ClassType>& get_results() const;
 
     void      set_score_threshold(ScoreType threshold);
     ScoreType get_score_threshold() const;
@@ -78,14 +81,12 @@ class FOMO : public edgelab::algorithm::base::Algorithm {
 
    private:
     ImageType _input_img;
-    float     _w_scale;
-    float     _h_scale;
 
     std::atomic<ScoreType> _score_threshold;
 
-    std::forward_list<BoxType> _results;
+    std::forward_list<ClassType> _results;
 };
 
-}  // namespace edgelab::algorithm
+}  // namespace edgelab
 
 #endif

@@ -23,15 +23,15 @@
  *
  */
 
-#ifndef _EL_ALGORITHM_BASE_HPP_
-#define _EL_ALGORITHM_BASE_HPP_
+#ifndef _EL_ALGORITHM_BASE_H_
+#define _EL_ALGORITHM_BASE_H_
 
 #include <cstdint>
 
-#include "el_engine_base.h"
-#include "el_types.h"
+#include "core/el_types.h"
+#include "core/engine/el_engine_base.h"
 
-namespace edgelab::algorithm {
+namespace edgelab {
 
 namespace types {
 
@@ -45,10 +45,12 @@ struct el_algorithm_info_t {
 
 namespace base {
 
+using namespace edgelab::types;
+
 class Algorithm {
    protected:
-    using EngineType = edgelab::base::Engine;
-    using InfoType   = types::el_algorithm_info_t;
+    using EngineType = Engine;
+    using InfoType   = el_algorithm_info_t;
 
    public:
     Algorithm(EngineType* engine, const InfoType& info);
@@ -86,6 +88,6 @@ class Algorithm {
 
 }  // namespace base
 
-}  // namespace edgelab::algorithm
+}  // namespace edgelab
 
 #endif

@@ -23,44 +23,34 @@
  *
  */
 
-#include "el_algorithm.hpp"
+#include "el_algorithm_delegate.h"
 
 #include <algorithm>
-#include <forward_list>
 
-#include "el_algorithm_fomo.hpp"
-#include "el_algorithm_imcls.hpp"
-#include "el_algorithm_pfld.hpp"
-#include "el_algorithm_yolo.hpp"
-#include "el_engine_base.h"
-#include "el_types.h"
+#include "core/el_types.h"
 
 namespace edgelab {
 
-namespace algorithm::utility {
+namespace utility {
 
 // Note: the order index influences the algorthm type in current implementation
-el_algorithm_type_t el_algorithm_type_from_engine(const edgelab::base::Engine* engine) {
-#ifdef _EL_ALGORITHM_YOLO_HPP_  // index 1
-    if (algorithm::YOLO::is_model_valid(engine)) return EL_ALGO_TYPE_YOLO;
+el_algorithm_type_t el_algorithm_type_from_engine(const Engine* engine) {
+#ifdef _EL_ALGORITHM_YOLO_H_  // index 1
+    if (AlgorithmYOLO::is_model_valid(engine)) return EL_ALGO_TYPE_YOLO;
 #endif
-
-#ifdef _EL_ALGORITHM_FOMO_HPP_  // index 2
-    if (algorithm::FOMO::is_model_valid(engine)) return EL_ALGO_TYPE_FOMO;
+#ifdef _EL_ALGORITHM_FOMO_H_  // index 2
+    if (AlgorithmFOMO::is_model_valid(engine)) return EL_ALGO_TYPE_FOMO;
 #endif
-
-#ifdef _EL_ALGORITHM_IMCLS_HPP_  // index 3
-    if (algorithm::IMCLS::is_model_valid(engine)) return EL_ALGO_TYPE_IMCLS;
+#ifdef _EL_ALGORITHM_IMCLS_H_  // index 3
+    if (AlgorithmIMCLS::is_model_valid(engine)) return EL_ALGO_TYPE_IMCLS;
 #endif
-
-#ifdef _EL_ALGORITHM_PFLD_HPP_  // index 4
-    if (algorithm::PFLD::is_model_valid(engine)) return EL_ALGO_TYPE_PFLD;
+#ifdef _EL_ALGORITHM_PFLD_H_  // index 4
+    if (AlgorithmPFLD::is_model_valid(engine)) return EL_ALGO_TYPE_PFLD;
 #endif
-
     return EL_ALGO_TYPE_UNDEFINED;
 }
 
-}  // namespace algorithm::utility
+}  // namespace utility
 
 AlgorithmDelegate* AlgorithmDelegate::get_delegate() {
     static AlgorithmDelegate data_delegate = AlgorithmDelegate();
@@ -89,16 +79,16 @@ bool AlgorithmDelegate::has_algorithm(el_algorithm_type_t type) const {
 }
 
 AlgorithmDelegate::AlgorithmDelegate() {
-#ifdef _EL_ALGORITHM_FOMO_HPP_
+#ifdef _EL_ALGORITHM_FOMO_H_
     _registered_algorithms.emplace_front(&AlgorithmFOMO::algorithm_info);
 #endif
-#ifdef _EL_ALGORITHM_PFLD_HPP_
+#ifdef _EL_ALGORITHM_PFLD_H_
     _registered_algorithms.emplace_front(&AlgorithmPFLD::algorithm_info);
 #endif
-#ifdef _EL_ALGORITHM_YOLO_HPP_
+#ifdef _EL_ALGORITHM_YOLO_H_
     _registered_algorithms.emplace_front(&AlgorithmYOLO::algorithm_info);
 #endif
-#ifdef _EL_ALGORITHM_IMCLS_HPP_
+#ifdef _EL_ALGORITHM_IMCLS_H_
     _registered_algorithms.emplace_front(&AlgorithmIMCLS::algorithm_info);
 #endif
 }
