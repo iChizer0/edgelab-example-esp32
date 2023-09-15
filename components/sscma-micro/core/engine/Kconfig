@@ -3,7 +3,8 @@ menu "Inference Engine"
         bool "Enable TFLite"
         default y
         help
-            Enable TFLite inference engine
+            "Enable TFLite inference engine"
+
     menu "TFLite Options"
         depends on EL_TFLITE
 
@@ -12,7 +13,7 @@ menu "Inference Engine"
             default n
             help
                 ABS
-                
+
         config EL_TFLITE_OP_ADD
             bool "ADD"
             default y
@@ -203,7 +204,7 @@ menu "Inference Engine"
             bool "FULLY_CONNECTED"
             default n
             help
-                FULLY_CONNECTED    
+                FULLY_CONNECTED
 
         config EL_TFLITE_OP_GATHER
             bool "GATHER"
@@ -426,7 +427,7 @@ menu "Inference Engine"
             bool "ROUND"
             default n
             help
-                ROUND  
+                ROUND
 
         config EL_TFLITE_OP_RSQRT
             bool "RSQRT"

@@ -23,7 +23,7 @@
  *
  */
 
-#include "porting/espressif/el_camera_esp.h"
+#include "el_camera_esp.h"
 
 #include "core/el_debug.h"
 

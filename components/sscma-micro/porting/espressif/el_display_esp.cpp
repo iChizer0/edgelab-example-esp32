@@ -23,7 +23,7 @@
  *
  */
 
-#include "porting/espressif/el_display_esp.h"
+#include "el_display_esp.h"
 
 #include "core/el_debug.h"
 #include "porting/espressif/el_board_config.h"

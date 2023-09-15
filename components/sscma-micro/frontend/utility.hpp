@@ -127,7 +127,7 @@ std::string img_2_jpeg_json_str(const el_img_t* img) {
                                .format = EL_PIXEL_FORMAT_JPEG,
                                .rotate = img->rotate};
 
-    el_err_code_t ret = rgb_to_jpeg(img, &jpeg_img);
+    el_err_code_t ret = el_img_convert(img, &jpeg_img);
     if (ret == EL_OK) [[likely]] {
         auto* buffer = new char[((jpeg_img.size + 2) / 3) * 4 + 1]{};
         el_base64_encode(jpeg_img.data, jpeg_img.size, buffer);

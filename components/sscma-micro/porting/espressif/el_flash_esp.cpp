@@ -23,7 +23,7 @@
  *
  */
 
-#include "porting/espressif/el_flash_esp.h"
+#include "el_flash_esp.h"
 
 #ifdef __cplusplus
 extern "C" {

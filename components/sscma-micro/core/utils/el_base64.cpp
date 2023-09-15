@@ -22,17 +22,16 @@
  * THE SOFTWARE.
  *
  */
-#include "el_base64.h"
 
-#include <cstring>
-#include <iostream>
-#include <string>
+#include "el_base64.h"
 
 namespace edgelab {
 
-static const char* base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                  "abcdefghijklmnopqrstuvwxyz"
-                                  "0123456789+/";
+namespace constants {
+
+static const char* BASE64_CHARS_TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+}
 
 void el_base64_encode_output(const unsigned char* in, int in_len, int (*putc_func)(int)) {
     int           i = 0;
@@ -41,37 +40,30 @@ void el_base64_encode_output(const unsigned char* in, int in_len, int (*putc_fun
     unsigned char char_array_4[4];
 
     while (in_len--) {
-        char_array_3[i++] = *(in++);
+        char_array_3[i++] = *in++;
         if (i == 3) {
             char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
             char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
             char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
             char_array_4[3] = char_array_3[2] & 0x3f;
 
-            for (i = 0; (i < 4); i++) {
-                putc_func(base64_chars[char_array_4[i]]);
-            }
+            for (i = 0; i < 4; i++) putc_func(constants::BASE64_CHARS_TABLE[char_array_4[i]]);
+
             i = 0;
         }
     }
 
     if (i) {
-        for (j = i; j < 3; j++) {
-            char_array_3[j] = '\0';
-        }
+        for (j = i; j < 3; j++) char_array_3[j] = '\0';
 
         char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
         char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
         char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
         char_array_4[3] = char_array_3[2] & 0x3f;
 
-        for (j = 0; (j < i + 1); j++) {
-            putc_func(base64_chars[char_array_4[j]]);
-        }
+        for (j = 0; j < i + 1; j++) putc_func(constants::BASE64_CHARS_TABLE[char_array_4[j]]);
 
-        while ((i++ < 3)) {
-            putc_func('=');
-        }
+        while (i++ < 3) putc_func('=');
     }
 }
 
@@ -89,30 +81,23 @@ void el_base64_encode(const unsigned char* in, int in_len, char* out) {
             char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
             char_array_4[3] = char_array_3[2] & 0x3f;
 
-            for (i = 0; (i < 4); i++) {
-                *out++ = base64_chars[char_array_4[i]];
-            }
+            for (i = 0; i < 4; i++) *out++ = constants::BASE64_CHARS_TABLE[char_array_4[i]];
+
             i = 0;
         }
     }
 
     if (i) {
-        for (j = i; j < 3; j++) {
-            char_array_3[j] = '\0';
-        }
+        for (j = i; j < 3; j++) char_array_3[j] = '\0';
 
         char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
         char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
         char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
         char_array_4[3] = char_array_3[2] & 0x3f;
 
-        for (j = 0; (j < i + 1); j++) {
-            *out++ = base64_chars[char_array_4[i]];
-        }
+        for (j = 0; j < i + 1; j++) *out++ = constants::BASE64_CHARS_TABLE[char_array_4[i]];
 
-        while ((i++ < 3)) {
-            *out++ = '=';
-        }
+        while (i++ < 3) *out++ = '=';
     }
 }
 

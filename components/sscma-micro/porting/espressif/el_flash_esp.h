@@ -49,7 +49,7 @@ el_err_code_t el_model_partition_mmap_init(const char*              partition_na
 void el_model_partition_mmap_deinit(spi_flash_mmap_handle_t* mmap_handler);
 
 #ifdef CONFIG_EL_LIB_FLASHDB
-    #include <fal_def.h>
+    #include "third_party/FlashDB/fal_def.h"
 
     #define NOR_FLASH_DEV_NAME CONFIG_EL_STORAGE_PARTITION_MOUNT_POINT
     #define FAL_FLASH_DEV_TABLE \

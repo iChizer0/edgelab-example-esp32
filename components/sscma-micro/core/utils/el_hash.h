@@ -26,17 +26,13 @@
 #ifndef _EL_HASH_H_
 #define _EL_HASH_H_
 
-#include <stdint.h>
-#include <stddef.h>
+#include <cstddef>
+#include <cstdint>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace edgelab {
 
 uint16_t el_crc16_maxim(const uint8_t* data, size_t length);
 
-#ifdef __cplusplus
 }
-#endif
 
 #endif

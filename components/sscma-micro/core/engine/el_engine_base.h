@@ -23,24 +23,20 @@
  *
  */
 
-#ifndef _EL_INFERENCE_BASE_HPP_
-#define _EL_INFERENCE_BASE_HPP_
+#ifndef _EL_ENGINE_BASE_H_
+#define _EL_ENGINE_BASE_H_
 
 #include <cstdint>
 
-#include "el_common.h"
-#include "el_compiler.h"
-#include "el_debug.h"
-#include "el_types.h"
+#include "core/el_config_internal.h"
+#include "core/el_types.h"
 
 #ifdef CONFIG_EL_FILESYSTEM
-    #ifdef __cplusplus
-        #include <fstream>
-        #include <iostream>
-    #endif
+    #include <fstream>
+    #include <iostream>
 #endif
 
-namespace edgelab::inference::base {
+namespace edgelab::base {
 
 class Engine {
    public:
@@ -54,9 +50,7 @@ class Engine {
     virtual el_err_code_t run() = 0;
 
 #ifdef CONFIG_EL_FILESYSTEM
-    #ifdef __cplusplus
     virtual el_err_code_t load_model(const char* model_path) = 0;
-    #endif
 #endif
 
     virtual el_err_code_t load_model(const void* model_data, size_t model_size) = 0;
@@ -72,7 +66,6 @@ class Engine {
     virtual el_quant_param_t get_output_quant_param(size_t index) const = 0;
 
 #ifdef CONFIG_EL_INFERENCER_TENSOR_NAME
-    #ifdef __cplusplus
     virtual size_t           get_input_index(const char* input_name) const                                = 0;
     virtual size_t           get_output_index(const char* output_name) const                              = 0;
     virtual void*            get_input(const char* input_name)                                            = 0;
@@ -82,10 +75,9 @@ class Engine {
     virtual el_shape_t       get_output_shape(const char* output_name) const                              = 0;
     virtual el_quant_param_t get_input_quant_param(const char* input_name) const                          = 0;
     virtual el_quant_param_t get_output_quant_param(const char* output_name) const                        = 0;
-    #endif
 #endif
 };
 
-}  // namespace edgelab::inference::base
+}  // namespace edgelab::base
 
 #endif

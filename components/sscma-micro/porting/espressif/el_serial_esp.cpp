@@ -23,7 +23,7 @@
  *
  */
 
-#include "porting/espressif/el_serial_esp.h"
+#include "el_serial_esp.h"
 
 #include <driver/usb_serial_jtag.h>
 #include <freertos/FreeRTOS.h>

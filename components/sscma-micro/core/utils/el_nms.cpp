@@ -25,6 +25,10 @@
 
 #include "el_nms.h"
 
+#include <algorithm>
+
+#include "core/el_compiler.h"
+
 namespace edgelab {
 
 bool box_comparator_sort(const el_box_t& box1, const el_box_t& box2) { return box1.score > box2.score; }

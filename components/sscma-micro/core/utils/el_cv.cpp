@@ -25,19 +25,20 @@
 
 #include "el_cv.h"
 
-#include <memory.h>
-#include <stdint.h>
+#include <memory>
 
-#include "el_common.h"
-#include "el_compiler.h"
-#include "el_types.h"
+#include "core/el_common.h"
+#include "core/el_compiler.h"
+#include "core/el_debug.h"
+#include "core/el_types.h"
 
 #ifdef CONFIG_EL_LIB_JPEGENC
-    #include "JPEGENC.h"
-static JPEG jpg;  // static copy of JPEG encoder class
+    #include "third_party/JPEGENC/JPEGENC.h"
 #endif
 
 namespace edgelab {
+
+namespace constants {
 
 const static uint8_t RGB565_TO_RGB888_LOOKUP_TABLE_5[] = {
   0x00, 0x08, 0x10, 0x19, 0x21, 0x29, 0x31, 0x3A, 0x42, 0x4A, 0x52, 0x5A, 0x63, 0x6B, 0x73, 0x7B,
@@ -51,6 +52,10 @@ const static uint8_t RGB565_TO_RGB888_LOOKUP_TABLE_6[] = {
   0xC2, 0xC6, 0xCA, 0xCE, 0xD2, 0xD7, 0xDB, 0xDF, 0xE3, 0xE7, 0xEB, 0xEF, 0xF3, 0xF7, 0xFB, 0xFF,
 };
 
+}  // namespace constants
+
+namespace types {
+
 typedef struct EL_ATTR_PACKED b16_t {
     uint8_t b0_8;
     uint8_t b8_16;
@@ -62,8 +67,13 @@ typedef struct EL_ATTR_PACKED b24_t {
     uint8_t b16_24;
 } b24_t;
 
+}  // namespace types
+
+using namespace constants;
+using namespace types;
+
 // TODO: need to be optimized
-EL_ATTR_WEAK el_err_code_t yuv422p_to_rgb(const el_img_t* src, el_img_t* dst) {
+EL_ATTR_WEAK void yuv422p_to_rgb(const el_img_t* src, el_img_t* dst) {
     int32_t  y;
     int32_t  cr;
     int32_t  cb;
@@ -115,8 +125,6 @@ EL_ATTR_WEAK el_err_code_t yuv422p_to_rgb(const el_img_t* src, el_img_t* dst) {
             }
         }
     }
-
-    return EL_OK;
 }
 
 EL_ATTR_WEAK void rgb888_to_rgb888(const el_img_t* src, el_img_t* dst) {
@@ -919,7 +927,9 @@ EL_ATTR_WEAK void rgb_to_rgb(const el_img_t* src, el_img_t* dst) {
 }
 
 #ifdef CONFIG_EL_LIB_JPEGENC
+
 EL_ATTR_WEAK el_err_code_t rgb_to_jpeg(const el_img_t* src, el_img_t* dst) {
+    static JPEG   jpg;
     JPEGENCODE    jpe;
     int           rc            = 0;
     el_err_code_t err           = EL_OK;
@@ -963,31 +973,39 @@ EL_ATTR_WEAK el_err_code_t rgb_to_jpeg(const el_img_t* src, el_img_t* dst) {
 exit:
     return err;
 }
+
 #endif
 
 // TODO: need to be optimized
 EL_ATTR_WEAK el_err_code_t el_img_convert(const el_img_t* src, el_img_t* dst) {
-    if (src == nullptr || dst == nullptr) {
+    if (!src || !src->data) [[unlikely]]
         return EL_EINVAL;
-    }
-    if (src->data == nullptr || dst->data == nullptr) {
+
+    if (!dst || !dst->data) [[unlikely]]
         return EL_EINVAL;
+
+    if (src->format == EL_PIXEL_FORMAT_RGB565 || src->format == EL_PIXEL_FORMAT_RGB888 ||
+        src->format == EL_PIXEL_FORMAT_GRAYSCALE) {
+        if (dst->format == EL_PIXEL_FORMAT_JPEG) {
+            return rgb_to_jpeg(src, dst);
+        }
+
+        if (dst->format == EL_PIXEL_FORMAT_RGB565 || dst->format == EL_PIXEL_FORMAT_RGB888 ||
+            dst->format == EL_PIXEL_FORMAT_GRAYSCALE) {
+            rgb_to_rgb(src, dst);
+            return EL_OK;
+        }
     }
 
     if (src->format == EL_PIXEL_FORMAT_YUV422) {
-        return yuv422p_to_rgb(src, dst);
-    } else if (src->format == EL_PIXEL_FORMAT_RGB565 || src->format == EL_PIXEL_FORMAT_RGB888 ||
-               src->format == EL_PIXEL_FORMAT_GRAYSCALE) {
-        if (dst->format == EL_PIXEL_FORMAT_JPEG) {
-            rgb_to_jpeg(src, dst);
-        } else {
-            rgb_to_rgb(src, dst);
+        if (dst->format == EL_PIXEL_FORMAT_RGB565 || dst->format == EL_PIXEL_FORMAT_RGB888 ||
+            dst->format == EL_PIXEL_FORMAT_GRAYSCALE) {
+            yuv422p_to_rgb(src, dst);
+            return EL_OK;
         }
-    } else {
-        return EL_ENOTSUP;
     }
 
-    return EL_OK;
+    return EL_ENOTSUP;
 }
 
 // TODO: need to be optimized

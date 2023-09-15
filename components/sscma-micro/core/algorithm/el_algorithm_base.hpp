@@ -28,7 +28,7 @@
 
 #include <cstdint>
 
-#include "el_inference_base.hpp"
+#include "el_engine_base.h"
 #include "el_types.h"
 
 namespace edgelab::algorithm {
@@ -47,7 +47,7 @@ namespace base {
 
 class Algorithm {
    protected:
-    using EngineType = edgelab::inference::base::Engine;
+    using EngineType = edgelab::base::Engine;
     using InfoType   = types::el_algorithm_info_t;
 
    public:

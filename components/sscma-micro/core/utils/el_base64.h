@@ -26,24 +26,14 @@
 #ifndef _EL_BASE64_H_
 #define _EL_BASE64_H_
 
-#include "el_common.h"
+#include <cstdint>
 
-#ifdef __cplusplus
-extern "C" {
 namespace edgelab {
-#endif
 
 void el_base64_encode_output(const unsigned char* in, int in_len, int (*putc_func)(int));
 
 void el_base64_encode(const unsigned char* in, int in_len, char* out);
 
-// void el_base64_decode_output(const unsigned char* in, int in_len, int (*putc_func)(int));
-
-// void el_base64_decode(const unsigned char* in, int in_len, char* out);
-
-#ifdef __cplusplus
-}
-}
-#endif
+}  // namespace edgelab
 
 #endif

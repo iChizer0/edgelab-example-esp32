@@ -32,7 +32,7 @@
 #include "el_algorithm_imcls.hpp"
 #include "el_algorithm_pfld.hpp"
 #include "el_algorithm_yolo.hpp"
-#include "el_inference.hpp"
+#include "el_engine_base.h"
 #include "el_types.h"
 
 namespace edgelab {
@@ -40,7 +40,7 @@ namespace edgelab {
 namespace algorithm::utility {
 
 // Note: the order index influences the algorthm type in current implementation
-el_algorithm_type_t el_algorithm_type_from_engine(const edgelab::InferenceEngine* engine) {
+el_algorithm_type_t el_algorithm_type_from_engine(const edgelab::base::Engine* engine) {
 #ifdef _EL_ALGORITHM_YOLO_HPP_  // index 1
     if (algorithm::YOLO::is_model_valid(engine)) return EL_ALGO_TYPE_YOLO;
 #endif

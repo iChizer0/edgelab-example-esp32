@@ -28,7 +28,7 @@
 #include <cstdint>
 
 #include "el_debug.h"
-#include "el_inference_base.hpp"
+#include "el_engine_base.h"
 #include "el_types.h"
 
 namespace edgelab::algorithm::base {

@@ -23,21 +23,24 @@
  *
  */
 
-#ifndef _EL_INFERENCE_TFLITE_HPP_
-#define _EL_INFERENCE_TFLITE_HPP_
+#ifndef _EL_ENGINE_TFLITE_H_
+#define _EL_ENGINE_TFLITE_H_
 
-#define TF_LITE_SATTIC_MEMORY
+#include <tensorflow/lite/core/c/common.h>
+#include <tensorflow/lite/micro/compatibility.h>
+#include <tensorflow/lite/micro/micro_interpreter.h>
+#include <tensorflow/lite/micro/micro_log.h>
+#include <tensorflow/lite/micro/micro_mutable_op_resolver.h>
+#include <tensorflow/lite/micro/system_setup.h>
+#include <tensorflow/lite/schema/schema_generated.h>
 
+#include <cstddef>
 #include <cstdint>
 
-#include "el_inference_base.hpp"
-#include "tensorflow/lite/core/c/common.h"
-#include "tensorflow/lite/micro/compatibility.h"
-#include "tensorflow/lite/micro/micro_interpreter.h"
-#include "tensorflow/lite/micro/micro_log.h"
-#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
-#include "tensorflow/lite/micro/system_setup.h"
-#include "tensorflow/lite/schema/schema_generated.h"
+#include "core/el_types.h"
+#include "el_engine_base.h"
+
+#define TF_LITE_SATTIC_MEMORY
 
 namespace tflite {
 
@@ -345,12 +348,12 @@ class OpsResolver : public MicroMutableOpResolver<OpsCount::OpsTail - OpsCount::
 
 }  // namespace tflite
 
-namespace edgelab::inference {
+namespace edgelab {
 
-class TFLiteEngine : public edgelab::inference::base::Engine {
+class EngineTFLite : public base::Engine {
    public:
-    TFLiteEngine();
-    ~TFLiteEngine();
+    EngineTFLite();
+    ~EngineTFLite();
 
     el_err_code_t init() override;
     el_err_code_t init(size_t size) override;
@@ -397,6 +400,6 @@ class TFLiteEngine : public edgelab::inference::base::Engine {
 #endif
 };
 
-}  // namespace edgelab::inference
+}  // namespace edgelab
 
 #endif

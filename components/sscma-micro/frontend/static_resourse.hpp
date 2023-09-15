@@ -8,7 +8,8 @@
 
 #include "core/algorithm/el_algorithm.hpp"
 #include "core/data/el_data.hpp"
-#include "core/inference/el_inference.hpp"
+#include "core/el_common.h"
+#include "core/engine/el_engine_tflite.h"
 #include "core/utils/el_hash.h"
 #include "frontend/interpreter/condition.hpp"
 #include "frontend/repl/executor.hpp"
@@ -23,6 +24,7 @@ using namespace frontend::interpreter;
 using namespace frontend::repl;
 
 using namespace edgelab;
+using namespace edgelab::base;
 
 class StaticResourse {
    public:
@@ -33,7 +35,7 @@ class StaticResourse {
     Models*            models;
     Storage*           storage;
     AlgorithmDelegate* algorithm_delegate;
-    InferenceEngine*   engine;
+    Engine*            engine;
 
     // lib
     Server*    instance;
@@ -86,7 +88,7 @@ class StaticResourse {
         models             = data_delegate->get_models_handler();
         storage            = data_delegate->get_storage_handler();
         algorithm_delegate = AlgorithmDelegate::get_delegate();
-        engine             = new InferenceEngine();
+        engine             = new EngineTFLite();
 
         instance    = new Server();
         executor    = new Executor();

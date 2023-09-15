@@ -3,37 +3,40 @@ menu "Edgelab Configuration"
     rsource "porting/Kconfig"
 
     config EL_DEBUG
-        bool "Log debug"
+        bool "Debug"
         default y
         help
-            Enable Edgelab debug
-    menu "debug options"
+            "Enable debugging"
+
+    menu "Debug Options"
         depends on EL_DEBUG
         config EL_DEBUG_COLOR
             bool "color"
             default y
             help
-                Enable Edgelab debug color
+                "Debug color"
+
         config EL_DEBUG_MORE_INFO
             bool "more info"
             default y
             help
-                Enable Edgelab debug more info
+               "Debug show more info"
+
         config EL_DEBUG_LEVEL
             int "level"
             default 3
             range 0 4
             help
-                Edgelab debug level
+                "Debug log level"
+
         config EL_ASSERT
             bool "assert"
             default y
             help
-                Enable Edgelab assert
+                "Enable assert"
     endmenu
 
-
-    rsource "core/inference/Kconfig"
+    rsource "core/engine/Kconfig"
     rsource "third_party/Kconfig"
 
 endmenu

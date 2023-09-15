@@ -25,10 +25,11 @@
 
 #include "el_hash.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include "core/el_compiler.h"
 
-#include "el_compiler.h"
+namespace edgelab {
+
+namespace constants {
 
 const static uint16_t CRC16_MAXIM_TABLE[256] = {
   0x0000, 0xc0c1, 0xc181, 0x0140, 0xc301, 0x03c0, 0x0280, 0xc241, 0xc601, 0x06c0, 0x0780, 0xc741, 0x0500, 0xc5c1,
@@ -51,13 +52,17 @@ const static uint16_t CRC16_MAXIM_TABLE[256] = {
   0x4c80, 0x8c41, 0x4400, 0x84c1, 0x8581, 0x4540, 0x8701, 0x47c0, 0x4680, 0x8641, 0x8201, 0x42c0, 0x4380, 0x8341,
   0x4100, 0x81c1, 0x8081, 0x4040};
 
+}
+
 EL_ATTR_WEAK uint16_t el_crc16_maxim(const uint8_t* data, size_t length) {
     uint16_t crc = 0x0000;
 
     for (size_t i = 0; i < length; ++i) {
         uint8_t index = static_cast<uint8_t>(crc ^ data[i]);
-        crc           = (crc >> 8) ^ CRC16_MAXIM_TABLE[index];
+        crc           = (crc >> 8) ^ constants::CRC16_MAXIM_TABLE[index];
     }
 
     return crc ^ 0xffff;
 }
+
+}  // namespace edgelab

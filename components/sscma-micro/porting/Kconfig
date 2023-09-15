@@ -3,18 +3,15 @@ choice "Target"
     prompt "Target"
     help
         Select the target system for which you want to build the firmware.
-        
+
     config EL_TARGET_ESPPRESSIF
         bool "Espressif"
         default y
+
     config EL_TARGET_HIMAX
         bool "Himax"
         default n
+
 endchoice
 
 rsource "espressif/Kconfig"
-
-
-
-   
-

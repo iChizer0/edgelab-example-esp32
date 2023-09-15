@@ -32,13 +32,13 @@
 #include "el_algorithm_imcls.hpp"
 #include "el_algorithm_pfld.hpp"
 #include "el_algorithm_yolo.hpp"
-#include "el_inference.hpp"
+#include "el_engine_base.h"
 
 namespace edgelab {
 
 namespace algorithm::utility {
 
-el_algorithm_type_t el_algorithm_type_from_engine(const edgelab::InferenceEngine* engine);
+el_algorithm_type_t el_algorithm_type_from_engine(const edgelab::base::Engine* engine);
 
 }  // namespace algorithm::utility
 

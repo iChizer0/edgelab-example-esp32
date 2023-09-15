@@ -23,7 +23,9 @@
  *
  */
 
-#include "el_inference_tflite.hpp"
+#include "el_engine_tflite.h"
+
+#include "core/el_debug.h"
 
 #ifdef CONFIG_EL_TFLITE
 
@@ -323,23 +325,21 @@ OpsResolver::OpsResolver() {
 
 }  // namespace tflite
 
-namespace edgelab::inference {
+namespace edgelab {
 
-tflite::OpsResolver TFLiteEngine::resolver;
+tflite::OpsResolver EngineTFLite::resolver;
 
-TFLiteEngine::TFLiteEngine() {
+EngineTFLite::EngineTFLite() {
     interpreter      = nullptr;
     model            = nullptr;
     memory_pool.pool = nullptr;
     memory_pool.size = 0;
     #ifdef CONFIG_EL_FILESYSTEM
-        #ifdef __cplusplus
     model_file = nullptr;
-        #endif
     #endif
 }
 
-TFLiteEngine::~TFLiteEngine() {
+EngineTFLite::~EngineTFLite() {
     if (interpreter != nullptr) {
         delete interpreter;
         interpreter = nullptr;
@@ -349,18 +349,16 @@ TFLiteEngine::~TFLiteEngine() {
         memory_pool.pool = nullptr;
     }
     #ifdef CONFIG_EL_FILESYSTEM
-        #ifdef __cplusplus
     if (model_file != nullptr) {
         delete model_file;
         model_file = nullptr;
     }
-        #endif
     #endif
 }
 
-el_err_code_t TFLiteEngine::init() { return EL_OK; }
+el_err_code_t EngineTFLite::init() { return EL_OK; }
 
-el_err_code_t TFLiteEngine::init(size_t size) {
+el_err_code_t EngineTFLite::init(size_t size) {
     void* pool = new uint8_t[size];
     if (pool == nullptr) {
         return EL_ENOMEM;
@@ -370,13 +368,13 @@ el_err_code_t TFLiteEngine::init(size_t size) {
     return init();
 }
 
-el_err_code_t TFLiteEngine::init(void* pool, size_t size) {
+el_err_code_t EngineTFLite::init(void* pool, size_t size) {
     memory_pool.pool = pool;
     memory_pool.size = size;
     return init();
 }
 
-el_err_code_t TFLiteEngine::run() {
+el_err_code_t EngineTFLite::run() {
     EL_ASSERT(interpreter != nullptr);
 
     if (kTfLiteOk != interpreter->Invoke()) {
@@ -385,7 +383,7 @@ el_err_code_t TFLiteEngine::run() {
     return EL_OK;
 }
 
-el_err_code_t TFLiteEngine::load_model(const void* model_data, size_t model_size) {
+el_err_code_t EngineTFLite::load_model(const void* model_data, size_t model_size) {
     model = tflite::GetModel(model_data);
     if (model == nullptr) {
         return EL_EINVAL;
@@ -404,7 +402,7 @@ el_err_code_t TFLiteEngine::load_model(const void* model_data, size_t model_size
     return EL_OK;
 }
 
-el_err_code_t TFLiteEngine::set_input(size_t index, const void* input_data, size_t input_size) {
+el_err_code_t EngineTFLite::set_input(size_t index, const void* input_data, size_t input_size) {
     EL_ASSERT(interpreter != nullptr);
 
     if (index >= interpreter->inputs().size()) {
@@ -421,7 +419,7 @@ el_err_code_t TFLiteEngine::set_input(size_t index, const void* input_data, size
     return EL_OK;
 }
 
-void* TFLiteEngine::get_input(size_t index) {
+void* EngineTFLite::get_input(size_t index) {
     EL_ASSERT(interpreter != nullptr);
 
     if (index >= interpreter->inputs().size()) {
@@ -434,7 +432,7 @@ void* TFLiteEngine::get_input(size_t index) {
     return input->data.data;
 }
 
-void* TFLiteEngine::get_output(size_t index) {
+void* EngineTFLite::get_output(size_t index) {
     EL_ASSERT(interpreter != nullptr);
 
     if (index >= interpreter->outputs().size()) {
@@ -447,7 +445,7 @@ void* TFLiteEngine::get_output(size_t index) {
     return output->data.data;
 }
 
-el_shape_t TFLiteEngine::get_input_shape(size_t index) const {
+el_shape_t EngineTFLite::get_input_shape(size_t index) const {
     el_shape_t shape;
 
     EL_ASSERT(interpreter != nullptr);
@@ -465,7 +463,7 @@ el_shape_t TFLiteEngine::get_input_shape(size_t index) const {
     return shape;
 }
 
-el_shape_t TFLiteEngine::get_output_shape(size_t index) const {
+el_shape_t EngineTFLite::get_output_shape(size_t index) const {
     el_shape_t shape;
     shape.size = 0;
 
@@ -483,7 +481,7 @@ el_shape_t TFLiteEngine::get_output_shape(size_t index) const {
     return shape;
 }
 
-el_quant_param_t TFLiteEngine::get_input_quant_param(size_t index) const {
+el_quant_param_t EngineTFLite::get_input_quant_param(size_t index) const {
     el_quant_param_t quant_param;
     quant_param.scale      = 0;
     quant_param.zero_point = 0;
@@ -502,7 +500,7 @@ el_quant_param_t TFLiteEngine::get_input_quant_param(size_t index) const {
     return quant_param;
 }
 
-el_quant_param_t TFLiteEngine::get_output_quant_param(size_t index) const {
+el_quant_param_t EngineTFLite::get_output_quant_param(size_t index) const {
     el_quant_param_t quant_param;
     quant_param.scale      = 0;
     quant_param.zero_point = 0;
@@ -522,8 +520,7 @@ el_quant_param_t TFLiteEngine::get_output_quant_param(size_t index) const {
 }
 
     #ifdef CONFIG_EL_FILESYSTEM
-        #ifdef __cplusplus
-el_err_code_t TFLiteEngine::load_model(const char* model_path) {
+el_err_code_t EngineTFLite::load_model(const char* model_path) {
     el_err_code_t ret  = EL_OK;
     size_t        size = 0;
     std::ifstream file(model_path, std::ios::binary | std::ios::ate);
@@ -546,9 +543,8 @@ el_err_code_t TFLiteEngine::load_model(const char* model_path) {
 
     return ret;
 }
-        #endif
     #endif
 
-}  // namespace edgelab::inference
+}  // namespace edgelab
 
 #endif

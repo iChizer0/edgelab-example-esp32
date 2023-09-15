@@ -29,7 +29,7 @@
 #include <sdkconfig.h>
 
 #ifdef CONFIG_EL_TARGET_ESPPRESSIF
-    #include "el_flash_esp.h"
+    #include "porting/espressif/el_flash_esp.h"
 #endif
 
 #endif

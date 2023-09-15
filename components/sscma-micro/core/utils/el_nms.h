@@ -26,15 +26,12 @@
 #ifndef _EL_NMS_H_
 #define _EL_NMS_H_
 
+#include <cstdint>
 #include <forward_list>
 
-#include "el_common.h"
-#include "el_types.h"
+#include "core/el_types.h"
 
-#ifdef __cplusplus
-extern "C" {
 namespace edgelab {
-#endif
 
 int el_nms(std::forward_list<el_box_t>& boxes,
            uint8_t                      nms_iou_thresh,
@@ -42,9 +39,6 @@ int el_nms(std::forward_list<el_box_t>& boxes,
            bool                         soft_nms     = false,
            bool                         multi_target = false);
 
-#ifdef __cplusplus
 }
-}
-#endif
 
 #endif

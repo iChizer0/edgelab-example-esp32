@@ -23,7 +23,7 @@
  *
  */
 
-#include "porting/espressif/el_device_esp.h"
+#include "el_device_esp.h"
 
 #include <esp_efuse.h>
 #include <esp_efuse_chip.h>
