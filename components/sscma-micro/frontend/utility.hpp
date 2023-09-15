@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "core/algorithm/el_algorithm_delegate.h"
-#include "core/data/el_data.hpp"
+#include "core/data/el_data_storage.hpp"
 #include "core/el_types.h"
 #include "core/utils/el_base64.h"
 #include "core/utils/el_cv.h"

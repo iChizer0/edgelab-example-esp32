@@ -25,19 +25,9 @@
 
 #include "el_data_storage.hpp"
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-
-#include <cstddef>
-
-#include "el_config_internal.h"
-#include "el_debug.h"
-
 #ifdef CONFIG_EL_LIB_FLASHDB
 
-    #include <flashdb.h>
-
-namespace edgelab::data {
+namespace edgelab {
 
 Storage::Storage() : __lock(xSemaphoreCreateCounting(1, 1)), __kvdb(new fdb_kvdb{}) {
     EL_ASSERT(__lock);
@@ -151,6 +141,6 @@ bool Storage::reset() {
     return __kvdb ? fdb_kv_set_default(__kvdb) == FDB_NO_ERR : false;
 }
 
-}  // namespace edgelab::data
+}  // namespace edgelab
 
 #endif

@@ -33,6 +33,10 @@
 
 #include "el_compiler.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     EL_OK      = 0,  // success
     EL_AGAIN   = 1,  // try again
@@ -195,5 +199,9 @@ typedef struct EL_ATTR_PACKED el_model_info_t {
 } el_model_info_t;
 
 typedef uint8_t el_model_id_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

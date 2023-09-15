@@ -37,14 +37,14 @@
 #include <type_traits>
 #include <utility>
 
-#include "el_config_internal.h"
-#include "el_debug.h"
+#include "core/el_config_internal.h"
+#include "core/el_debug.h"
 
 #ifdef CONFIG_EL_LIB_FLASHDB
 
-    #include <flashdb.h>
+    #include "third_party/FlashDB/flashdb.h"
 
-namespace edgelab::data {
+namespace edgelab {
 
 namespace types {
 
@@ -63,6 +63,8 @@ template <typename ValueType> struct el_storage_kv_t {
 
 }  // namespace types
 
+using namespace edgelab::types;
+
 namespace utility {
 
 template <typename ValueType,
@@ -70,10 +72,12 @@ template <typename ValueType,
           typename ValueTypeNoCV  = typename std::remove_cv<ValueType>::type,
           typename std::enable_if<std::is_trivial<ValueTypeNoRef>::value ||
                                   std::is_standard_layout<ValueTypeNoRef>::value>::type* = nullptr>
-static inline constexpr edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv(const char* key,
-                                                                                                ValueType&& value) {
-    return edgelab::data::types::el_storage_kv_t<ValueTypeNoCV>(key, std::forward<ValueTypeNoCV>(value));
+static inline constexpr el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv(const char* key,
+                                                                                          ValueType&& value) {
+    return el_storage_kv_t<ValueTypeNoCV>(key, std::forward<ValueTypeNoCV>(value));
 }
+
+using namespace edgelab::utility;
 
 static inline unsigned long djb2_hash(const unsigned char* bytes) {
     unsigned long hash = 0x1505;
@@ -90,8 +94,7 @@ template <typename T> static inline constexpr const char* get_type_name() { retu
 //          a. too compilcate to use const difference to determine whether to delete the key (need to set to nullptr while copy/assign, etc.)
 //          b. not wise to use a bool flag to dertermine whether to delete the key (because copy/assign would be a continuation of the key)
 template <typename VarType, typename ValueTypeNoCV = typename std::remove_cv<VarType>::type>
-static inline constexpr edgelab::data::types::el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv_from_type(
-  VarType&& data) {
+static inline constexpr el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv_from_type(VarType&& data) {
     using VarTypeNoCVRef               = typename std::remove_cv<typename std::remove_reference<VarType>::type>::type;
     const char*          type_name     = get_type_name<VarTypeNoCVRef>();
     unsigned long        hash          = djb2_hash(reinterpret_cast<const unsigned char*>(type_name));
@@ -245,7 +248,7 @@ class Storage {
     fdb_kvdb_t                __kvdb;
 };
 
-}  // namespace edgelab::data
+}  // namespace edgelab
 
 #endif
 #endif

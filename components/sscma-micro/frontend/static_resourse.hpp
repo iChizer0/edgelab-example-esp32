@@ -7,7 +7,8 @@
 #include <string>
 
 #include "core/algorithm/el_algorithm_delegate.h"
-#include "core/data/el_data.hpp"
+#include "core/data/el_data_models.h"
+#include "core/data/el_data_storage.hpp"
 #include "core/el_common.h"
 #include "core/engine/el_engine_tflite.h"
 #include "core/utils/el_hash.h"
@@ -31,7 +32,6 @@ class StaticResourse {
     // external
     Device*            device;
     Transport*         transport;
-    DataDelegate*      data_delegate;
     Models*            models;
     Storage*           storage;
     AlgorithmDelegate* algorithm_delegate;
@@ -84,9 +84,8 @@ class StaticResourse {
     StaticResourse() {
         device             = DeviceEsp::get_device();
         transport          = device->get_serial();
-        data_delegate      = DataDelegate::get_delegate();
-        models             = data_delegate->get_models_handler();
-        storage            = data_delegate->get_storage_handler();
+        models             = new Models();
+        storage            = new Storage();
         algorithm_delegate = AlgorithmDelegate::get_delegate();
         engine             = new EngineTFLite();
 

@@ -23,20 +23,17 @@
  *
  */
 
-#ifndef _EL_DATA_MODELS_HPP_
-#define _EL_DATA_MODELS_HPP_
+#ifndef _EL_DATA_MODELS_H_
+#define _EL_DATA_MODELS_H_
 
-#include <algorithm>
 #include <cstdint>
 #include <forward_list>
 
-#include "el_compiler.h"
-#include "el_config_internal.h"
-#include "el_debug.h"
-#include "el_flash.h"
-#include "el_types.h"
+#include "core/el_debug.h"
+#include "core/el_types.h"
+#include "porting/el_flash.h"
 
-namespace edgelab::data {
+namespace edgelab {
 
 class Models {
    public:
