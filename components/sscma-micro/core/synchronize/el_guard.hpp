@@ -22,3 +22,26 @@
  * THE SOFTWARE.
  *
  */
+
+#ifndef _EL_GUARD_HPP_
+#define _EL_GUARD_HPP_
+
+#include "el_mutex.hpp"
+
+namespace edgelab {
+
+template <typename T> class Guard {
+   public:
+    explicit Guard(const T& mutex) noexcept : _mutex(mutex) { _mutex.lock(); }
+    ~Guard() noexcept { _mutex.unlock(); }
+
+    Guard(const Guard&)            = delete;
+    Guard& operator=(const Guard&) = delete;
+
+   private:
+    const T& _mutex;
+};
+
+}  // namespace edgelab
+
+#endif

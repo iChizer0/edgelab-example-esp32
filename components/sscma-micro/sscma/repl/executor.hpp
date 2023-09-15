@@ -1,7 +1,6 @@
 #pragma once
 
 #include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 #include <atomic>
@@ -11,17 +10,21 @@
 #include <queue>
 #include <utility>
 
+#include "core/synchronize/el_guard.hpp"
+#include "core/synchronize/el_mutex.hpp"
 #include "sscma/definations.hpp"
 #include "sscma/types.hpp"
 
 namespace sscma::repl {
+
+using namespace edgelab;
 
 using namespace sscma::types;
 
 class Executor {
    public:
     Executor(size_t worker_stack_size = REPL_EXECUTOR_STACK_SIZE, size_t worker_priority = REPL_EXECUTOR_PRIO)
-        : _task_queue_lock(xSemaphoreCreateCounting(1, 1)),
+        : _task_queue_lock(),
           _task_stop_requested(false),
           _worker_thread_stop_requested(false),
           _worker_ret(),
@@ -34,10 +37,7 @@ class Executor {
         std::snprintf(_worker_name, length, "task_executor_%2X", worker_id++);
     }
 
-    ~Executor() {
-        stop();
-        vSemaphoreDelete(_task_queue_lock);
-    }
+    ~Executor() { stop(); }
 
     void start() {
         _worker_ret =
@@ -51,23 +51,19 @@ class Executor {
     }
 
     void add_task(repl_task_t task) {
-        m_lock();
+        const Guard<Mutex> guard(_task_queue_lock);
         _task_queue.push(task);
         _task_stop_requested.store(true, std::memory_order_relaxed);
-        m_unlock();
     }
 
     const char* get_worker_name() const { return _worker_name; }
 
    protected:
-    inline void m_lock() const { xSemaphoreTake(_task_queue_lock, portMAX_DELAY); }
-    inline void m_unlock() const { xSemaphoreGive(_task_queue_lock); }
-
     void run() {
         while (!_worker_thread_stop_requested.load(std::memory_order_relaxed)) {
             repl_task_t task;
             {
-                m_lock();
+                const Guard<Mutex> guard(_task_queue_lock);
                 if (!_task_queue.empty()) {
                     task = std::move(_task_queue.front());
                     _task_queue.pop();
@@ -76,7 +72,6 @@ class Executor {
                     else
                         _task_stop_requested.store(true, std::memory_order_seq_cst);
                 }
-                m_unlock();
             }
             if (task) task(_task_stop_requested);
             vTaskDelay(15 / portTICK_PERIOD_MS);  // TODO: use yield
@@ -86,9 +81,9 @@ class Executor {
     static void c_run(void* this_pointer) { static_cast<Executor*>(this_pointer)->run(); }
 
    private:
-    mutable SemaphoreHandle_t _task_queue_lock;
-    std::atomic<bool>         _task_stop_requested;
-    std::atomic<bool>         _worker_thread_stop_requested;
+    Mutex             _task_queue_lock;
+    std::atomic<bool> _task_stop_requested;
+    std::atomic<bool> _worker_thread_stop_requested;
 
     BaseType_t   _worker_ret;
     TaskHandle_t _worker_handler;

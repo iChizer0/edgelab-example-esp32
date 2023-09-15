@@ -27,14 +27,13 @@
 #define _EL_FLASH_ESP_H_
 
 #include <esp_partition.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
 #include <spi_flash_mmap.h>
 
 #include "core/el_config_internal.h"
 #include "core/el_types.h"
 
 #ifdef __cplusplus
+namespace edgelab {
 extern "C" {
 #endif
 
@@ -85,6 +84,7 @@ extern const struct fal_flash_dev el_flash_db_nor_flash0;
 #endif
 
 #ifdef __cplusplus
+}
 }
 #endif
 

@@ -25,9 +25,6 @@
 
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-
 #include <algorithm>
 #include <forward_list>
 #include <functional>
@@ -37,6 +34,8 @@
 #include <vector>
 
 #include "core/el_types.h"
+#include "core/synchronize/el_guard.hpp"
+#include "core/synchronize/el_mutex.hpp"
 #include "sscma/repl/history.hpp"
 
 namespace sscma {
@@ -80,11 +79,7 @@ namespace sscma::repl {
 
 class Server {
    public:
-    Server()
-        : _cmd_list_lock(xSemaphoreCreateCounting(1, 1)),
-          _exec_lock(xSemaphoreCreateCounting(1, 1)),
-          _is_ctrl(false),
-          _line_index(-1) {
+    Server() : _cmd_list_lock(), _exec_lock(), _is_ctrl(false), _line_index(-1) {
         register_cmd("HELP", "List available commands", "", [this](std::vector<std::string>) -> el_err_code_t {
             this->print_help();
             return EL_OK;
@@ -98,7 +93,7 @@ class Server {
 
     void init(repl_echo_cb_t echo_cb) {
         {
-            const Guard guard(this, _cmd_list_lock);
+            const Guard<Mutex> guard(_cmd_list_lock);
             _echo_cb = echo_cb;
         }
 
@@ -106,7 +101,7 @@ class Server {
     }
 
     void deinit() {
-        const Guard guard(this, _cmd_list_lock);
+        const Guard<Mutex> guard(_cmd_list_lock);
 
         _history.clear();
         _cmd_list.clear();
@@ -118,7 +113,7 @@ class Server {
     }
 
     bool has_cmd(const std::string& cmd) {
-        const Guard guard(this, _cmd_list_lock);
+        const Guard<Mutex> guard(_cmd_list_lock);
 
         auto it = std::find_if(
           _cmd_list.begin(), _cmd_list.end(), [&](const repl_cmd_t& c) { return c.cmd.compare(cmd) == 0; });
@@ -127,7 +122,7 @@ class Server {
     }
 
     el_err_code_t register_cmd(const repl_cmd_t& cmd) {
-        const Guard guard(this, _cmd_list_lock);
+        const Guard<Mutex> guard(_cmd_list_lock);
 
         if (cmd.cmd.empty()) [[unlikely]]
             return EL_EINVAL;
@@ -149,17 +144,17 @@ class Server {
     }
 
     template <typename... Args> void unregister_cmd(Args&&... args) {
-        const Guard guard(this, _cmd_list_lock);
+        const Guard<Mutex> guard(_cmd_list_lock);
         ((m_unregister_cmd(std::forward<Args>(args))), ...);
     }
 
     std::forward_list<repl_cmd_t> get_registered_cmds() const {
-        const Guard guard(this, _cmd_list_lock);
+        const Guard<Mutex> guard(_cmd_list_lock);
         return _cmd_list;
     }
 
     void print_help() {
-        const Guard guard(this, _cmd_list_lock);
+        const Guard<Mutex> guard(_cmd_list_lock);
 
         _echo_cb(EL_OK, "Command list:\n");
         for (const auto& cmd : _cmd_list) {
@@ -178,7 +173,7 @@ class Server {
     }
 
     el_err_code_t exec(std::string line) {
-        const Guard guard(this, _exec_lock);
+        const Guard<Mutex> guard(_exec_lock);
         return exec_non_lock(std::move(line));
     }
 
@@ -272,21 +267,6 @@ class Server {
     }
 
    protected:
-    struct Guard {
-        Guard(const Server* const repl_server, SemaphoreHandle_t& lock) noexcept
-            : __repl_server(repl_server), __lock(lock) {
-            __repl_server->m_lock(__lock);
-        }
-        ~Guard() noexcept { __repl_server->m_unlock(__lock); }
-
-        Guard(const Guard&)            = delete;
-        Guard& operator=(const Guard&) = delete;
-
-       private:
-        const Server* const __repl_server;
-        SemaphoreHandle_t&  __lock;
-    };
-
     void m_unregister_cmd(const std::string& cmd) {
         _cmd_list.remove_if([&](const repl_cmd_t& c) { return c.cmd.compare(cmd) == 0; });
     }
@@ -312,18 +292,18 @@ class Server {
 
         cmd_name = cmd_name.substr(3);
 
-        m_lock(_cmd_list_lock);
+        _cmd_list_lock.lock();
         auto it = std::find_if(_cmd_list.begin(), _cmd_list.end(), [&](const repl_cmd_t& c) {
             size_t cmd_body_pos = cmd_name.rfind("@");
             return c.cmd.compare(cmd_name.substr(cmd_body_pos != std::string::npos ? cmd_body_pos + 1 : 0)) == 0;
         });
         if (it == _cmd_list.end()) [[unlikely]] {
             m_echo_cb(EL_EINVAL, "Unknown command: ", cmd, "\n");
-            m_unlock(_cmd_list_lock);
+            _cmd_list_lock.unlock();
             return ret;
         }
         repl_cmd_t cmd_copy = *it;
-        m_unlock(_cmd_list_lock);
+        _cmd_list_lock.unlock();
 
         if (!cmd_copy.cmd_cb) [[unlikely]]
             return ret;
@@ -377,16 +357,13 @@ class Server {
         _echo_cb(ret, os.str());
     }
 
-    inline void m_lock(SemaphoreHandle_t lock) const { xSemaphoreTake(lock, portMAX_DELAY); }
-    inline void m_unlock(SemaphoreHandle_t lock) const { xSemaphoreGive(lock); }
-
    private:
     History _history;
 
-    mutable SemaphoreHandle_t     _cmd_list_lock;
+    Mutex                         _cmd_list_lock;
     std::forward_list<repl_cmd_t> _cmd_list;
 
-    mutable SemaphoreHandle_t _exec_lock;
+    Mutex _exec_lock;
 
     repl_echo_cb_t _echo_cb;
 

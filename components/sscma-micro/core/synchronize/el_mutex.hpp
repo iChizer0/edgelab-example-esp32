@@ -22,3 +22,27 @@
  * THE SOFTWARE.
  *
  */
+
+#ifndef _EL_MUTEX_HPP_
+#define _EL_MUTEX_HPP_
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
+namespace edgelab {
+
+class Mutex {
+   public:
+    Mutex() noexcept : _lock(xSemaphoreCreateCounting(1, 1)) {}
+    ~Mutex() noexcept { vSemaphoreDelete(_lock); }
+
+    inline void lock() const { xSemaphoreTake(_lock, portMAX_DELAY); }
+    inline void unlock() const { xSemaphoreGive(_lock); }
+
+   private:
+    mutable SemaphoreHandle_t _lock;
+};
+
+}  // namespace edgelab
+
+#endif

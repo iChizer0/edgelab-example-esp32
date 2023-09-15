@@ -29,23 +29,17 @@
 
 namespace edgelab {
 
-Storage::Storage() : __lock(xSemaphoreCreateCounting(1, 1)), __kvdb(new fdb_kvdb{}) {
-    EL_ASSERT(__lock);
-    EL_ASSERT(__kvdb);
-}
+Storage::Storage() : __lock(), __kvdb(new fdb_kvdb{}) { EL_ASSERT(__kvdb); }
 
-Storage::~Storage() {
-    deinit();
-    vSemaphoreDelete(__lock);
-};
+Storage::~Storage() { deinit(); };
 
 el_err_code_t Storage::init(const char* name, const char* path) {
-    const Guard guard(this);
+    const Guard<Mutex> guard(__lock);
     return fdb_kvdb_init(__kvdb, name, path, nullptr, nullptr) == FDB_NO_ERR ? EL_OK : EL_EINVAL;
 }
 
 void Storage::deinit() {
-    const Guard guard(this);
+    const Guard<Mutex> guard(__lock);
     if (__kvdb && (fdb_kvdb_deinit(__kvdb) == FDB_NO_ERR)) [[likely]] {
         delete __kvdb;
         __kvdb = nullptr;
@@ -53,7 +47,7 @@ void Storage::deinit() {
 }
 
 bool Storage::contains(const char* key) const {
-    const Guard guard(this);
+    const Guard<Mutex> guard(__lock);
     if (!key || !__kvdb) [[unlikely]]
         return false;
     fdb_kv kv{};
@@ -61,9 +55,9 @@ bool Storage::contains(const char* key) const {
 }
 
 size_t Storage::get_value_size(const char* key) const {
-    const Guard guard(this);
-    fdb_kv      handler{};
-    fdb_kv_t    p_handler = fdb_kv_get_obj(__kvdb, key, &handler);
+    const Guard<Mutex> guard(__lock);
+    fdb_kv             handler{};
+    fdb_kv_t           p_handler = fdb_kv_get_obj(__kvdb, key, &handler);
     if (!p_handler || !p_handler->value_len) [[unlikely]]
         return 0u;
 
@@ -80,7 +74,7 @@ struct Storage::Iterator {
     explicit Iterator(const Storage* const storage)
         : ___storage(storage), ___kvdb(nullptr), ___iterator(), ___reach_end(true) {
         if (!___storage) return;
-        volatile const Guard guard(___storage);
+        const Guard<Mutex> guard(___storage->__lock);
         ___kvdb = storage->__kvdb;
         if (___kvdb) [[likely]] {
             fdb_kv_iterator_init(___kvdb, &___iterator);
@@ -95,7 +89,7 @@ struct Storage::Iterator {
     Iterator& operator++() {
         if (!___storage || !___kvdb) [[unlikely]]
             return *this;
-        volatile const Guard guard(___storage);
+        const Guard<Mutex> guard(___storage->__lock);
         ___reach_end = !fdb_kv_iterate(___kvdb, &___iterator);
         return *this;
     }
@@ -123,12 +117,12 @@ Storage::Iterator Storage::cbegin() const { return Iterator(this); }
 Storage::Iterator Storage::cend() const { return Iterator(nullptr); }
 
 bool Storage::erase(const char* key) {
-    const Guard guard(this);
+    const Guard<Mutex> guard(__lock);
     return fdb_kv_del(__kvdb, key) == FDB_NO_ERR;
 }
 
 void Storage::clear() {
-    const Guard guard(this);
+    const Guard<Mutex> guard(__lock);
     if (!__kvdb) [[unlikely]]
         return;
     struct fdb_kv_iterator iterator;
@@ -137,7 +131,7 @@ void Storage::clear() {
 }
 
 bool Storage::reset() {
-    const Guard guard(this);
+    const Guard<Mutex> guard(__lock);
     return __kvdb ? fdb_kv_set_default(__kvdb) == FDB_NO_ERR : false;
 }
 

@@ -26,7 +26,7 @@
 #include <driver/gpio.h>
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 #include <cstdarg>
 #include <cstdint>

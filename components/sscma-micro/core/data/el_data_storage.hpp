@@ -26,9 +26,6 @@
 #ifndef _EL_DATA_STORAGE_HPP_
 #define _EL_DATA_STORAGE_HPP_
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
@@ -39,6 +36,10 @@
 
 #include "core/el_config_internal.h"
 #include "core/el_debug.h"
+#include "core/synchronize/el_guard.hpp"
+#include "core/synchronize/el_mutex.hpp"
+
+#define CONFIG_EL_LIB_FLASHDB
 
 #ifdef CONFIG_EL_LIB_FLASHDB
 
@@ -72,8 +73,7 @@ template <typename ValueType,
           typename ValueTypeNoCV  = typename std::remove_cv<ValueType>::type,
           typename std::enable_if<std::is_trivial<ValueTypeNoRef>::value ||
                                   std::is_standard_layout<ValueTypeNoRef>::value>::type* = nullptr>
-static inline constexpr el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv(const char* key,
-                                                                                          ValueType&& value) {
+static inline constexpr el_storage_kv_t<ValueTypeNoCV> el_make_storage_kv(const char* key, ValueType&& value) {
     return el_storage_kv_t<ValueTypeNoCV>(key, std::forward<ValueTypeNoCV>(value));
 }
 
@@ -145,7 +145,7 @@ class Storage {
     // size of the buffer should be equal to handler->value_len
     template <typename ValueType, typename std::enable_if<!std::is_const<ValueType>::value>::type* = nullptr>
     bool get(types::el_storage_kv_t<ValueType>& kv) const {
-        const Guard guard(this);
+        const Guard<Mutex> guard(__lock);
         if (!kv.size || !__kvdb) [[unlikely]]
             return false;
 
@@ -197,8 +197,8 @@ class Storage {
     }
 
     template <typename ValueType> bool emplace(const types::el_storage_kv_t<ValueType>& kv) {
-        volatile const Guard guard(this);
-        fdb_blob             blob{};
+        const Guard<Mutex> guard(__lock);
+        fdb_blob           blob{};
         return fdb_kv_set_blob(__kvdb, kv.key, fdb_blob_make(&blob, &kv.value, kv.size)) == FDB_NO_ERR;
     }
 
@@ -210,7 +210,7 @@ class Storage {
     }
 
     template <typename ValueType> bool try_emplace(const types::el_storage_kv_t<ValueType>& kv) {
-        volatile const Guard guard(this);
+        const Guard<Mutex> guard(__lock);
         if (!kv.key || !__kvdb) [[unlikely]]
             return false;
         fdb_kv kv_{};
@@ -228,24 +228,9 @@ class Storage {
     void clear();
     bool reset();
 
-   protected:
-    struct Guard {
-        Guard(const Storage* const storage) noexcept : ___storage(storage) { ___storage->m_lock(); }
-        ~Guard() noexcept { ___storage->m_unlock(); }
-
-        Guard(const Guard&)            = delete;
-        Guard& operator=(const Guard&) = delete;
-
-       private:
-        const Storage* const ___storage;
-    };
-
-    inline void m_lock() const { xSemaphoreTake(__lock, portMAX_DELAY); }
-    inline void m_unlock() const { xSemaphoreGive(__lock); }
-
    private:
-    mutable SemaphoreHandle_t __lock;
-    fdb_kvdb_t                __kvdb;
+    Mutex      __lock;
+    fdb_kvdb_t __kvdb;
 };
 
 }  // namespace edgelab

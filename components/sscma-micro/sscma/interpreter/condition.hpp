@@ -1,12 +1,11 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-
 #include <functional>
 #include <string>
 #include <unordered_map>
 
+#include "core/synchronize/el_guard.hpp"
+#include "core/synchronize/el_mutex.hpp"
 #include "sscma/interpreter/lexer.hpp"
 #include "sscma/interpreter/parser.hpp"
 #include "sscma/interpreter/types.hpp"
@@ -14,24 +13,25 @@
 
 namespace sscma::interpreter {
 
+using namespace edgelab;
+
 using namespace sscma::types;
 using namespace sscma::interpreter;
 using namespace sscma::interpreter::types;
 
 class Condition {
    public:
-    Condition() : _node(nullptr), _eval_lock(xSemaphoreCreateCounting(1, 1)){};
+    Condition() : _node(nullptr), _eval_lock() {}
 
     ~Condition() { unset_condition(); }
 
     bool has_condition() {
-        const Guard guard(this);
-
+        const Guard<Mutex> guard(_eval_lock);
         return _node ? true : false;
     }
 
     bool set_condition(const std::string& input) {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
 
         Lexer    lexer(input);
         Mutables mutables;
@@ -48,32 +48,32 @@ class Condition {
     }
 
     const mutable_map_t& get_mutable_map() {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
         return _mutable_map;
     }
 
     void set_mutable_map(const mutable_map_t& map) {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
         _mutable_map = map;
     }
 
     void set_true_cb(branch_cb_t cb) {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
         _true_cb = cb;
     }
 
     void set_false_cb(branch_cb_t cb) {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
         _false_cb = cb;
     }
 
     void set_exception_cb(branch_cb_t cb) {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
         _exception_cb = cb;
     }
 
     void evalute() {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
 
         if (!_node) [[unlikely]]
             return;
@@ -100,7 +100,7 @@ class Condition {
     }
 
     void unset_condition() {
-        const Guard guard(this);
+        const Guard<Mutex> guard(_eval_lock);
 
         if (_node) [[likely]] {
             delete _node;
@@ -109,25 +109,10 @@ class Condition {
         _mutable_map.clear();
     }
 
-   protected:
-    inline void m_lock() const noexcept { xSemaphoreTake(_eval_lock, portMAX_DELAY); }
-    inline void m_unlock() const noexcept { xSemaphoreGive(_eval_lock); }
-
-    struct Guard {
-        Guard(const Condition* const action) noexcept : __action(action) { __action->m_lock(); }
-        ~Guard() noexcept { __action->m_unlock(); }
-
-        Guard(const Guard&)            = delete;
-        Guard& operator=(const Guard&) = delete;
-
-       private:
-        const Condition* const __action;
-    };
-
    private:
     ASTNode* _node;
 
-    SemaphoreHandle_t _eval_lock;
+    Mutex _eval_lock;
 
     mutable_map_t _mutable_map;
 
@@ -136,4 +121,4 @@ class Condition {
     branch_cb_t _exception_cb;
 };
 
-}  // namespace sscma
+}  // namespace sscma::interpreter
