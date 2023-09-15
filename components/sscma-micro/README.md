@@ -4,7 +4,7 @@
 
 This is a cross-platform machine learning inference framework designed for embedded devices, serving for [SenseCraft Model Assistant by Seeed Studio](https://github.com/Seeed-Studio/SSCMA) and providing functionalities such as digital signal processing, model inference, AT command interaction, and more.
 
-## Brief
+## Structure
 
 ```
 sscma-micro
