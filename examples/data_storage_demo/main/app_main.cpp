@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "edgelab.h"
+#include "core/edgelab.h"
 
 struct some_config_t {
     int val;
@@ -10,13 +10,13 @@ struct some_config_t {
 
 extern "C" void app_main()
 {
+    using namespace edgelab;
+    using namespace edgelab::utility;
+
     printf("Data storage demo:\n");
 
-    printf("Getting data delegate...\n");
-    DataDelegate* data_dalegate = DataDelegate::get_delegate();
-
     printf("Geting storage handler from data delegate...\n");
-    Storage* storage = data_dalegate->get_storage_handler();
+    auto* storage = new edgelab::Storage();
 
     printf("Init storage...\n");
     storage->init();

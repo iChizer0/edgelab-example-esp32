@@ -3,10 +3,11 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#include "edgelab.h"
-#include "el_device_esp.h"
+#include "core/edgelab.h"
 
 extern "C" void app_main(void) {
+    using namespace edgelab;
+
     Device* device = Device::get_device();
     Serial* serial = device->get_serial();
 
@@ -22,7 +23,7 @@ extern "C" void app_main(void) {
     while (true) {
         serial->get_line(buffer, buffer_size);
         serial->send_bytes(buffer, strlen(buffer));
-    
+
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 

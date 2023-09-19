@@ -1,7 +1,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#include "edgelab.h"
+#include "core/edgelab.h"
 #include "fomo_mobilenetv2_model_data.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -17,6 +17,8 @@ uint16_t color[] = {
 };
 
 extern "C" void app_main(void) {
+    using namespace edgelab;
+
     Device*  device  = Device::get_device();
     Display* display = device->get_display();
     Camera*  camera  = device->get_camera();
@@ -24,7 +26,7 @@ extern "C" void app_main(void) {
     display->init();
     camera->init(240, 240);
 
-    auto* engine       = new InferenceEngine();
+    auto* engine       = new EngineTFLite();
     auto* tensor_arena = heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     engine->init(tensor_arena, kTensorArenaSize);
     engine->load_model(g_fomo_mobilenetv2_model_data, g_fomo_mobilenetv2_model_data_len);

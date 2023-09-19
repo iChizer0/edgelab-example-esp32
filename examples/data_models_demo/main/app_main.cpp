@@ -2,17 +2,14 @@
 
 #include <stdio.h>
 
-#include "edgelab.h"
+#include "core/edgelab.h"
 
 extern "C" void app_main()
 {
     printf("Data models demo:\n");
 
-    printf("Getting data delegate...\n");
-    DataDelegate* data_dalegate = DataDelegate::get_delegate();
-
     printf("Geting models handler from data delegate...\n");
-    Models* models = data_dalegate->get_models_handler();
+    auto* models = new edgelab::Models();
 
     printf("Init models...\n");
     models->init();

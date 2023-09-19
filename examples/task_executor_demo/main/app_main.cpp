@@ -1,9 +1,12 @@
 #include <stdio.h>
 
-#include "edgelab.h"
+#include "core/edgelab.h"
+#include "sscma/repl/executor.hpp"
 
 extern "C" void app_main() {
-    ReplExecutor* executor = ReplDelegate::get_delegate()->get_executor_handler();
+    using namespace sscma;
+
+    auto* executor = new Executor();
 
     printf("Starting task thread...\n");
     executor->start();
