@@ -111,7 +111,7 @@ extern "C" void app_main() {
     std::cout << "Start sampling in 3 seconds";
     for (size_t i = 0; i < 3; ++i) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        std::cout << ".";
+        std::cout << "." << std::flush;
     }
     std::cout << std::endl;
     gyroSampleFlag = true;
@@ -123,6 +123,11 @@ extern "C" void app_main() {
 
     // finetune the collected data
     std::cout << "Finetuning the collected data..." << std::endl;
+    static std::array<ad::AlphaBeta<float>, 3> calibration = {
+      ad::AlphaBeta<float>{1.5f, 0.f},
+      ad::AlphaBeta<float>{1.5f, 0.f},
+      ad::AlphaBeta<float>{1.5f, 0.f}
+    };
     gedad.calEuclideanDistThresh(GEDAD_WINDOW_START,
                                  GEDAD_WINDOW_SIZE,
                                  GEDAD_SAMPLE_START,
@@ -130,7 +135,8 @@ extern "C" void app_main() {
                                  GEDAD_VIEW_SIZE,
                                  GEDAD_BATCH_SIZE,
                                  GEDAD_SHIFT_DIST,
-                                 GEDAD_MINIMAL_N);
+                                 GEDAD_MINIMAL_N,
+                                 calibration);
     std::cout << "Finetuning finished" << std::endl;
 
     // start prediction task

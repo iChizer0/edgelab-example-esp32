@@ -19,6 +19,11 @@ using namespace std;
 
 enum class AnomalyType { Unknown, Normal, Anomaly };
 
+template <typename T> struct AlphaBeta {
+    T alpha;
+    T beta;
+};
+
 template <typename DataType, typename DistType = float, size_t Channels = 3u> class GEDAD final {
    public:
     GEDAD(size_t buffer_size)
@@ -31,7 +36,6 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
           _view_size(0),
           _shift_dist(1),
           _minimal_n(0),
-          _bind_channels(false),
           _buffer(),
           _window(),
           _euclidean_dist_thresh() {
@@ -81,15 +85,15 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
         return true;
     }
 
-    void calEuclideanDistThresh(size_t window_start,
-                                size_t window_size,
-                                size_t sample_start,
-                                size_t sample_size,
-                                size_t view_size,
-                                size_t batch_size,
-                                size_t shift_dist    = 1,
-                                size_t minimal_n     = 10,
-                                bool   bind_channels = false) {
+    void calEuclideanDistThresh(size_t                                      window_start,
+                                size_t                                      window_size,
+                                size_t                                      sample_start,
+                                size_t                                      sample_size,
+                                size_t                                      view_size,
+                                size_t                                      batch_size,
+                                size_t                                      shift_dist,
+                                size_t                                      minimal_n,
+                                const array<AlphaBeta<DistType>, Channels>& thresh_calibration) {
         // verify and assign parameters to member variables
         {
             assert(window_size >= 1);
@@ -100,12 +104,11 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
             assert(window_start + window_size <= _buffer_size);
             assert(sample_start + sample_size <= _buffer_size);
             assert(view_size * batch_size - (view_size - shift_dist) * (batch_size - 1) <= sample_size);
-            _window_start  = window_start;
-            _window_size   = window_size;
-            _view_size     = view_size;
-            _shift_dist    = shift_dist;
-            _minimal_n     = minimal_n;
-            _bind_channels = bind_channels;
+            _window_start = window_start;
+            _window_size  = window_size;
+            _view_size    = view_size;
+            _shift_dist   = shift_dist;
+            _minimal_n    = minimal_n;
         }
 
         // release the window buffer
@@ -129,7 +132,6 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
         }
 
         // calculate the euclidean distance for each channel
-        // TODO: support bind_channels
         array<vector<DistType>, Channels> euclidean_dist_per_channel;
         {
             size_t window_end        = window_start + window_size - view_size;
@@ -180,11 +182,15 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
         // calculate and assign the final euclidean distance threshold
         {
             for (size_t i = 0; i < Channels; ++i) {
-                _euclidean_dist_thresh[i] =
+                auto eucliden_dist =
                   accumulate(begin(euclidean_dist_per_channel[i]), end(euclidean_dist_per_channel[i]), DistType{}) /
                   static_cast<DistType>(batch_size);
-
-                _euclidean_dist_thresh[i] *= 1.5f;
+                if (i < thresh_calibration.size()) [[likely]] {
+                    _euclidean_dist_thresh[i] =
+                      thresh_calibration[i].alpha * eucliden_dist + thresh_calibration[i].beta;
+                } else {
+                    _euclidean_dist_thresh[i] = eucliden_dist;
+                }
             }
 
             // debug print euclidean_dist_thresh
@@ -240,7 +246,6 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
 
         // calculate the euclidean distance for each channel
         // slide the view with shift_dist on the window buffer
-        // TODO: support bind_channels
         size_t verified_channels = 0;
         for (size_t i = 0; i < Channels; ++i) {
             const auto& window_i   = _window[i];
@@ -252,7 +257,7 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
                 for (size_t k = 0; k < _view_size; ++k) {
                     euclidean_dist += pow(window_i[j + k] - view_i[k], 2);
                 }
-                if (euclidean_dist < thresh_i) {
+                if (euclidean_dist < thresh_i) [[unlikely]] {
                     ++verified_channels;
                     break;
                 }
@@ -291,7 +296,6 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
     size_t _view_size;
     size_t _shift_dist;
     size_t _minimal_n;
-    bool   _bind_channels;
 
     array<vector<DataType>, Channels> _buffer;
     array<vector<DataType>, Channels> _window;
