@@ -11,31 +11,36 @@
 
 #include "GEDAD.hpp"
 
-#define GRAVITY_EARTH            9.78762f
-#define GYRO_SAMPLE_DELAY_MS     16
-#define GYRO_BUFFER_SIZE         512
-#define GYRO_FIT_SAMPLE_SIZE_MIN 1024
+#define GRAVITY_EARTH             9.78762f
+#define GYRO_SAMPLE_DELAY_MS      16
+#define GYRO_BUFFER_SIZE          512
+#define GYRO_FIT_SAMPLE_SIZE_MIN  512
 
-#define GEDAD_WINDOW_START       0
-#define GEDAD_WINDOW_SIZE        192
-#define GEDAD_SAMPLE_START       64
-#define GEDAD_SAMPLE_SIZE        (64 + 192)
-#define GEDAD_VIEW_SIZE          64
-#define GEDAD_BATCH_SIZE         20
-#define GEDAD_SHIFT_DIST         1
-#define GEDAD_MINIMAL_N          5
-#define GEDAD_PREDICT_DELAY_MS   50
+#define GEDAD_WINDOW_START        0
+#define GEDAD_WINDOW_SIZE         192
+#define GEDAD_SAMPLE_START        64
+#define GEDAD_SAMPLE_SIZE         (64 + 192)
+#define GEDAD_VIEW_SIZE           64
+#define GEDAD_BATCH_SIZE          20
+#define GEDAD_SHIFT_DIST          1
+#define GEDAD_MINIMAL_N           10
+#define GEDAD_PREDICT_DELAY_MS    50
 
-#define DEBUG                    3
+#define GEDAD_ALPHA               1.30f
+#define GEDAD_ANOMALITY_TOLERANCE 0.20f
+
+#define DEBUG                     3
 
 enum class GEDADState { Sampling, Finetuning, Predicting };
 
-static volatile bool              gyroSampleFlag  = false;
-static volatile size_t            gyroSampleCount = 0;
+static volatile size_t            gyroSampleCount  = 0;
+static volatile bool              gyroSampleFlag   = false;
+static volatile bool              gedadPredictFlag = false;
 static ad::GEDAD<float, float, 3> gedad(GYRO_BUFFER_SIZE);
 
 static void gyroSampleCallback(TimerHandle_t xTimer) {
-    if (!gyroSampleFlag) {
+    if (!gyroSampleFlag) [[unlikely]] {
+        gedadPredictFlag = true;
         return;
     }
 
@@ -79,7 +84,7 @@ static void gedadPredictTask(void*) {
 
     while (1) {
         start        = std::chrono::high_resolution_clock::now();
-        anomaly_type = gedad.isLastViewAnomaly();
+        anomaly_type = gedad.isLastViewAnomaly(GEDAD_ANOMALITY_TOLERANCE);
         end          = std::chrono::high_resolution_clock::now();
 
         switch (anomaly_type) {
@@ -105,7 +110,7 @@ extern "C" void app_main() {
     // initialize gyro sensor
     std::cout << "Initializing gyro sensor..." << std::endl;
     gyroSensorInit();
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     // start sampling
     std::cout << "Start sampling in 3 seconds";
@@ -119,14 +124,18 @@ extern "C" void app_main() {
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
     gyroSampleFlag = false;
+    while (!gedadPredictFlag) {
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
     std::cout << "Sampling finished" << std::endl;
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     // finetune the collected data
     std::cout << "Finetuning the collected data..." << std::endl;
     static std::array<ad::AlphaBeta<float>, 3> calibration = {
-      ad::AlphaBeta<float>{1.5f, 0.f},
-      ad::AlphaBeta<float>{1.5f, 0.f},
-      ad::AlphaBeta<float>{1.5f, 0.f}
+      ad::AlphaBeta<float>{GEDAD_ALPHA, 0.f},
+      ad::AlphaBeta<float>{GEDAD_ALPHA, 0.f},
+      ad::AlphaBeta<float>{GEDAD_ALPHA, 0.f}
     };
     gedad.calEuclideanDistThresh(GEDAD_WINDOW_START,
                                  GEDAD_WINDOW_SIZE,
@@ -138,6 +147,7 @@ extern "C" void app_main() {
                                  GEDAD_MINIMAL_N,
                                  calibration);
     std::cout << "Finetuning finished" << std::endl;
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     // start prediction task
     std::cout << "Start prediction loop...";
@@ -145,6 +155,6 @@ extern "C" void app_main() {
     xTaskCreate(gedadPredictTask, "GEDADPredictTask", 8192, nullptr, 2, nullptr);
 
     while (1) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
 }

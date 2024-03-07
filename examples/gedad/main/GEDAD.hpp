@@ -5,6 +5,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <forward_list>
@@ -153,7 +154,8 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
                         for (size_t l = 0; l < view_size; ++l) {
                             euclidean_dist += pow(buffer_i[j + l] - buffer_i[k + l], 2);
                         }
-                        euclidean_dist_per_element.emplace_back(euclidean_dist);  // skip sqrt for performance
+                        euclidean_dist = sqrt(euclidean_dist);
+                        euclidean_dist_per_element.emplace_back(euclidean_dist);
                     }
                     // sort and take minimal_n euclidean distances
                     sort(begin(euclidean_dist_per_element), end(euclidean_dist_per_element), less<DistType>{});
@@ -213,7 +215,7 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
         }
     }
 
-    inline AnomalyType isLastViewAnomaly() const {
+    inline AnomalyType isLastViewAnomaly(float anormality_tolerance) const {
         // take last view_size elements from the _buffer (ring buffer)
         // copy them to the _cached_view
         if (_buffer_flag) {
@@ -246,25 +248,38 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
 
         // calculate the euclidean distance for each channel
         // slide the view with shift_dist on the window buffer
-        size_t verified_channels = 0;
+        array<float, Channels> anormality;
+        fill(begin(anormality), end(anormality), numeric_limits<float>::max());
         for (size_t i = 0; i < Channels; ++i) {
-            const auto& window_i   = _window[i];
-            const auto& view_i     = _cached_view[i];
-            auto        thresh_i   = _euclidean_dist_thresh[i];
-            size_t      window_end = window_i.size() - _view_size;
+            const auto& window_i     = _window[i];
+            const auto& view_i       = _cached_view[i];
+            auto&       anormality_i = anormality[i];
+            auto        thresh_i     = _euclidean_dist_thresh[i];
+            size_t      window_end   = window_i.size() - _view_size;
             for (size_t j = 0; j < window_end; j += _shift_dist) {
                 DistType euclidean_dist{};
                 for (size_t k = 0; k < _view_size; ++k) {
                     euclidean_dist += pow(window_i[j + k] - view_i[k], 2);
                 }
+                euclidean_dist = sqrt(euclidean_dist);
                 if (euclidean_dist < thresh_i) [[unlikely]] {
-                    ++verified_channels;
+                    anormality_i = 0.f;
                     break;
+                } else {
+                    anormality_i = min(anormality_i, 1.0f - (thresh_i / euclidean_dist));
                 }
             }
         }
 
-        return verified_channels != Channels ? AnomalyType::Anomaly : AnomalyType::Normal;
+        // debug print anormality
+        cout << "anormality: ";
+        for (const auto& a : anormality) {
+            cout << a << " ";
+        }
+        cout << endl;
+
+        return accumulate(begin(anormality), end(anormality), 0.f) > anormality_tolerance ? AnomalyType::Anomaly
+                                                                                          : AnomalyType::Normal;
     }
 
     inline vector<size_t> geneRandViewIndex(size_t range_start, size_t range_end, size_t n) const {
