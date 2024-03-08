@@ -24,11 +24,11 @@
 #define GEDAD_VIEW_SIZE           64
 #define GEDAD_BATCH_SIZE          20
 #define GEDAD_SHIFT_DIST          1
-#define GEDAD_MINIMAL_N           10
+#define GEDAD_MINIMAL_N           5
 #define GEDAD_PREDICT_DELAY_MS    (GYRO_SAMPLE_DELAY_MS / 2)
 
-#define GEDAD_ALPHA               1.50f
-#define GEDAD_ANOMALITY_TOLERANCE 0.00f
+#define GEDAD_ALPHA               1.60f
+#define GEDAD_ANOMALITY_TOLERANCE 0.15f
 
 #define DEBUG                     3
 
@@ -90,6 +90,9 @@ static void gedadPredictTask(void*) {
 
         switch (anomaly_type) {
         case ad::AnomalyType::Anomaly:
+            // turn on LED on esp32s3
+            
+
             std::cout << "Anomaly detected" << std::endl;
             break;
         case ad::AnomalyType::Normal:

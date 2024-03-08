@@ -232,6 +232,9 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
         // calculate the euclidean distance for each channel
         // slide the view with shift_dist on the window buffer
         array<float, Channels> anormality;
+
+        array<pair<DistType, DistType>, Channels> debug;
+
         fill(begin(anormality), end(anormality), numeric_limits<float>::max());
         for (size_t i = 0; i < Channels; ++i) {
             const auto& window_i     = _window[i];
@@ -245,6 +248,9 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
                     euclidean_dist += pow(view_i[k] - window_i[j + k], 2);
                 }
                 euclidean_dist = sqrt(euclidean_dist);
+
+                debug[i]       = {euclidean_dist, thresh_i};
+
                 if (euclidean_dist < thresh_i) [[unlikely]] {
                     anormality_i = 0.f;
                     break;
@@ -256,10 +262,16 @@ template <typename DataType, typename DistType = float, size_t Channels = 3u> cl
 
         // debug print anormality
         {
+            // size_t i = 0;
+            // cout << "anormality: \n";
+            // for (const auto& a : anormality) {
+            //     cout << "  " << i << ": " << a << endl;
+            // }
+            // cout << endl;
             size_t i = 0;
-            cout << "anormality: \n";
-            for (const auto& a : anormality) {
-                cout << "  " << i << ": " << a << endl;
+            cout << "d_e_curr | d_e_thresh:\n";
+            for (const auto& d : debug) {
+                cout << "  " << i << ": " << d.first << " | " << d.second << endl;
             }
             cout << endl;
         }
