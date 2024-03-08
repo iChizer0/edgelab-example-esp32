@@ -5,6 +5,7 @@
 #include <freertos/timers.h>
 #include <qma7981.h>
 
+#include <array>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -24,10 +25,10 @@
 #define GEDAD_BATCH_SIZE          20
 #define GEDAD_SHIFT_DIST          1
 #define GEDAD_MINIMAL_N           10
-#define GEDAD_PREDICT_DELAY_MS    50
+#define GEDAD_PREDICT_DELAY_MS    (GYRO_SAMPLE_DELAY_MS / 2)
 
-#define GEDAD_ALPHA               1.30f
-#define GEDAD_ANOMALITY_TOLERANCE 0.20f
+#define GEDAD_ALPHA               1.50f
+#define GEDAD_ANOMALITY_TOLERANCE 0.00f
 
 #define DEBUG                     3
 
@@ -44,7 +45,7 @@ static void gyroSampleCallback(TimerHandle_t xTimer) {
         return;
     }
 
-    static float xyz[3]{};
+    static std::array<float, 3> xyz;
     qma7981_get_acce(&xyz[0], &xyz[1], &xyz[2]);
     xyz[0] *= GRAVITY_EARTH;
     xyz[1] *= GRAVITY_EARTH;
@@ -98,11 +99,16 @@ static void gedadPredictTask(void*) {
             std::cout << "Unknown (skipped)" << std::endl;
             break;
         }
-        std::cout << "Predict time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-                  << "ms" << std::endl;
+        auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << "Predict time: " << duration_ms << "ms" << std::endl;
         std::cout << std::endl;
 
-        vTaskDelay(pdMS_TO_TICKS(GEDAD_PREDICT_DELAY_MS));
+        int32_t delay = GYRO_SAMPLE_DELAY_MS - duration_ms;
+        if (delay > 0) {
+            vTaskDelay(pdMS_TO_TICKS(delay));
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(GEDAD_PREDICT_DELAY_MS));
+        }
     }
 }
 
@@ -152,7 +158,7 @@ extern "C" void app_main() {
     // start prediction task
     std::cout << "Start prediction loop...";
     gyroSampleFlag = true;
-    xTaskCreate(gedadPredictTask, "GEDADPredictTask", 8192, nullptr, 2, nullptr);
+    xTaskCreate(gedadPredictTask, "GEDADPredictTask", 8192, nullptr, 1, nullptr);
 
     while (1) {
         vTaskDelay(10000 / portTICK_PERIOD_MS);
